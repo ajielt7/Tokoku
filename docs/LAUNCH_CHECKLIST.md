@@ -74,7 +74,7 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 ### B.1 Database dan migrasi — Selesai (2/2)
 
 - [x] Buat database produksi terpisah dari database lokal; ID D1 produksi sudah terpasang pada kedua binding `DB` di `backend/wrangler.jsonc`.
-- [x] Tinjau dan terapkan migrasi 0001–0008 ke D1 produksi tanpa seed demo; urutan tercatat dan `PRAGMA foreign_key_check` kosong. Latihan backup/restore SQLite lokal lulus (8 migrasi, integritas OK, foreign key bersih); D1 staging cloud tidak dibuat agar tidak menambah resource yang berpotensi biaya.
+- [x] Tinjau dan terapkan migrasi 0001–0008 ke D1 produksi tanpa seed demo; urutan tercatat dan `PRAGMA foreign_key_check` kosong. Query baca-saja pada 9 November 2026 mengonfirmasi 0 baris di 13 tabel katalog, pesanan, pembayaran, pengiriman, file, dan admin. Latihan backup/restore SQLite lokal lulus (8 migrasi, integritas OK, foreign key bersih); D1 staging cloud tidak dibuat agar tidak menambah resource yang berpotensi biaya.
 
 ### B.2 Konfigurasi dan deploy Worker — Selesai (5/5)
 
@@ -204,3 +204,4 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 ## Syarat lulus
 
 Peluncuran toko untuk pelanggan baru hanya dimulai setelah semua kotak bagian A sampai E ditinjau dan disetujui pemilik toko. Worker dan demo noindex sudah tayang. Checklist **belum lulus** karena katalog D1 kosong, validasi ImageKit menerima HTTP 403 dan alur bukti belum diuji end-to-end, serta produk, rekening, dan kebijakan toko belum final.
+
