@@ -51,55 +51,101 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 ## A. Domain dan GitHub Pages
 
+### A.1 URL dan hosting — Selesai (4/4)
+
 - [x] URL publik dipilih: `https://ajielt7.github.io/Tokoku/`. `SITE_URL` menggunakan URL proyek dengan subpath repositori. Domain custom tidak dipakai.
 - [x] Worker `ruma-api-production` aktif di `https://ruma-api-production.ajielt7.workers.dev`; `GET /api/catalog` terverifikasi HTTP 200 dengan 0 kategori dan 0 produk.
 - [x] Pages memakai sumber **GitHub Actions** dan workflow menargetkan branch `main`.
-- [x] Gate indeks/kesiapan tetap tertutup sampai konten final siap; pratinjau Pages tetap `noindex`.
 - [x] GitHub Pages melaporkan `https_enforced: true`.
+
+### A.2 Gate indeks dan pembaruan katalog — Berjalan (1/2)
+
+- [x] Gate indeks/kesiapan tetap tertutup sampai konten final siap; pratinjau Pages tetap `noindex`.
 - [ ] Setelah katalog D1 berubah, jalankan workflow **Build and deploy store** secara manual agar HTML statis, halaman produk, dan sitemap dibangun ulang dari katalog terbaru.
+
+### A.3 Keamanan repository — Selesai (1/1)
+
 - [x] Pemindaian file terlacak tidak menemukan `.dev.vars`, `.env`, `google-services.json`, private key, dump database, atau pola token umum. Pertahankan aturan ini pada perubahan selanjutnya.
 
 ## B. Cloudflare Worker dan D1
 
+### B.1 Database dan migrasi — Selesai (2/2)
+
 - [x] Buat database produksi terpisah dari database lokal; ID D1 produksi sudah terpasang pada kedua binding `DB` di `backend/wrangler.jsonc`.
 - [x] Tinjau dan terapkan migrasi 0001–0008 ke D1 produksi tanpa seed demo; urutan tercatat dan `PRAGMA foreign_key_check` kosong. Latihan backup/restore SQLite lokal lulus (8 migrasi, integritas OK, foreign key bersih); D1 staging cloud tidak dibuat agar tidak menambah resource yang berpotensi biaya.
+
+### B.2 Konfigurasi dan deploy Worker — Selesai (5/5)
+
 - [x] `ALLOWED_ORIGINS` production sudah memakai origin GitHub Pages `https://ajielt7.github.io` (tanpa subpath); `APP_ENV=production` sudah ditetapkan.
 - [x] Wrangler production `deploy --dry-run` lulus; Worker production sudah diunggah dan subdomain workers.dev aktif.
-- [x] `IMAGEKIT_PRIVATE_KEY`, `RAJAONGKIR_API_KEY`, dan `ADMIN_TOKEN` terpasang sebagai Worker secrets; nilainya tidak masuk Git atau frontend.
-- [x] GET admin orders setelah deploy terbaru merespons HTTP 200 dengan 0 pesanan memakai token lokal; nilai token tidak ditampilkan dan D1 tetap kosong.
 - [x] `IMAGEKIT_URL_ENDPOINT` dan `RAJAONGKIR_ORIGIN_ID=5052` tersedia sebagai production vars; endpoint memakai HTTPS.
 - [x] Perubahan logging pada commit `1d3570c` telah dideploy ke Worker `ruma-api-production` pada 9 November 2026 (versi `df440313-c47f-4594-a0df-6d3a175b3c50`); GET `/api/catalog` setelah deploy merespons HTTP 200.
-- [ ] Validasi ImageKit read-only ke API daftar berkas mengembalikan HTTP 403 pada 9 November 2026. Dokumentasi ImageKit menyebut 403 dapat berarti akun tidak terautentikasi dengan key, key kedaluwarsa, atau akun dinonaktifkan; batas upload hanya relevan bagi API upload. Periksa Dashboard ImageKit > Developer > API Keys dan status akun, lalu ulangi validasi setelah penyebab diperbaiki. Jangan mengunggah bukti pembayaran sebelum lolos ([dokumentasi API ImageKit](https://imagekit.io/docs/api-overview)).
 - [x] Worker production memuat binding D1 produksi `ruma-store` serta empat rate limiter; katalog API runtime merespons HTTP 200.
+
+### B.3 Secret dan akses admin — Selesai (2/2)
+
+- [x] `IMAGEKIT_PRIVATE_KEY`, `RAJAONGKIR_API_KEY`, dan `ADMIN_TOKEN` terpasang sebagai Worker secrets; nilainya tidak masuk Git atau frontend.
+- [x] GET admin orders setelah deploy terbaru merespons HTTP 200 dengan 0 pesanan memakai token lokal; nilai token tidak ditampilkan dan D1 tetap kosong.
+
+### B.4 Validasi layanan dan log runtime — Belum (0/2)
+
+- [ ] Validasi ImageKit read-only ke API daftar berkas mengembalikan HTTP 403 pada 9 November 2026. Dokumentasi ImageKit menyebut 403 dapat berarti akun tidak terautentikasi dengan key, key kedaluwarsa, atau akun dinonaktifkan; batas upload hanya relevan bagi API upload. Periksa Dashboard ImageKit > Developer > API Keys dan status akun, lalu ulangi validasi setelah penyebab diperbaiki. Jangan mengunggah bukti pembayaran sebelum lolos ([dokumentasi API ImageKit](https://imagekit.io/docs/api-overview)).
 - [ ] Tinjau log/error Worker production melalui dashboard Cloudflare tanpa mencatat bukti pembayaran, alamat, nomor telepon, token, atau kredensial. Pemeriksaan sumber kode sudah dilakukan, tetapi log runtime belum dapat diperiksa pada sesi ini.
 
 ## C. Produk, transaksi, dan kebijakan toko
 
+### C.1 Katalog produk — Belum (0/1)
+
 - [ ] Ganti seluruh produk demo dengan barang yang benar: nama, deskripsi, harga, ukuran, batas personalisasi, stok/ketersediaan, berat paket, dan foto milik toko.
+
+### C.2 Ongkir dan pembayaran — Berjalan (1/3)
+
 - [x] `RAJAONGKIR_API_KEY` dari berkas lokal yang diabaikan Git terpasang pada Worker; pencarian tujuan merespons HTTP 200. Pastikan tarif/kurir dan titik asal `5052` sesuai operasional sebelum menerima pesanan.
-- [ ] Isi bank, nomor rekening, nama pemilik rekening, waktu konfirmasi, pembatalan, refund, dan cara menghubungi toko.
-- [ ] Siapkan kebijakan privasi dan syarat pembelian yang ditinjau pemilik toko; jangan menampilkan alamat/data pribadi pesanan pada halaman publik.
 - [ ] Uji transfer nyata dengan nominal kecil dan rekonsiliasi manual. Jangan menyatakan pembayaran otomatis terverifikasi.
 - [ ] Pastikan unggah bukti hanya ke ImageKit privat, URL admin bertanda tangan singkat, penolakan membersihkan file aktif, dan kebijakan retensi ImageKit jelas.
+
+### C.3 Informasi toko dan kebijakan — Belum (0/2)
+
+- [ ] Isi bank, nomor rekening, nama pemilik rekening, waktu konfirmasi, pembatalan, refund, dan cara menghubungi toko.
+- [ ] Siapkan kebijakan privasi dan syarat pembelian yang ditinjau pemilik toko; jangan menampilkan alamat/data pribadi pesanan pada halaman publik.
+
+### C.4 Pengiriman dan produksi — Belum (0/2)
+
 - [ ] Verifikasi pengiriman, resi, tracking, notifikasi FCM, dan akses admin memakai akun/perangkat yang benar.
 - [ ] Periksa DXF melalui alur CAD/CAM dan lakukan uji bahan/mesin; gambar tahap 11 bukan toolpath siap mesin.
 
 ## D. SEO dan mutu halaman
 
+### D.1 Indeks dan metadata — Berjalan (2/4)
+
 - [x] `SITE_URL` sudah memakai HTTPS `https://ajielt7.github.io/Tokoku`; HTML demo tetap `noindex` tanpa canonical publik. Canonical menunggu katalog final.
 - [ ] Bangun ulang dari katalog produksi. `check-release.mjs` harus lulus dan semua halaman publik harus memiliki satu H1, title, description, canonical, tautan lokal valid, dan konten bukan demo.
 - [ ] Pastikan cart, checkout, dan lacak pesanan tetap `noindex` dan tidak ada di sitemap; jangan blok crawler pada robots.txt untuk halaman yang perlu dibaca noindex-nya.
-- [ ] Periksa produk dan harga pada HTML hasil build, gambar/alt text, mobile layout, keyboard, kontras, dan pesan error.
 - [x] Build produk siap membuat JSON-LD `Product`/`Offer` hanya saat indeks diaktifkan; build memeriksa foto HTTPS, alt text, harga, mata uang, dan URL Offer. Data contoh tetap lokal/noindex. Validasi hasil pada URL yang diterbitkan dan Google Rich Results Test masih menunggu data toko final serta deployment.
+
+### D.2 Konten produk dan aksesibilitas — Belum (0/1)
+
+- [ ] Periksa produk dan harga pada HTML hasil build, gambar/alt text, mobile layout, keyboard, kontras, dan pesan error.
+
+### D.3 Performa dan Search Console — Belum (0/2)
+
 - [ ] Uji semua URL publik setelah deployment, termasuk 404 dan subpath Pages. Jalankan pemeriksaan Lighthouse seluler dan tinjau Core Web Vitals setelah data lapangan tersedia.
 - [ ] Verifikasi properti domain di Google Search Console, periksa URL dengan URL Inspection, lalu kirim sitemap. Pengiriman sitemap membantu penemuan URL tetapi tidak menjamin pengindeksan atau peringkat.
 
 ## E. Backup, pemulihan, dan peluncuran bertahap
 
+### E.1 Backup dan pemulihan — Berjalan (2/3)
+
 - [x] D1 produksi memakai versi `production`; API mengembalikan bookmark Time Travel. Fitur aktif otomatis dengan retensi 30 hari dan tanpa biaya tambahan. Tetap siapkan ekspor terenkripsi terpisah sebelum transaksi untuk perlindungan di luar jendela/akun Cloudflare.
 - [ ] Ekspor D1 ke lokasi terenkripsi di luar repositori dan batasi akses. Buat salinan terpisah untuk bukti ImageKit jika kebijakan layanan memerlukannya.
 - [x] Latihan pemulihan lokal SQLite lulus untuk skema kosong; ini tidak membuktikan pemulihan D1 cloud atau file ImageKit. D1 staging cloud tidak dibuat karena pemilik memilih tanpa resource tambahan berpotensi biaya. Sebelum transaksi nyata, pastikan ekspor D1 produksi dapat dibuat dan simpan salinan terenkripsi; jadwalkan latihan cloud terpisah bila kelak ada lingkungan gratis yang sesuai.
+
+### E.2 Akses pemulihan — Belum (0/1)
+
 - [ ] Catat kontak pemulihan akun GitHub, Cloudflare, ImageKit, RajaOngkir, dan Firebase di password manager organisasi, bukan di repositori.
+
+### E.3 Peluncuran kecil dan rollback — Belum (0/2)
+
 - [ ] Rilis dahulu ke kelompok kecil; pantau pesanan gagal, ongkir, upload bukti, notifikasi, dan log selama periode awal.
 - [ ] Simpan artifact/rilis sebelumnya dan prosedur rollback. Jangan pulihkan database produksi tanpa menentukan titik waktu serta membuat cadangan keadaan saat ini.
 
