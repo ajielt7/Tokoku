@@ -107,10 +107,12 @@ function productMedia(product, className = "") {
   const content = image
     ? `<img class="product-photo" src="${escapeHtml(image)}" alt="${escapeHtml(product.image_alt || product.name)}" width="800" height="600" loading="lazy">`
     : '<span class="product-image-placeholder" aria-hidden="true">Foto produk</span>';
-  return `<a class="product-visual ${visualClass} ${className}" href="${product.link}" aria-label="Lihat ${escapeHtml(product.name)}">
+  const accessibleName = image ? "" : `<span class="visually-hidden">Lihat ${escapeHtml(product.name)}</span>`;
+  return `<a class="product-visual ${visualClass} ${className}" href="${product.link}">
     ${content}
     <span class="product-tag">${escapeHtml(product.category_name)}</span>
     <span class="visual-caption">${escapeHtml(product.fixed_size || "Detail produk")}</span>
+    ${accessibleName}
   </a>`;
 }
 

@@ -14,7 +14,7 @@ Gunakan bobot tetap per bagian agar laporan progres konsisten. Nilai tiap bagian
 | D. SEO dan mutu halaman | 20% |
 | E. Backup, pemulihan, dan peluncuran | 15% |
 
-**Progres berbobot per 9 November 2026: 50,7%** (A 6/7, B 9/11, C 1/8, D 2/7, E 4/7). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
+**Progres berbobot per 9 November 2026: 37.9%** (A 6/9, B 11/15, C 1/27, D 5/19, E 4/18) (A 6/9, B 11/15, C 1/27, D 4/18, E 4/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
 
 ## Status yang sudah terlihat di workspace
 
@@ -58,10 +58,12 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 - [x] Pages memakai sumber **GitHub Actions** dan workflow menargetkan branch `main`.
 - [x] GitHub Pages melaporkan `https_enforced: true`.
 
-### A.2 Gate indeks dan pembaruan katalog — Berjalan (1/2)
+### A.2 Gate indeks dan pembaruan katalog — Berjalan (1/4)
 
 - [x] Gate indeks/kesiapan tetap tertutup sampai konten final siap; pratinjau Pages tetap `noindex`.
-- [ ] Setelah katalog D1 berubah, jalankan workflow **Build and deploy store** secara manual agar HTML statis, halaman produk, dan sitemap dibangun ulang dari katalog terbaru.
+- [ ] Setelah katalog D1 berubah, jalankan workflow **Build and deploy store** secara manual.
+- [ ] Pastikan HTML statis dan halaman produk yang diterbitkan memuat katalog terbaru.
+- [ ] Pastikan sitemap yang diterbitkan memuat URL produk/kategori terbaru dan tidak memuat cart, checkout, atau lacak pesanan.
 
 ### A.3 Keamanan repository — Selesai (1/1)
 
@@ -87,71 +89,117 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 - [x] `IMAGEKIT_PRIVATE_KEY`, `RAJAONGKIR_API_KEY`, dan `ADMIN_TOKEN` terpasang sebagai Worker secrets; nilainya tidak masuk Git atau frontend.
 - [x] GET admin orders setelah deploy terbaru merespons HTTP 200 dengan 0 pesanan memakai token lokal; nilai token tidak ditampilkan dan D1 tetap kosong.
 
-### B.4 Validasi layanan dan log runtime — Belum (0/2)
+### B.4 Validasi layanan dan log runtime — Berjalan (2/6)
 
-- [ ] Validasi ImageKit read-only ke API daftar berkas mengembalikan HTTP 403 pada 9 November 2026. Dokumentasi ImageKit menyebut 403 dapat berarti akun tidak terautentikasi dengan key, key kedaluwarsa, atau akun dinonaktifkan; batas upload hanya relevan bagi API upload. Periksa Dashboard ImageKit > Developer > API Keys dan status akun, lalu ulangi validasi setelah penyebab diperbaiki. Jangan mengunggah bukti pembayaran sebelum lolos ([dokumentasi API ImageKit](https://imagekit.io/docs/api-overview)).
-- [ ] Tinjau log/error Worker production melalui dashboard Cloudflare tanpa mencatat bukti pembayaran, alamat, nomor telepon, token, atau kredensial. Pemeriksaan sumber kode sudah dilakukan, tetapi log runtime belum dapat diperiksa pada sesi ini.
+- [ ] Di Dashboard ImageKit, periksa apakah akun aktif dan masih pada paket yang diinginkan.
+- [ ] Di Dashboard ImageKit > Developer > API Keys, periksa status private key tanpa menyalin nilainya ke chat, Git, atau log.
+- [ ] Setelah penyebab HTTP 403 diperbaiki, minta pemilik menjalankan validasi API daftar berkas yang aman sebelum alur upload bukti dipakai. Jangan mengulang request validasi tanpa persetujuan pemilik.
+- [ ] Buka log Worker production di dashboard Cloudflare dan periksa apakah ada error runtime yang perlu ditangani.
+- [x] Ringkasan issue Cloudflare Observability untuk Worker diperiksa pada 9 November 2026: tidak ada issue aktif atau occurrence; ringkasan ini bukan pemeriksaan event log lengkap.
+- [x] Audit kode logging memastikan bukti pembayaran, alamat, nomor telepon, token, kredensial, dan isi data pesanan tidak ditulis ke log; error dibatasi ke operasi/jenis error, status upstream, atau request ID.
 
 ## C. Produk, transaksi, dan kebijakan toko
 
-### C.1 Katalog produk — Belum (0/1)
+### C.1 Katalog produk — Belum (0/7)
 
-- [ ] Ganti seluruh produk demo dengan barang yang benar: nama, deskripsi, harga, ukuran, batas personalisasi, stok/ketersediaan, berat paket, dan foto milik toko.
+- [ ] Tetapkan daftar produk yang benar dan hapus produk demo dari katalog yang akan diterbitkan.
+- [ ] Isi nama, deskripsi singkat, dan kategori setiap produk.
+- [ ] Tetapkan harga, mata uang, dan status stok/ketersediaan.
+- [ ] Isi ukuran produk dan batas personalisasi yang benar.
+- [ ] Isi berat paket untuk perhitungan ongkir.
+- [ ] Siapkan foto milik toko yang dapat diterbitkan dengan URL HTTPS.
+- [ ] Tulis alt text yang menjelaskan foto untuk setiap produk.
 
-### C.2 Ongkir dan pembayaran — Berjalan (1/3)
+### C.2 Ongkir dan pembayaran — Berjalan (1/8)
 
-- [x] `RAJAONGKIR_API_KEY` dari berkas lokal yang diabaikan Git terpasang pada Worker; pencarian tujuan merespons HTTP 200. Pastikan tarif/kurir dan titik asal `5052` sesuai operasional sebelum menerima pesanan.
-- [ ] Uji transfer nyata dengan nominal kecil dan rekonsiliasi manual. Jangan menyatakan pembayaran otomatis terverifikasi.
-- [ ] Pastikan unggah bukti hanya ke ImageKit privat, URL admin bertanda tangan singkat, penolakan membersihkan file aktif, dan kebijakan retensi ImageKit jelas.
+- [x] `RAJAONGKIR_API_KEY` dari berkas lokal yang diabaikan Git terpasang pada Worker; pencarian tujuan merespons HTTP 200.
+- [ ] Pastikan titik asal `5052` sesuai lokasi operasional toko.
+- [ ] Pastikan kurir dan tarif yang dikembalikan sesuai layanan yang akan dipakai.
+- [ ] Uji pembuatan order memastikan backend menghitung ulang subtotal dan ongkir dari data server.
+- [ ] Setelah rekening final tersedia, lakukan uji transfer nominal kecil dan cocokkan mutasi secara manual. Jangan menyatakan pembayaran otomatis terverifikasi.
+- [ ] Verifikasi unggah bukti hanya ke ImageKit privat setelah validasi ImageKit lolos.
+- [ ] Verifikasi URL bukti untuk admin bertanda tangan dan berumur singkat.
+- [ ] Verifikasi penolakan bukti membersihkan file aktif dan tetapkan masa retensi bukti.
 
-### C.3 Informasi toko dan kebijakan — Belum (0/2)
+### C.3 Informasi toko dan kebijakan — Belum (0/6)
 
-- [ ] Isi bank, nomor rekening, nama pemilik rekening, waktu konfirmasi, pembatalan, refund, dan cara menghubungi toko.
-- [ ] Siapkan kebijakan privasi dan syarat pembelian yang ditinjau pemilik toko; jangan menampilkan alamat/data pribadi pesanan pada halaman publik.
+- [ ] Tetapkan nama resmi toko dan kanal kontak yang akan ditampilkan.
+- [ ] Isi bank, nomor rekening, dan nama pemilik rekening untuk pembayaran.
+- [ ] Jelaskan batas waktu konfirmasi pembayaran dan apa yang terjadi jika melewati batas.
+- [ ] Jelaskan pembatalan dan pengembalian dana.
+- [ ] Tulis kebijakan privasi dan syarat pembelian, lalu minta pemilik meninjaunya.
+- [ ] Periksa halaman publik agar tidak menampilkan alamat atau data pribadi pelanggan.
 
-### C.4 Pengiriman dan produksi — Belum (0/2)
+### C.4 Pengiriman dan produksi — Belum (0/6)
 
-- [ ] Verifikasi pengiriman, resi, tracking, notifikasi FCM, dan akses admin memakai akun/perangkat yang benar.
-- [ ] Periksa DXF melalui alur CAD/CAM dan lakukan uji bahan/mesin; gambar tahap 11 bukan toolpath siap mesin.
+- [ ] Uji alur admin mengubah status pesanan dan menyimpan nomor resi.
+- [ ] Uji tautan/informasi tracking yang diterima pelanggan.
+- [ ] Uji notifikasi FCM pada perangkat yang memang akan dipakai toko.
+- [ ] Pastikan akses admin hanya berfungsi untuk akun/perangkat yang berwenang.
+- [ ] Buka DXF di alur CAD/CAM dan periksa skala, kontur, serta satuan.
+- [ ] Lakukan uji bahan/mesin sebelum produksi; gambar tahap 11 bukan toolpath siap mesin.
 
 ## D. SEO dan mutu halaman
 
-### D.1 Indeks dan metadata — Berjalan (2/4)
+### D.1 Indeks dan metadata — Berjalan (2/7)
 
 - [x] `SITE_URL` sudah memakai HTTPS `https://ajielt7.github.io/Tokoku`; HTML demo tetap `noindex` tanpa canonical publik. Canonical menunggu katalog final.
-- [ ] Bangun ulang dari katalog produksi. `check-release.mjs` harus lulus dan semua halaman publik harus memiliki satu H1, title, description, canonical, tautan lokal valid, dan konten bukan demo.
-- [ ] Pastikan cart, checkout, dan lacak pesanan tetap `noindex` dan tidak ada di sitemap; jangan blok crawler pada robots.txt untuk halaman yang perlu dibaca noindex-nya.
+- [ ] Bangun ulang situs dari katalog final di D1 production.
+- [ ] Jalankan `check-release.mjs` dan pastikan pemeriksaan rilis lulus.
+- [ ] Periksa setiap halaman publik memiliki satu H1, title, description, canonical, tautan lokal valid, dan tidak berisi konten demo.
+- [ ] Pastikan cart, checkout, dan lacak pesanan memiliki `noindex`.
+- [ ] Pastikan cart, checkout, dan lacak pesanan tidak masuk sitemap; jangan memblokir crawler di `robots.txt` untuk URL yang perlu membaca arahan noindex.
 - [x] Build produk siap membuat JSON-LD `Product`/`Offer` hanya saat indeks diaktifkan; build memeriksa foto HTTPS, alt text, harga, mata uang, dan URL Offer. Data contoh tetap lokal/noindex. Validasi hasil pada URL yang diterbitkan dan Google Rich Results Test masih menunggu data toko final serta deployment.
 
-### D.2 Konten produk dan aksesibilitas — Belum (0/1)
+### D.2 Konten produk dan aksesibilitas — Belum (0/5)
 
-- [ ] Periksa produk dan harga pada HTML hasil build, gambar/alt text, mobile layout, keyboard, kontras, dan pesan error.
+- [ ] Cocokkan nama, deskripsi, harga, dan ketersediaan produk pada HTML hasil build dengan katalog final.
+- [ ] Periksa gambar produk tampil, URL-nya aman, dan alt text sesuai.
+- [ ] Periksa tata letak pada layar ponsel.
+- [ ] Selesaikan navigasi dan alur belanja memakai keyboard saja.
+- [ ] Periksa kontras teks dan kejelasan pesan error/formulir.
 
-### D.3 Performa dan Search Console — Belum (0/2)
+### D.3 Performa dan Search Console — Berjalan (3/7)
 
-- [ ] Uji semua URL publik setelah deployment, termasuk 404 dan subpath Pages. Jalankan pemeriksaan Lighthouse seluler dan tinjau Core Web Vitals setelah data lapangan tersedia.
-- [ ] Verifikasi properti domain di Google Search Console, periksa URL dengan URL Inspection, lalu kirim sitemap. Pengiriman sitemap membantu penemuan URL tetapi tidak menjamin pengindeksan atau peringkat.
+- [x] Buka seluruh URL yang ada pada deployment demo: beranda, checkout, keranjang, lacak pesanan, 2 kategori, dan 3 produk; semuanya merespons HTTP 200.
+- [x] URL acak merespons 404; subpath proyek `/Tokoku/` berfungsi pada halaman-halaman tersebut. Sitemap merespons 404 sesuai status demo `noindex` dan katalog demo tidak dikirim sebagai sitemap publik.
+- [x] Audit Lighthouse seluler pada build lokal setelah perbaikan: beranda mendapat skor performance/accessibility/best-practices 100/100/100 (LCP 1,5 dtk, CLS 0,004, TBT 0); halaman produk, kategori, keranjang, checkout, dan lacak pesanan juga mendapat accessibility/best-practices 100/100. Laporan tersimpan di luar repo pada `%LOCALAPPDATA%\Ruma\lighthouse-stage12-local.json` dan laporan halaman terkait.
+- [ ] Ulangi Lighthouse pada situs publik setelah perubahan ini diterbitkan dan catat skor/temuan baru.
+- [ ] Tinjau Core Web Vitals setelah tersedia data pengguna nyata.
+- [ ] Verifikasi properti situs di Google Search Console dan inspeksi beberapa URL penting.
+- [ ] Kirim sitemap ke Search Console dan pantau status pembacaan. Pengiriman sitemap membantu penemuan URL tetapi tidak menjamin indeks atau peringkat.
 
 ## E. Backup, pemulihan, dan peluncuran bertahap
 
-### E.1 Backup dan pemulihan — Berjalan (2/3)
+### E.1 Backup dan pemulihan — Berjalan (2/5)
 
 - [x] D1 produksi memakai versi `production`; API mengembalikan bookmark Time Travel. Fitur aktif otomatis dengan retensi 30 hari dan tanpa biaya tambahan. Tetap siapkan ekspor terenkripsi terpisah sebelum transaksi untuk perlindungan di luar jendela/akun Cloudflare.
-- [ ] Ekspor D1 ke lokasi terenkripsi di luar repositori dan batasi akses. Buat salinan terpisah untuk bukti ImageKit jika kebijakan layanan memerlukannya.
-- [x] Latihan pemulihan lokal SQLite lulus untuk skema kosong; ini tidak membuktikan pemulihan D1 cloud atau file ImageKit. D1 staging cloud tidak dibuat karena pemilik memilih tanpa resource tambahan berpotensi biaya. Sebelum transaksi nyata, pastikan ekspor D1 produksi dapat dibuat dan simpan salinan terenkripsi; jadwalkan latihan cloud terpisah bila kelak ada lingkungan gratis yang sesuai.
+- [ ] Tentukan lokasi backup terenkripsi di luar repositori dan siapa yang boleh mengaksesnya.
+- [ ] Buat ekspor D1 production dan simpan di lokasi terenkripsi; jangan masukkan dump ke Git.
+- [ ] Periksa ekspor dapat dibaca/dipulihkan tanpa menimpa database production.
+- [ ] Tentukan apakah kebijakan ImageKit mengharuskan backup bukti terpisah dan bagaimana aksesnya dibatasi.
+- [x] Latihan pemulihan lokal SQLite lulus untuk skema kosong; ini tidak membuktikan pemulihan D1 cloud atau file ImageKit. D1 staging cloud tidak dibuat karena pemilik memilih tanpa resource tambahan berpotensi biaya. Jadwalkan latihan cloud terpisah bila kelak ada lingkungan gratis yang sesuai.
 
-### E.2 Akses pemulihan — Belum (0/1)
+### E.2 Akses pemulihan — Belum (0/5)
 
-- [ ] Catat kontak pemulihan akun GitHub, Cloudflare, ImageKit, RajaOngkir, dan Firebase di password manager organisasi, bukan di repositori.
+- [ ] Pastikan email/nomor pemulihan akun GitHub masih dapat diakses.
+- [ ] Pastikan kontak dan metode pemulihan akun Cloudflare tersedia.
+- [ ] Pastikan kontak pemulihan ImageKit dan RajaOngkir tersedia.
+- [ ] Pastikan kontak serta pemulihan proyek Firebase tersedia.
+- [ ] Simpan informasi pemulihan di password manager, bukan di repositori; jangan menaruh password atau recovery code di checklist.
 
 ### E.3 Prosedur rollback — Selesai (1/1)
 
 - [x] Prosedur rollback Worker dan GitHub Pages beserta versi/run target terdahulu sudah dicatat di [panduan operasional](OPERATIONS.md). Prosedur melarang force-push dan menjelaskan bahwa rollback Worker tidak memulihkan D1.
 
-### E.4 Arsip artifact dan uji bertahap — Berjalan (1/2)
+### E.4 Arsip artifact dan uji bertahap — Berjalan (1/5)
 
 - [x] Artifact Pages workflow run `42576560129` sudah disimpan di arsip lokal luar repo `%LOCALAPPDATA%\Ruma\release-archive\github-pages-demo-60b5e6f.zip` dan checksum SHA-256 diverifikasi; jangan masukkan `dist/` atau dump data ke Git.
-- [ ] Rilis dahulu ke kelompok kecil setelah transaksi siap; pantau pesanan gagal, ongkir, upload bukti, notifikasi, dan log selama periode awal.
+- [ ] Tentukan kelompok uji kecil dan kriteria berhenti sebelum menerima pesanan uji.
+- [ ] Jalankan uji order end-to-end setelah katalog, pembayaran, dan ImageKit siap.
+- [ ] Pantau pesanan gagal, tarif ongkir, dan proses pengiriman selama periode awal.
+- [ ] Pantau upload bukti, notifikasi, dan error Worker tanpa menyimpan data pelanggan di log.
+- [ ] Catat masalah uji, perbaiki, lalu tinjau hasil sebelum membuka toko untuk umum.
 
 ## Syarat lulus
 
