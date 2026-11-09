@@ -121,7 +121,7 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 - [ ] Di Dashboard ImageKit, periksa apakah akun aktif dan masih pada paket yang diinginkan.
 - [ ] Di Dashboard ImageKit > Developer > API Keys, periksa status private key tanpa menyalin nilainya ke chat, Git, atau log.
 - [ ] Setelah penyebab HTTP 403 diperbaiki, minta pemilik menjalankan validasi API daftar berkas yang aman sebelum alur upload bukti dipakai. Jangan mengulang request validasi tanpa persetujuan pemilik.
-- [x] Tinjauan agregat Workers Observability untuk 7 hari sampai 9 November 2026: tidak ada event berisi `$metadata.error` atau respons 5xx; hasil mengelompokkan 11 status 200, 10 status 404, dan dua log `d1_all OK` tanpa status HTTP. Tidak ada teks log pesanan/bukti yang diambil. Tinjauan agregat tidak menggantikan pemantauan rutin.
+- [x] Tinjauan agregat Workers Observability untuk 7 hari sampai 9 November 2026 (sampling log 10%): pada sampel yang ditinjau, tidak ditemukan event berisi `$metadata.error` atau respons 5xx; hasil mengelompokkan 11 status 200, 10 status 404, dan dua log `d1_all OK` tanpa status HTTP. Tidak ada teks log pesanan/bukti yang diambil. Ini bukan hitungan seluruh traffic dan tidak menggantikan pemantauan rutin.
 - [x] Ringkasan issue Cloudflare Observability untuk Worker diperiksa pada 9 November 2026: tidak ada issue aktif atau occurrence; ringkasan ini bukan pemeriksaan event log lengkap.
 - [x] Audit kode logging memastikan bukti pembayaran, alamat, nomor telepon, token, kredensial, dan isi data pesanan tidak ditulis ke log; error dibatasi ke operasi/jenis error, status upstream, atau request ID.
 
