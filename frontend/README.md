@@ -57,7 +57,17 @@ Jalankan Worker lokal dan isi D1 demo sesuai [panduan backend](../backend/README
 
 ```sh
 node frontend/src/scripts/build-site.mjs
+node frontend/src/scripts/check-release.mjs --preview
 ```
+
+Untuk pratinjau interaktif di browser, biarkan Worker lokal tetap berjalan di terminal pertama. Build situs di terminal kedua, lalu jalankan server Pages lokal dari folder `backend/` di terminal ketiga:
+
+```powershell
+cd backend
+npx wrangler pages dev ../frontend/dist --ip 127.0.0.1 --port 5500
+```
+
+Buka `http://localhost:5500`. Origin ini sudah diizinkan oleh konfigurasi lokal Worker untuk permintaan ongkir, checkout, dan pelacakan. Hentikan server dengan `Ctrl+C`. Pratinjau memakai D1 lokal dan tetap `noindex`; jangan gunakan seed demo pada D1 cloud.
 
 Build memakai `http://127.0.0.1:8787/api/catalog` secara default. Untuk pipeline publik, isi `CATALOG_API_URL` dengan endpoint HTTPS Worker yang terhubung ke D1 berisi katalog final. Build berhenti dengan pesan yang jelas bila API tidak dapat dijangkau atau mengembalikan data yang tidak sesuai.
 
