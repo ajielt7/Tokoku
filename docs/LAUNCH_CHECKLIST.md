@@ -36,10 +36,10 @@ Tahap 12 dibagi menjadi 5 bagian utama dan 18 subbagian. Status dihitung dari ko
 | D.1 | Indeks dan metadata | 2/7 | Berjalan |
 | D.2 | Konten produk dan aksesibilitas | 0/5 | Belum mulai |
 | D.3 | Performa dan Search Console | 4/7 | Berjalan |
-| E.1 | Backup dan pemulihan | 2/5 | Berjalan |
+| E.1 | Backup dan pemulihan | 2/6 | Berjalan |
 | E.2 | Akses pemulihan | 0/5 | Belum mulai |
 | E.3 | Prosedur rollback | 1/1 | Selesai |
-| E.4 | Arsip artifact dan uji bertahap | 2/5 | Berjalan |
+| E.4 | Arsip artifact dan uji bertahap | 2/6 | Berjalan |
 
 **Yang sudah selesai sepenuhnya:** A.1, A.3, B.1, B.2, B.3, dan E.3. **Bagian yang sedang dikerjakan:** A.2, B.4, C.2, D.1, D.3, E.1, dan E.4. Sisanya menunggu data toko atau pengujian yang belum tersedia. Rincian kotak tugas tetap ada di bagian A–E di bawah.
 
@@ -198,7 +198,7 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 ## E. Backup, pemulihan, dan peluncuran bertahap
 
-### E.1 Backup dan pemulihan — Berjalan (2/5)
+### E.1 Backup dan pemulihan — Berjalan (2/6)
 
 - [x] D1 produksi memakai versi `production`; API mengembalikan bookmark Time Travel. Fitur aktif otomatis dengan retensi 30 hari dan tanpa biaya tambahan. Tetap siapkan ekspor terenkripsi terpisah sebelum transaksi untuk perlindungan di luar jendela/akun Cloudflare.
 - [ ] Tentukan lokasi backup terenkripsi di luar repositori dan siapa yang boleh mengaksesnya.
@@ -219,7 +219,7 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 - [x] Prosedur rollback Worker dan GitHub Pages beserta versi/run target terdahulu sudah dicatat di [panduan operasional](OPERATIONS.md). Prosedur melarang force-push dan menjelaskan bahwa rollback Worker tidak memulihkan D1.
 
-### E.4 Arsip artifact dan uji bertahap — Berjalan (2/5)
+### E.4 Arsip artifact dan uji bertahap — Berjalan (2/6)
 
 - [x] Artifact Pages workflow run `42576560129` sudah disimpan di arsip lokal luar repo `%LOCALAPPDATA%\Ruma\release-archive\github-pages-demo-60b5e6f.zip` dan checksum SHA-256 diverifikasi; jangan masukkan `dist/` atau dump data ke Git.
 - [x] Rencana uji menetapkan pemilik dan maksimal dua penguji tepercaya, cakupan satu order bernilai rendah setelah persetujuan biaya, syarat lulus, serta kondisi berhenti. Rencana ada di [panduan operasional](OPERATIONS.md); transaksinya belum dijalankan.
