@@ -14,7 +14,7 @@ Gunakan bobot tetap per bagian agar laporan progres konsisten. Nilai tiap bagian
 | D. SEO dan mutu halaman | 20% |
 | E. Backup, pemulihan, dan peluncuran | 15% |
 
-**Progres berbobot per 9 November 2026: 46,5%** (A 6/9, B 12/15, C 1/27, D 12/21, E 5/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
+**Progres berbobot per 9 November 2026: 46,9%** (A 6/9, B 12/15, C 1/27, D 13/22, E 5/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
 
 ### Rincian Tahap 12
 
@@ -33,7 +33,7 @@ Tahap 12 dibagi menjadi 5 bagian utama dan 18 subbagian. Setiap baris merangkum 
 | C.2 | Ongkir dan pembayaran | Cara transaksi dasar sudah didokumentasikan | Pastikan key RajaOngkir aktif, tarif nyata cocok, rekening dan instruksi pembayaran final, lalu uji hitung total | 1/8 | Berjalan |
 | C.3 | Identitas toko dan kebijakan | Belum ada data final | Tetapkan nama/kontak toko, privasi, retur, pembatalan, dan syarat transaksi | 0/6 | Belum mulai |
 | C.4 | Pengiriman dan produksi | Belum disiapkan untuk operasional pelanggan | Tetapkan asal/kurir, proses packing, stok, SLA, dan penanganan pesanan bermasalah | 0/6 | Belum mulai |
-| D.1 | Indeks dan metadata | SITE_URL HTTPS benar; preview lulus pemeriksaan struktur; halaman privat noindex; robots.txt tidak menghalangi crawler; Product/Offer schema tersedia di kode | Setelah konten final, cek canonical/metadata halaman publik, pastikan URL privat tak masuk sitemap rilis, lalu validasi Rich Results | 5/8 | Berjalan |
+| D.1 | Indeks dan metadata | SITE_URL HTTPS benar; preview lulus pemeriksaan; 9 rute live punya title, description, dan H1; halaman privat noindex; robots.txt membolehkan crawler; Product/Offer schema tersedia di kode | Setelah konten final, cek canonical dan konten halaman publik, pastikan URL privat tak masuk sitemap rilis, lalu validasi Rich Results | 6/9 | Berjalan |
 | D.2 | Konten dan aksesibilitas | Audit tampilan ponsel, urutan Tab, kontras, label, dan live region lulus pada preview | Masukkan konten/foto final dan uji pembelian keyboard-only | 3/6 | Berjalan |
 | D.3 | Performa dan Search Console | URL demo dan 404 diperiksa; audit Lighthouse lokal dan Pages selesai | Tinjau CWV pengguna nyata, verifikasi Search Console, lalu kirim sitemap | 4/7 | Berjalan |
 | E.1 | Backup dan pemulihan | Time Travel D1 aktif; pemulihan SQLite lokal lulus | Tentukan lokasi terenkripsi, buat dan cek ekspor D1; putuskan perlindungan file ImageKit | 2/6 | Berjalan |
@@ -168,12 +168,13 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 ## D. SEO dan mutu halaman
 
-### D.1 Indeks dan metadata — Berjalan (5/8)
+### D.1 Indeks dan metadata — Berjalan (6/9)
 
 - [x] `SITE_URL` sudah memakai HTTPS `https://ajielt7.github.io/Tokoku`; pemeriksaan Pages pada 9 November 2026 menemukan sembilan rute merespons HTTP 200, semuanya `noindex,nofollow`, dan belum ada canonical publik. Ini sesuai mode demo; canonical menunggu katalog final.
 - [ ] Bangun ulang situs dari katalog final di D1 production.
 - [x] Jalankan `node frontend/src/scripts/check-release.mjs --preview`; pemeriksaan lulus pada 9 November 2026 (9 HTML, 6 halaman publik). Ini hanya memvalidasi pratinjau `noindex`; build indeks publik masih menunggu katalog dan informasi toko final.
-- [ ] Periksa setiap halaman publik memiliki satu H1, title, description, canonical, tautan lokal valid, dan tidak berisi konten demo.
+- [x] Periksa struktur halaman preview: sembilan rute live memiliki tepat satu H1, title, dan description; pemeriksaan lokal memastikan tautan internal valid. GET Pages pada 9 November 2026 juga tidak menemukan gambar tanpa atribut alt.
+- [ ] Pada rilis final, periksa setiap halaman publik memiliki canonical yang benar dan tidak berisi konten demo.
 - [x] Pastikan keranjang, checkout, dan lacak pesanan memiliki `noindex`. Build preview dan pemeriksaan `check-release.mjs --preview` lulus pada 9 November 2026; keluaran saat ini mencakup ketiga halaman tersebut.
 - [x] Pastikan `robots.txt` preview membolehkan crawler membaca halaman noindex dan tidak menunjuk sitemap demo. Pemeriksaan `check-release.mjs --preview` lulus pada 9 November 2026.
 - [ ] Pastikan keranjang, checkout, dan lacak pesanan tidak masuk sitemap rilis; jangan memblokir crawler di `robots.txt` untuk URL yang perlu membaca arahan noindex.
