@@ -14,7 +14,7 @@ Gunakan bobot tetap per bagian agar laporan progres konsisten. Nilai tiap bagian
 | D. SEO dan mutu halaman | 20% |
 | E. Backup, pemulihan, dan peluncuran | 15% |
 
-**Progres berbobot per 9 November 2026: 37.9%** (A 6/9, B 11/15, C 1/27, D 5/19, E 4/18) (A 6/9, B 11/15, C 1/27, D 4/18, E 4/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
+**Progres berbobot per 9 November 2026: 38,9%** (A 6/9, B 11/15, C 1/27, D 6/19, E 4/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
 
 ## Status yang sudah terlihat di workspace
 
@@ -159,12 +159,12 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 - [ ] Selesaikan navigasi dan alur belanja memakai keyboard saja.
 - [ ] Periksa kontras teks dan kejelasan pesan error/formulir.
 
-### D.3 Performa dan Search Console — Berjalan (3/7)
+### D.3 Performa dan Search Console — Berjalan (4/7)
 
 - [x] Buka seluruh URL yang ada pada deployment demo: beranda, checkout, keranjang, lacak pesanan, 2 kategori, dan 3 produk; semuanya merespons HTTP 200.
 - [x] URL acak merespons 404; subpath proyek `/Tokoku/` berfungsi pada halaman-halaman tersebut. Sitemap merespons 404 sesuai status demo `noindex` dan katalog demo tidak dikirim sebagai sitemap publik.
 - [x] Audit Lighthouse seluler pada build lokal setelah perbaikan: beranda mendapat skor performance/accessibility/best-practices 100/100/100 (LCP 1,5 dtk, CLS 0,004, TBT 0); halaman produk, kategori, keranjang, checkout, dan lacak pesanan juga mendapat accessibility/best-practices 100/100. Laporan tersimpan di luar repo pada `%LOCALAPPDATA%\Ruma\lighthouse-stage12-local.json` dan laporan halaman terkait.
-- [ ] Ulangi Lighthouse pada situs publik setelah perubahan ini diterbitkan dan catat skor/temuan baru.
+- [x] Audit ulang Lighthouse seluler pada Pages publik setelah perbaikan terbit: performance 98, accessibility 100, best-practices 100; LCP 1,9 dtk, CLS 0, TBT 0 ms, tanpa mismatch label atau error konsol. Temuan untuk optimasi berikutnya: CSS render-blocking diperkirakan 650 ms dan cache aset statis berpotensi menghemat sekitar 11 KiB saat kunjungan ulang. Laporan disimpan di luar repo pada `%LOCALAPPDATA%\Ruma\lighthouse-stage12-production.json`.
 - [ ] Tinjau Core Web Vitals setelah tersedia data pengguna nyata.
 - [ ] Verifikasi properti situs di Google Search Console dan inspeksi beberapa URL penting.
 - [ ] Kirim sitemap ke Search Console dan pantau status pembacaan. Pengiriman sitemap membantu penemuan URL tetapi tidak menjamin indeks atau peringkat.
