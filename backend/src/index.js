@@ -1556,6 +1556,9 @@ export default {
     }
 
     if (request.method === "GET" && pathname === "/api/catalog") {
+      const origin = getAllowedOrigin(request, env);
+      if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
+      const headers = corsHeaders(origin);
       try {
         const [categoryResult, productResult] = await Promise.all([
           env.DB.prepare(
@@ -1623,14 +1626,17 @@ export default {
             categories: categoryResult.results,
             products: [...productsBySlug.values()],
           },
-        });
+        }, 200, headers);
       } catch (error) {
         logDatabaseError("get_catalog", error);
-        return jsonResponse({ error: "internal_server_error" }, 500);
+        return jsonResponse({ error: "internal_server_error" }, 500, headers);
       }
     }
 
     if (request.method === "GET" && pathname === "/api/products") {
+      const origin = getAllowedOrigin(request, env);
+      if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
+      const headers = corsHeaders(origin);
       try {
         const { results } = await env.DB.prepare(
           `SELECT p.slug, p.name, p.description, p.price_amount, p.currency,
@@ -1643,15 +1649,18 @@ export default {
            LIMIT ?1`,
         ).bind(parseLimit(url)).all();
 
-        return jsonResponse({ data: results });
+        return jsonResponse({ data: results }, 200, headers);
       } catch (error) {
         logDatabaseError("list_products", error);
-        return jsonResponse({ error: "internal_server_error" }, 500);
+        return jsonResponse({ error: "internal_server_error" }, 500, headers);
       }
     }
 
     const productMatch = pathname.match(/^\/api\/products\/([a-z0-9-]+)$/);
     if (request.method === "GET" && productMatch) {
+      const origin = getAllowedOrigin(request, env);
+      if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
+      const headers = corsHeaders(origin);
       try {
         const product = await env.DB.prepare(
           `SELECT p.slug, p.name, p.description, p.price_amount, p.currency,
@@ -1663,11 +1672,11 @@ export default {
            LIMIT 1`,
         ).bind(productMatch[1]).first();
 
-        if (!product) return jsonResponse({ error: "not_found" }, 404);
-        return jsonResponse({ data: product });
+        if (!product) return jsonResponse({ error: "not_found" }, 404, headers);
+        return jsonResponse({ data: product }, 200, headers);
       } catch (error) {
         logDatabaseError("get_product", error);
-        return jsonResponse({ error: "internal_server_error" }, 500);
+        return jsonResponse({ error: "internal_server_error" }, 500, headers);
       }
     }
 

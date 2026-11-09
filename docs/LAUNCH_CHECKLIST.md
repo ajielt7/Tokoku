@@ -12,6 +12,7 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 - [x] Pemindaian statis frontend/backend tidak menemukan `innerHTML`, `outerHTML`, `document.write`, `eval`, atau `new Function`; keranjang memakai node DOM dan `textContent` untuk nilai katalog.
 - [x] Environment produksi Wrangler mewajibkan `ADMIN_TOKEN`, `RAJAONGKIR_API_KEY`, dan `IMAGEKIT_PRIVATE_KEY` sebelum deploy berhasil.
 - [x] Request berbiaya dan operasi tulis diberi rate limit Worker; production menolak request jika binding limiter hilang.
+- [x] Endpoint baca katalog/produk mengirim CORS untuk origin Pages yang diizinkan dan menolak origin asing; sudah diverifikasi dengan konfigurasi production secara lokal.
 - [x] Build Pages memiliki workflow yang menolak rilis bila variabel produksi dan persetujuan indeks belum ada.
 - [x] D1 produksi `ruma-store` sudah dibuat di APAC, ID terpasang pada kedua binding Wrangler, dan migrasi 0001–0008 tercatat di `d1_migrations`; belum ada seed demo atau data toko.
 - [x] URL publik default Pages dipilih: `https://ajielt7.github.io/Tokoku/`; origin frontend production sudah diatur ke `https://ajielt7.github.io`. URL API target sudah disiapkan, tetapi Worker belum dideploy.
