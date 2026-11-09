@@ -47,6 +47,7 @@ Tahap 12 dibagi menjadi 5 bagian utama dan 18 subbagian. Setiap baris merangkum 
 
 - [x] SEO situs masih nonaktif (`indexable: false`, `contentReady: false`). Build belum bisa menerbitkan canonical atau sitemap publik.
 - [x] Pratinjau lokal dibangun dari 2 kategori dan 3 produk contoh; halaman berstatus `noindex,nofollow`, menampilkan catatan data contoh, dan `frontend/dist/` diabaikan Git. D1 cloud tetap kosong setelah seed lokal.
+- [x] Artefak lokal `frontend/dist/` diselaraskan dari API sementara port `8789` ke port default `8787`. Pemeriksaan manual menemukan 9 halaman HTML, semuanya tetap `noindex,nofollow`, tanpa referensi `8789`. `node frontend/src/scripts/check-release.mjs --preview` lulus: 9 halaman HTML dan 6 halaman publik; build berikutnya mengambil default `8787` dari `src/data/site.json`.
 - [x] Alur lokal diverifikasi ulang melalui API dan server Pages: API menyediakan 2 kategori/3 produk, halaman beranda dan produk tampil dengan `noindex`, dan konten contoh terlihat. Saat `CONTENT_READY=true` dicoba pada data tersebut, build ditolak karena foto HTTPS/alt belum ada dan berkas pratinjau sebelumnya tidak berubah.
 - [x] Delapan migrasi SQL lulus diterapkan berurutan pada SQLite sementara. D1 produksi sudah dimigrasikan; latihan ekspor/pemulihan lokal SQLite juga lulus, tetapi bukan pemulihan D1 cloud.
 - [x] Checkout backend menghitung ulang harga/ongkir dan memerlukan API; konfigurasi lokal memakai URL localhost.

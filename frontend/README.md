@@ -51,7 +51,8 @@ frontend/
 
 Sumber halaman ada di `src/templates/`, konfigurasi publikasi ada di `src/data/site.json`, stylesheet di `src/assets/css/site.css`, dan `src/scripts/build-site.mjs` mengambil katalog dari endpoint `/api/catalog` Worker sebelum membuat halaman serta file SEO di `dist/`. Database menjadi sumber data produk; HTML yang dibangun tetap memuat konten statis sehingga dapat dibaca tanpa JavaScript browser.
 
-Konfigurasi awal memakai `indexable: false` dan `contentReady: false`. Build memberi halaman `noindex,nofollow`; `robots.txt` tetap mengizinkan perayapan agar mesin pencari dapat membaca arahan `noindex`. Sebelum peluncuran, isi `siteUrl` dengan URL HTTPS situs (termasuk subpath repositori jika memakai GitHub Pages), pastikan data katalog final, lalu ubah kedua nilai kesiapan menjadi `true`. Build publik akan menambahkan canonical, Open Graph, BreadcrumbList, `robots.txt` yang mengizinkan perayapan dan mengumumkan sitemap, serta `sitemap.xml` dari URL halaman yang dibuat. Build menolak aktivasi indeks jika URL publik atau konfirmasi kesiapan konten belum diisi.
+
+> Wrangler untuk menjalankan Worker lokal memerlukan Node.js 22 atau lebih baru (lihat `backend/package.json`). Node.js ini hanya prasyarat alat backend; frontend yang dikirim ke browser tetap HTML, CSS, dan vanilla JavaScript.
 
 > Wrangler untuk menjalankan Worker lokal memerlukan Node.js 22 atau lebih baru (lihat `backend/package.json`). Node.js ini hanya prasyarat alat backend; frontend yang dikirim ke browser tetap HTML, CSS, dan vanilla JavaScript.
 
