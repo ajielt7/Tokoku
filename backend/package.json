@@ -1,0 +1,17 @@
+{
+  "name": "ruma-api",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "db:migrate:local": "wrangler d1 migrations apply ruma-store --local",
+    "db:migrations:local": "wrangler d1 migrations list ruma-store --local",
+    "db:seed:demo:local": "wrangler d1 execute ruma-store --local --file=seeds/demo.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.158.0"
+  }
+}

@@ -1,0 +1,8 @@
+# Salin sebagai .dev.vars lalu ganti nilainya. Jangan isi file ini dengan kredensial asli.
+RAJAONGKIR_API_KEY=isi_api_key_rajaongkir
+IMAGEKIT_PRIVATE_KEY=isi_private_key_imagekit
+IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/isi_imagekit_id
+ADMIN_TOKEN=ganti_dengan_token_acak_minimal_32_karakter
+FCM_PROJECT_ID=isi_project_id_firebase
+FCM_SERVICE_ACCOUNT_EMAIL=service-account@project-id.iam.gserviceaccount.com
+FCM_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nisi_private_key_service_account\n-----END PRIVATE KEY-----\n"

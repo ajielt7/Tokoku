@@ -1,0 +1,63 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ruma-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-08",
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.05
+    }
+  },
+  "vars": {
+    "APP_ENV": "local",
+    "ALLOWED_ORIGINS": "http://localhost:5500,http://127.0.0.1:5500",
+    "RAJAONGKIR_ORIGIN_ID": "5052"
+  },
+  "ratelimits": [
+    { "name": "ORDER_RATE_LIMITER", "namespace_id": "781321041", "simple": { "limit": 10, "period": 60 } },
+    { "name": "STATUS_RATE_LIMITER", "namespace_id": "781321042", "simple": { "limit": 20, "period": 60 } },
+    { "name": "SHIPPING_RATE_LIMITER", "namespace_id": "781321043", "simple": { "limit": 30, "period": 60 } },
+    { "name": "ADMIN_RATE_LIMITER", "namespace_id": "781321044", "simple": { "limit": 120, "period": 60 } }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ruma-store",
+      "database_id": "909aeaf3-f3bc-4892-a2ce-e2dcdc4092bf",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "env": {
+    "production": {
+      "name": "ruma-api-production",
+      "vars": {
+        "APP_ENV": "production",
+        "ALLOWED_ORIGINS": "https://ajielt7.github.io",
+        "RAJAONGKIR_ORIGIN_ID": "5052"
+      },
+      "secrets": {
+        "required": ["ADMIN_TOKEN", "RAJAONGKIR_API_KEY", "IMAGEKIT_PRIVATE_KEY"]
+      },
+      "ratelimits": [
+        { "name": "ORDER_RATE_LIMITER", "namespace_id": "781321051", "simple": { "limit": 10, "period": 60 } },
+        { "name": "STATUS_RATE_LIMITER", "namespace_id": "781321052", "simple": { "limit": 20, "period": 60 } },
+        { "name": "SHIPPING_RATE_LIMITER", "namespace_id": "781321053", "simple": { "limit": 30, "period": 60 } },
+        { "name": "ADMIN_RATE_LIMITER", "namespace_id": "781321054", "simple": { "limit": 120, "period": 60 } }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "ruma-store",
+          "database_id": "909aeaf3-f3bc-4892-a2ce-e2dcdc4092bf",
+          "migrations_dir": "migrations"
+        }
+      ]
+    }
+  }
+}

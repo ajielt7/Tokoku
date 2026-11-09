@@ -1,0 +1,8 @@
+{
+  "name": "Ruma",
+  "siteUrl": "https://ajielt7.github.io/Tokoku",
+  "apiBaseUrl": "http://127.0.0.1:8787",
+  "indexable": false,
+  "contentReady": false,
+  "language": "id-ID"
+}

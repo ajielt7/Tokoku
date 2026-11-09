@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="{{PRODUCT_DESCRIPTION}}">
+    <meta name="theme-color" content="#006b3c">
+    <title>{{PRODUCT_NAME}} Custom | Ruma</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ROOT_PREFIX}}assets/css/site.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#konten-utama">Lewati ke konten utama</a>
+    {{PREVIEW_BANNER}}
+
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="{{ROOT_PREFIX}}index.html" aria-label="Ruma, beranda">
+          <span class="brand-mark" aria-hidden="true">R</span><span>ruma<span class="brand-period">.</span></span>
+        </a>
+        <nav class="main-nav" aria-label="Navigasi utama">
+          <a href="{{ROOT_PREFIX}}index.html#produk">Produk</a>
+          <a href="{{ROOT_PREFIX}}index.html#cara-pesan">Cara pesan</a>
+          <a href="{{ROOT_PREFIX}}index.html#tentang">Tentang</a>
+        </nav>
+        <div class="header-actions"><a class="header-cart" href="{{ROOT_PREFIX}}keranjang/">Keranjang <span data-cart-count>0</span></a><a class="header-cta" href="{{ROOT_PREFIX}}index.html#produk">Lihat produk</a></div>
+      </div>
+    </header>
+
+    <main id="konten-utama" class="product-detail-page">
+      <div class="container">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <ol>
+            <li><a href="{{ROOT_PREFIX}}index.html">Beranda</a></li>
+            <li><a href="{{ROOT_PREFIX}}kategori/{{CATEGORY_SLUG}}/">{{CATEGORY_NAME}}</a></li>
+            <li aria-current="page">{{PRODUCT_NAME}}</li>
+          </ol>
+        </nav>
+
+        <article class="product-detail">
+          <figure class="detail-visual">
+            {{PRODUCT_MEDIA}}
+            {{PRODUCT_MEDIA_CAPTION}}
+          </figure>
+
+          <div class="detail-copy">
+            <p class="eyebrow">Produk custom</p>
+            <h1>{{PRODUCT_NAME}}</h1>
+            <p class="detail-description">{{PRODUCT_DESCRIPTION}}</p>
+            {{DEMO_NOTE}}
+            <dl class="product-specs">
+              <div><dt>Ukuran</dt><dd>{{PRODUCT_SIZE}}</dd></div>
+              <div><dt>Bagian custom</dt><dd>{{PRODUCT_CUSTOMIZATION}}</dd></div>
+              <div><dt>Harga</dt><dd>{{PRODUCT_PRICE}}</dd></div>
+            </dl>
+            <section class="custom-preview" aria-labelledby="custom-preview-title">
+              <h2 id="custom-preview-title">Pratinjau desain</h2>
+              <p>Contoh posisi teks, belum termasuk detail bahan dan proses mesin.</p>
+              <svg data-custom-preview viewBox="0 0 480 280" role="img" aria-label="Pratinjau personalisasi produk">
+                <rect x="18" y="18" width="444" height="244" rx="8" fill="#263b36" stroke="#d8c8a7" stroke-width="8"></rect>
+                <text x="240" y="151" text-anchor="middle" fill="#fffaf0" font-family="Arial, sans-serif" font-size="70" font-weight="700" data-preview-line="0">123</text>
+                <text x="240" y="205" text-anchor="middle" fill="#e5d5b5" font-family="Arial, sans-serif" font-size="25" data-preview-line="1"></text>
+                <text x="240" y="236" text-anchor="middle" fill="#e5d5b5" font-family="Arial, sans-serif" font-size="18" data-preview-line="2"></text>
+              </svg>
+            </section>
+            <form class="cart-add-form" data-product-form data-product-slug="{{PRODUCT_SLUG}}" data-product-name="{{PRODUCT_NAME}}" data-product-price="{{PRODUCT_PRICE_AMOUNT}}">
+              <fieldset>
+                <legend>Personalisasi</legend>
+                {{CUSTOM_FIELDS}}
+                <label class="form-field">Jumlah<input name="quantity" type="number" value="1" min="1" max="10" required></label>
+              </fieldset>
+              <button class="button button-primary" type="submit">Tambah ke keranjang</button>
+              <p class="form-message" data-form-message aria-live="polite"></p>
+            </form>
+            <a class="text-link" href="{{ROOT_PREFIX}}kategori/{{CATEGORY_SLUG}}/">Lihat kategori</a>
+          </div>
+        </article>
+
+        <section class="related-products detail-related" aria-labelledby="related-title">
+          <div class="related-heading"><h2 id="related-title">Desain lainnya</h2><a class="text-link" href="{{ROOT_PREFIX}}index.html#produk">Semua produk <span aria-hidden="true">→</span></a></div>
+          <div class="product-grid">{{RELATED_PRODUCTS}}</div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <a class="brand footer-brand" href="{{ROOT_PREFIX}}index.html"><span class="brand-mark" aria-hidden="true">R</span><span>ruma<span class="brand-period">.</span></span></a>
+        <p>Penanda rumah custom.</p>
+        <small>{{FOOTER_COPY}}</small>
+      </div>
+    </footer>
+    {{CUSTOM_PREVIEW_SCRIPT}}
+    <script src="{{ROOT_PREFIX}}assets/js/cart.js" data-api-base="{{API_BASE_URL}}" defer></script>
+  </body>
+</html>

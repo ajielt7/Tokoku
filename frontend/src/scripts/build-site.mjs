@@ -1,0 +1,351 @@
+import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
+const frontendDirectory = path.resolve(scriptDirectory, "../..");
+const sourceDirectory = path.join(frontendDirectory, "src");
+const outputDirectory = path.join(frontendDirectory, "dist");
+const templateDirectory = path.join(sourceDirectory, "templates");
+const siteConfig = JSON.parse(await readFile(path.join(sourceDirectory, "data", "site.json"), "utf8"));
+function environmentBoolean(name, fallback) {
+  const value = process.env[name];
+  if (value == null || value === "") return fallback;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  throw new Error(`${name} harus bernilai true atau false.`);
+}
+const site = {
+  ...siteConfig,
+  siteUrl: (process.env.SITE_URL || siteConfig.siteUrl).trim().replace(/\/$/, ""),
+  apiBaseUrl: (process.env.PUBLIC_API_BASE_URL || siteConfig.apiBaseUrl).trim(),
+  indexable: environmentBoolean("SEO_INDEXABLE", siteConfig.indexable),
+  contentReady: environmentBoolean("CONTENT_READY", siteConfig.contentReady),
+};
+const catalogApiUrl = process.env.CATALOG_API_URL || "http://127.0.0.1:8787/api/catalog";
+const apiBaseUrl = (site.apiBaseUrl || "http://127.0.0.1:8787").replace(/\/$/, "");
+const parsedApiBaseUrl = new URL(apiBaseUrl);
+if (!["http:", "https:"].includes(parsedApiBaseUrl.protocol)) throw new Error("apiBaseUrl harus memakai HTTP atau HTTPS.");
+if (parsedApiBaseUrl.username || parsedApiBaseUrl.password || parsedApiBaseUrl.search || parsedApiBaseUrl.hash) {
+  throw new Error("apiBaseUrl tidak boleh berisi kredensial, query, atau fragment.");
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character]);
+}
+
+function replaceTokens(template, values) {
+  const rendered = template.replace(/{{([A-Z_]+)}}/g, (_, key) => {
+    if (!(key in values)) throw new Error(`Data template tidak tersedia: ${key}`);
+    return values[key];
+  });
+  if (/{{[A-Z_]+}}/.test(rendered)) throw new Error("Masih ada token template yang belum terisi.");
+  return rendered;
+}
+
+function rootPrefix(depth) {
+  return "../".repeat(depth);
+}
+
+function absoluteUrl(pathname) {
+  return `${site.siteUrl.replace(/\/$/, "")}/${pathname.replace(/^\//, "")}`;
+}
+
+function addSeo(html, { title, description, pathname, breadcrumbs }) {
+  const robots = site.indexable ? "index,follow" : "noindex,nofollow";
+  const tags = [`<meta name="robots" content="${robots}">`];
+  if (site.indexable && site.siteUrl) {
+    const canonical = absoluteUrl(pathname);
+    tags.push(`<link rel="canonical" href="${escapeHtml(canonical)}">`);
+    tags.push('<meta property="og:type" content="website">');
+    tags.push(`<meta property="og:site_name" content="${escapeHtml(site.name)}">`);
+    tags.push(`<meta property="og:title" content="${escapeHtml(title)}">`);
+    tags.push(`<meta property="og:description" content="${escapeHtml(description)}">`);
+    tags.push(`<meta property="og:url" content="${escapeHtml(canonical)}">`);
+    tags.push(`<meta property="og:locale" content="${escapeHtml(site.language)}">`);
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: breadcrumbs.map((item, index) => ({
+        "@type": "ListItem", position: index + 1, name: item.name, item: absoluteUrl(item.path),
+      })),
+    };
+    tags.push(`<script type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>`);
+  }
+  return html.replace("</head>", `    ${tags.join("\n    ")}\n  </head>`);
+}
+
+function addNoIndex(html) {
+  return html.replace("</head>", '    <meta name="robots" content="noindex,nofollow">\n  </head>');
+}
+
+function formatPrice(amount) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function imageUrl(product) {
+  if (!product.image_url) return null;
+  try {
+    const parsed = new URL(product.image_url);
+    return parsed.protocol === "https:" ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function productMedia(product, className = "") {
+  const image = imageUrl(product);
+  const visualClass = product.category === "plang-nama" ? "visual-sand" : "visual-sage";
+  const content = image
+    ? `<img class="product-photo" src="${escapeHtml(image)}" alt="${escapeHtml(product.image_alt || product.name)}" width="800" height="600" loading="lazy">`
+    : '<span class="product-image-placeholder" aria-hidden="true">Foto produk</span>';
+  return `<a class="product-visual ${visualClass} ${className}" href="${product.link}" aria-label="Lihat ${escapeHtml(product.name)}">
+    ${content}
+    <span class="product-tag">${escapeHtml(product.category_name)}</span>
+    <span class="visual-caption">${escapeHtml(product.fixed_size || "Detail produk")}</span>
+  </a>`;
+}
+
+function productCard(product, prefix) {
+  const link = `${prefix}produk/${escapeHtml(product.slug)}/`;
+  const productForMedia = { ...product, link };
+  return `<article class="product-card">
+    ${productMedia(productForMedia)}
+    <div class="product-info"><div><h3><a href="${link}">${escapeHtml(product.name)}</a></h3><p>${escapeHtml(product.customization || "Produk custom")} · ${formatPrice(product.price_amount)}</p></div><a class="round-link" href="${link}" aria-label="Lihat ${escapeHtml(product.name)}">↗</a></div>
+  </article>`;
+}
+
+function customizationFields(fields) {
+  if (!fields?.length) return '<p class="form-hint">Tidak ada bagian custom untuk produk ini.</p>';
+  return fields.map((field) => {
+    const key = escapeHtml(field.key);
+    const label = escapeHtml(field.label);
+    const length = Number.isInteger(field.max_length) && field.max_length > 0 ? ` maxlength="${field.max_length}"` : "";
+    const required = field.required ? " required" : "";
+    const numeric = field.type === "number";
+    const inputMode = numeric ? ' inputmode="numeric" pattern="[0-9]*"' : "";
+    return `<label class="form-field">${label}<input type="text" name="custom-${key}" data-custom-key="${key}" data-custom-label="${label}"${inputMode}${length}${required}></label>`;
+  }).join("\n");
+}
+
+async function copyAssetFiles(fromDirectory, toDirectory) {
+  let entries;
+  try {
+    entries = await readdir(fromDirectory, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === "ENOENT") return;
+    throw error;
+  }
+
+  for (const entry of entries) {
+    if (entry.name === ".gitkeep") continue;
+    const sourcePath = path.join(fromDirectory, entry.name);
+    const outputPath = path.join(toDirectory, entry.name);
+    if (entry.isDirectory()) {
+      await copyAssetFiles(sourcePath, outputPath);
+    } else if (entry.isFile()) {
+      await mkdir(toDirectory, { recursive: true });
+      await copyFile(sourcePath, outputPath);
+    }
+  }
+}
+
+async function loadCatalog() {
+  let response;
+  try {
+    response = await fetch(catalogApiUrl, { signal: AbortSignal.timeout(15000) });
+  } catch (error) {
+    throw new Error(`API katalog tidak dapat dijangkau (${catalogApiUrl}). Jalankan Worker lokal atau isi CATALOG_API_URL. ${error.message}`);
+  }
+  if (!response.ok) throw new Error(`API katalog mengembalikan HTTP ${response.status}.`);
+
+  const payload = await response.json();
+  const catalog = payload?.data;
+  if (!Array.isArray(catalog?.categories) || !Array.isArray(catalog?.products)) {
+    throw new Error("Format API katalog tidak valid; perlu data.categories dan data.products.");
+  }
+
+  const categorySlugs = new Set(catalog.categories.map((category) => category.slug));
+  const categories = catalog.categories.map((category) => {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(category.slug)) throw new Error(`Slug kategori tidak valid: ${category.slug}`);
+    return category;
+  });
+  const products = catalog.products.map((product) => {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(product.slug)) throw new Error(`Slug produk tidak valid: ${product.slug}`);
+    if (!categorySlugs.has(product.category)) throw new Error(`Kategori tidak ditemukan untuk produk ${product.slug}.`);
+    if (!Number.isSafeInteger(product.price_amount) || product.price_amount < 0) throw new Error(`Harga tidak valid untuk produk ${product.slug}.`);
+    if (product.currency !== "IDR") throw new Error(`Mata uang produk ${product.slug} bukan IDR.`);
+    return product;
+  });
+  return { categories, products };
+}
+
+let parsedSiteUrl = null;
+if (site.siteUrl) {
+  try { parsedSiteUrl = new URL(site.siteUrl); } catch { throw new Error("siteUrl harus berupa URL HTTPS yang valid."); }
+}
+if (site.indexable && (!parsedSiteUrl || parsedSiteUrl.protocol !== "https:" || parsedSiteUrl.username || parsedSiteUrl.password || parsedSiteUrl.search || parsedSiteUrl.hash || !site.contentReady)) {
+  throw new Error("SEO aktif memerlukan siteUrl HTTPS dan contentReady: true setelah data katalog final di src/data/site.json.");
+}
+if (site.contentReady && parsedApiBaseUrl.protocol !== "https:") {
+  throw new Error("apiBaseUrl publik harus memakai HTTPS saat contentReady: true.");
+}
+
+const catalog = await loadCatalog();
+if (site.contentReady && (!catalog.categories.length || !catalog.products.length)) {
+  throw new Error("Katalog production harus memiliki minimal satu kategori dan satu produk sebelum contentReady diaktifkan.");
+}
+const homeTemplate = await readFile(path.join(templateDirectory, "home.html"), "utf8");
+const categoryTemplate = await readFile(path.join(templateDirectory, "category.html"), "utf8");
+const productTemplate = await readFile(path.join(templateDirectory, "product.html"), "utf8");
+const cartTemplate = await readFile(path.join(templateDirectory, "cart.html"), "utf8");
+const checkoutTemplate = await readFile(path.join(templateDirectory, "checkout.html"), "utf8");
+const trackingTemplate = await readFile(path.join(templateDirectory, "lacak-pesanan.html"), "utf8");
+const previewMode = !site.contentReady;
+const previewBanner = previewMode ? '<p class="preview-banner">Pratinjau katalog · Data lokal</p>' : "";
+const demoNote = previewMode ? '<p class="demo-note">Data dan harga katalog ini hanya untuk pratinjau lokal.</p>' : "";
+const footerCopy = `© ${new Date().getUTCFullYear()} ${escapeHtml(site.name)}`;
+const homePrefix = "./";
+const homeCategoryLinks = catalog.categories.map((category) =>
+  `<a href="${homePrefix}kategori/${escapeHtml(category.slug)}/">${escapeHtml(category.name)}</a>`
+).join("");
+const homeCards = catalog.products.map((product) => productCard(product, homePrefix)).join("\n")
+  || '<p class="empty-catalog">Produk akan segera tersedia.</p>';
+const categoryTiles = catalog.categories.map((category, index) =>
+  `<a href="./kategori/${escapeHtml(category.slug)}/"><span class="related-icon ${["", "related-icon-two", "related-icon-three"][index % 3]}" aria-hidden="true">${escapeHtml(category.name.slice(0, 1).toUpperCase())}</span><span><strong>${escapeHtml(category.name)}</strong><small>Lihat kategori</small></span><span class="related-arrow" aria-hidden="true">↗</span></a>`
+).join("");
+const homeHtml = replaceTokens(homeTemplate, {
+  PREVIEW_BANNER: previewBanner,
+  FEATURED_PRODUCTS: catalog.products.slice(0, 2).map((product) => productCard(product, homePrefix)).join("\n") || '<p class="empty-catalog">Produk akan segera tersedia.</p>',
+  CATEGORY_LINKS: homeCategoryLinks || '<span class="empty-catalog">Kategori akan segera tersedia.</span>',
+  PRODUCT_CARDS: homeCards,
+  CATEGORY_TILES: categoryTiles || '<p class="empty-catalog">Kategori akan segera tersedia.</p>',
+  DEMO_NOTE: demoNote,
+  FOOTER_COPY: footerCopy,
+  API_BASE_URL: escapeHtml(apiBaseUrl),
+});
+
+await rm(outputDirectory, { recursive: true, force: true });
+await mkdir(outputDirectory, { recursive: true });
+const homeSeo = addSeo(homeHtml, {
+  title: `Produk Custom untuk Rumah | ${site.name}`,
+  description: "Lihat katalog produk custom untuk rumah. Temukan detail desain, ukuran, dan harga produk.",
+  pathname: "/",
+  breadcrumbs: [{ name: "Beranda", path: "/" }],
+});
+await writeFile(path.join(outputDirectory, "index.html"), homeSeo, "utf8");
+
+for (const category of catalog.categories) {
+  const categoryProducts = catalog.products.filter((product) => product.category === category.slug);
+  if (categoryProducts.length === 0) continue;
+  const prefix = rootPrefix(2);
+  const categoryLinks = catalog.categories.map((item) =>
+    `<a href="${prefix}kategori/${escapeHtml(item.slug)}/"${item.slug === category.slug ? ' aria-current="page"' : ""}>${escapeHtml(item.name)}</a>`
+  ).join("");
+  const html = replaceTokens(categoryTemplate, {
+    ROOT_PREFIX: prefix,
+    CATEGORY_NAME: escapeHtml(category.name),
+    CATEGORY_DESCRIPTION: escapeHtml(category.description),
+    CATEGORY_LINKS: categoryLinks,
+    PRODUCT_CARDS: categoryProducts.map((product) => productCard(product, prefix)).join("\n"),
+    PREVIEW_BANNER: previewBanner,
+    DEMO_NOTE: demoNote,
+    FOOTER_COPY: footerCopy,
+    API_BASE_URL: escapeHtml(apiBaseUrl),
+  });
+  const seoHtml = addSeo(html, {
+    title: `${category.name} Custom | ${site.name}`,
+    description: category.description,
+    pathname: `/kategori/${category.slug}/`,
+    breadcrumbs: [
+      { name: "Beranda", path: "/" },
+      { name: category.name, path: `/kategori/${category.slug}/` },
+    ],
+  });
+  const destination = path.join(outputDirectory, "kategori", category.slug);
+  await mkdir(destination, { recursive: true });
+  await writeFile(path.join(destination, "index.html"), seoHtml, "utf8");
+}
+
+for (const product of catalog.products) {
+  const category = catalog.categories.find((item) => item.slug === product.category);
+  const related = catalog.products.filter((item) => item.slug !== product.slug).slice(0, 3);
+  const prefix = rootPrefix(2);
+  const link = `${prefix}produk/${escapeHtml(product.slug)}/`;
+  const image = imageUrl(product);
+  const media = image
+    ? `<img class="detail-photo" src="${escapeHtml(image)}" alt="${escapeHtml(product.image_alt || product.name)}" width="1000" height="750" fetchpriority="high">`
+    : '<div class="detail-image-placeholder" role="img" aria-label="Foto produk belum tersedia"><span>Foto produk</span></div>';
+  const html = replaceTokens(productTemplate, {
+    ROOT_PREFIX: prefix,
+    CATEGORY_SLUG: escapeHtml(category.slug),
+    CATEGORY_NAME: escapeHtml(category.name),
+    PRODUCT_NAME: escapeHtml(product.name),
+    PRODUCT_SLUG: escapeHtml(product.slug),
+    PRODUCT_PRICE_AMOUNT: String(product.price_amount),
+    PRODUCT_DESCRIPTION: escapeHtml(product.description),
+    PRODUCT_MEDIA: media,
+    PRODUCT_MEDIA_CAPTION: image ? "" : "<figcaption>Foto produk belum tersedia.</figcaption>",
+    PRODUCT_SIZE: escapeHtml(product.fixed_size || "Belum ditentukan"),
+    PRODUCT_CUSTOMIZATION: escapeHtml(product.customization || "Belum ditentukan"),
+    CUSTOM_FIELDS: customizationFields(product.customization_fields),
+    PRODUCT_PRICE: formatPrice(product.price_amount),
+    RELATED_PRODUCTS: related.map((item) => productCard(item, prefix)).join("\n") || '<p class="empty-catalog">Belum ada produk terkait.</p>',
+    PREVIEW_BANNER: previewBanner,
+    DEMO_NOTE: previewMode ? '<p class="demo-note detail-notice">Informasi ini hanya contoh pratinjau lokal.</p>' : "",
+    FOOTER_COPY: footerCopy,
+    API_BASE_URL: escapeHtml(apiBaseUrl),
+    CUSTOM_PREVIEW_SCRIPT: `<script src="${prefix}assets/js/custom-preview.js" defer></script>`,
+  });
+  const seoHtml = addSeo(html, {
+    title: `${product.name} Custom | ${site.name}`,
+    description: product.description,
+    pathname: `/produk/${product.slug}/`,
+    breadcrumbs: [
+      { name: "Beranda", path: "/" },
+      { name: category.name, path: `/kategori/${category.slug}/` },
+      { name: product.name, path: `/produk/${product.slug}/` },
+    ],
+  });
+  const destination = path.join(outputDirectory, "produk", product.slug);
+  await mkdir(destination, { recursive: true });
+  await writeFile(path.join(destination, "index.html"), seoHtml, "utf8");
+}
+
+for (const [slug, template] of [["keranjang", cartTemplate], ["checkout", checkoutTemplate], ["lacak-pesanan", trackingTemplate]]) {
+  const html = replaceTokens(template, {
+    ROOT_PREFIX: "../",
+    PREVIEW_BANNER: previewBanner,
+    FOOTER_COPY: footerCopy,
+    API_BASE_URL: escapeHtml(apiBaseUrl),
+  });
+  const destination = path.join(outputDirectory, slug);
+  await mkdir(destination, { recursive: true });
+  await writeFile(path.join(destination, "index.html"), addNoIndex(html), "utf8");
+}
+
+const publicPages = [
+  { path: "/", priority: "1.0" },
+  ...catalog.categories.filter((category) => catalog.products.some((product) => product.category === category.slug))
+    .map((category) => ({ path: `/kategori/${category.slug}/`, priority: "0.8" })),
+  ...catalog.products.map((product) => ({ path: `/produk/${product.slug}/`, priority: "0.7" })),
+];
+const robots = site.indexable
+  ? `User-agent: *\nAllow: /\n\nSitemap: ${absoluteUrl("/sitemap.xml")}\n`
+  : "User-agent: *\nAllow: /\n";
+await writeFile(path.join(outputDirectory, "robots.txt"), robots, "utf8");
+if (site.indexable) {
+  const urls = publicPages.map(({ path: pagePath, priority }) =>
+    `  <url><loc>${escapeHtml(absoluteUrl(pagePath))}</loc><priority>${priority}</priority></url>`
+  ).join("\n");
+  await writeFile(path.join(outputDirectory, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`, "utf8");
+}
+
+await copyAssetFiles(path.join(sourceDirectory, "assets"), path.join(outputDirectory, "assets"));
+console.log(`Situs statis dibuat dari API (${catalog.categories.length} kategori, ${catalog.products.length} produk).`);

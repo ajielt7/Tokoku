@@ -1,0 +1,78 @@
+name: Build and deploy store
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-pages.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      release_ready: ${{ steps.release_settings.outputs.ready }}
+    permissions:
+      contents: read
+    env:
+      SITE_URL: ${{ vars.SITE_URL }}
+      PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
+      CATALOG_API_URL: ${{ vars.PUBLIC_API_BASE_URL }}/api/catalog
+      SEO_INDEXABLE: ${{ vars.SEO_INDEXABLE }}
+      CONTENT_READY: ${{ vars.CONTENT_READY }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Require production settings
+        id: release_settings
+        shell: bash
+        run: |
+          if [ -z "$SITE_URL" ] || [ -z "$PUBLIC_API_BASE_URL" ] || [ "$SEO_INDEXABLE" != "true" ] || [ "$CONTENT_READY" != "true" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Public release skipped. Set production repository variables after the API and final catalog are ready."
+            exit 0
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+      - name: Build static site from public catalog
+        if: steps.release_settings.outputs.ready == 'true'
+        run: node frontend/src/scripts/build-site.mjs
+      - name: Check production output
+        if: steps.release_settings.outputs.ready == 'true'
+        run: node frontend/src/scripts/check-release.mjs
+      - name: Upload Pages artifact
+        if: steps.release_settings.outputs.ready == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    if: needs.build.outputs.release_ready == 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

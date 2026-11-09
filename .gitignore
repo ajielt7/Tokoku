@@ -1,0 +1,24 @@
+# Secrets and local credentials
+.env
+.env.*
+!.env.example
+**/.dev.vars
+**/.dev.vars.*
+!**/.dev.vars.example
+**/google-services.json
+*.jks
+*.keystore
+
+# Generated dependencies, builds, and local service state
+**/node_modules/
+**/.wrangler/
+**/.gradle/
+**/build/
+**/local.properties
+
+# Editor and operating system files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Lacak perkembangan pesanan Ruma dengan kode pesanan dan nomor telepon checkout.">
+    <meta name="theme-color" content="#006b3c">
+    <title>Lacak Pesanan | Ruma</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ROOT_PREFIX}}assets/css/site.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#konten-utama">Lewati ke konten utama</a>
+    <header class="site-header"><div class="container header-inner">
+      <a class="brand" href="{{ROOT_PREFIX}}index.html" aria-label="Ruma, beranda"><span class="brand-mark" aria-hidden="true">R</span><span>ruma<span class="brand-period">.</span></span></a>
+      <nav class="main-nav" aria-label="Navigasi utama"><a href="{{ROOT_PREFIX}}index.html#produk">Produk</a><a href="{{ROOT_PREFIX}}keranjang/">Keranjang</a></nav>
+    </div></header>
+    <main id="konten-utama" class="checkout-page"><div class="container">
+      <nav class="breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="{{ROOT_PREFIX}}index.html">Beranda</a></li><li aria-current="page">Lacak pesanan</li></ol></nav>
+      <header class="catalog-heading"><p class="eyebrow">Info pesanan</p><h1>Lacak pesanan</h1><p>Masukkan kode pesanan dan nomor telepon checkout. Nama dan alamat tidak ditampilkan.</p></header>
+      <section class="tracking-card" aria-labelledby="tracking-title">
+        <h2 id="tracking-title">Cek status</h2>
+        <form class="tracking-form" data-tracking-form>
+          <label class="form-field">Kode pesanan<input name="order_code" type="text" autocomplete="off" autocapitalize="characters" minlength="21" maxlength="21" placeholder="RUMA-XXXXXXXXXXXXXXXX" required></label>
+          <label class="form-field">Nomor telepon checkout<input name="phone" type="tel" autocomplete="tel" minlength="8" maxlength="24" placeholder="08xxxxxxxxxx" required></label>
+          <p class="form-message" data-tracking-message role="status" aria-live="polite"></p>
+          <button class="button button-primary" type="submit">Cari pesanan</button>
+        </form>
+      </section>
+      <section class="tracking-results" data-tracking-results aria-live="polite" hidden></section>
+    </div></main>
+    <footer class="site-footer"><div class="container footer-inner"><a class="brand footer-brand" href="{{ROOT_PREFIX}}index.html"><span class="brand-mark" aria-hidden="true">R</span><span>ruma<span class="brand-period">.</span></span></a><p>Penanda rumah custom.</p><small>{{FOOTER_COPY}}</small></div></footer>
+    <script src="{{ROOT_PREFIX}}assets/js/tracking.js" data-api-base="{{API_BASE_URL}}" defer></script>
+  </body>
+</html>
