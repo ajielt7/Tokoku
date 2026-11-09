@@ -56,9 +56,9 @@ Dari folder `backend/`, salin `.dev.vars.example` menjadi `.dev.vars`, lalu isi 
 
 Jangan jalankan langkah ini sebelum domain frontend, URL Worker, katalog, konfigurasi pembayaran, dan rahasia layanan sudah ditinjau. Semua perintah dijalankan dari folder `backend/` dengan Wrangler lokal proyek. Jangan pernah memakai seed demo pada database remote.
 
-1. Pastikan akun CLI yang aktif benar dengan `npx wrangler whoami`. Buat database produksi bernama `ruma-store` di akun yang benar, lalu salin ID yang dikembalikan ke kedua binding `DB` di `wrangler.jsonc` (root dan `env.production`). Jangan gunakan database produksi untuk pengembangan lokal.
+1. Pastikan akun CLI yang aktif benar dengan `npx wrangler whoami`. Database produksi `ruma-store` sudah ada; cocokkan ID di kedua binding `DB` pada `wrangler.jsonc` dengan database akun tersebut sebelum deploy. Jangan membuat database produksi kedua dan jangan gunakan database produksi untuk pengembangan lokal.
 2. Pastikan `ALLOWED_ORIGINS` pada `env.production.vars` adalah `https://ajielt7.github.io` (origin situs, tanpa `/Tokoku`), isi `IMAGEKIT_URL_ENDPOINT`, dan pastikan `RAJAONGKIR_ORIGIN_ID` serta semua namespace rate limiter sesuai akun.
-3. Tinjau migrasi `0001` sampai `0008`, siapkan backup/restore point, lalu terapkan ke database produksi:
+3. Database produksi saat ini sudah mencatat migrasi `0001` sampai `0008`. Cocokkan catatan migrasi dan siapkan backup sebelum perubahan skema. Jika ada migrasi baru, tinjau lalu terapkan hanya migrasi yang belum tercatat:
 
    ```sh
    npx wrangler d1 migrations apply ruma-store --remote --env production
