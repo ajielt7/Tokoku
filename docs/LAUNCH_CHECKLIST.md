@@ -14,7 +14,7 @@ Gunakan bobot tetap per bagian agar laporan progres konsisten. Nilai tiap bagian
 | D. SEO dan mutu halaman | 20% |
 | E. Backup, pemulihan, dan peluncuran | 15% |
 
-**Progres berbobot per 9 November 2026: 46,9%** (A 6/9, B 12/15, C 1/27, D 13/22, E 5/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
+**Progres berbobot per 9 November 2026: 47,8%** (A 6/9, B 12/15, C 2/27, D 13/22, E 5/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
 
 ### Rincian Tahap 12
 
@@ -30,7 +30,7 @@ Tahap 12 dibagi menjadi 5 bagian utama dan 18 subbagian. Setiap baris merangkum 
 | B.3 | Secret dan akses admin | Secret dipasang di Worker; endpoint admin terverifikasi tanpa membuka nilainya | — | 2/2 | Selesai |
 | B.4 | Layanan eksternal dan log | Ringkasan log/issue Worker diperiksa; tidak ada 5xx pada sampel | Pemilik cek paket dan status key ImageKit di dashboard; validasi API setelah 403 dibereskan | 3/6 | Berjalan |
 | C.1 | Katalog produk | Belum ada data produk final | Isi nama, deskripsi, harga, stok, bobot, foto, dan alt text setiap produk | 0/7 | Belum mulai |
-| C.2 | Ongkir dan pembayaran | Cara transaksi dasar sudah didokumentasikan | Pastikan key RajaOngkir aktif, tarif nyata cocok, rekening dan instruksi pembayaran final, lalu uji hitung total | 1/8 | Berjalan |
+| C.2 | Ongkir dan pembayaran | Transaksi dasar terdokumentasi; hitung subtotal/ongkir lokal dan idempotency order teruji | Konfirmasi asal/kurir, verifikasi tarif RajaOngkir nyata, lalu finalkan rekening dan uji pembayaran/ImageKit | 2/8 | Berjalan |
 | C.3 | Identitas toko dan kebijakan | Belum ada data final | Tetapkan nama/kontak toko, privasi, retur, pembatalan, dan syarat transaksi | 0/6 | Belum mulai |
 | C.4 | Pengiriman dan produksi | Belum disiapkan untuk operasional pelanggan | Tetapkan asal/kurir, proses packing, stok, SLA, dan penanganan pesanan bermasalah | 0/6 | Belum mulai |
 | D.1 | Indeks dan metadata | SITE_URL HTTPS benar; preview lulus pemeriksaan; 9 rute live punya title, description, dan H1; halaman privat noindex; robots.txt membolehkan crawler; Product/Offer schema tersedia di kode | Setelah konten final, cek canonical dan konten halaman publik, pastikan URL privat tak masuk sitemap rilis, lalu validasi Rich Results | 6/9 | Berjalan |
@@ -137,12 +137,12 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 - [ ] Siapkan foto milik toko yang dapat diterbitkan dengan URL HTTPS.
 - [ ] Tulis alt text yang menjelaskan foto untuk setiap produk.
 
-### C.2 Ongkir dan pembayaran — Berjalan (1/8)
+### C.2 Ongkir dan pembayaran — Berjalan (2/8)
 
 - [x] `RAJAONGKIR_API_KEY` dari berkas lokal yang diabaikan Git terpasang pada Worker; pencarian tujuan merespons HTTP 200.
 - [ ] Pastikan titik asal `5052` sesuai lokasi operasional toko.
 - [ ] Pastikan kurir dan tarif yang dikembalikan sesuai layanan yang akan dipakai.
-- [ ] Uji pembuatan order memastikan backend menghitung ulang subtotal dan ongkir dari data server.
+- [x] Uji API lokal dengan seed demo: backend menghitung subtotal Rp150.000 dan ongkir fixture lokal Rp10.000 dari server menjadi total Rp160.000; pengiriman ulang memakai idempotency key yang sama memberi kode yang sama, hanya satu order/item/payment tersimpan, dan endpoint tracking tidak mengembalikan nomor telepon. Rute ongkir memakai fixture 1 km; ini bukan verifikasi tarif RajaOngkir nyata atau order production.
 - [ ] Setelah rekening final tersedia, lakukan uji transfer nominal kecil dan cocokkan mutasi secara manual. Jangan menyatakan pembayaran otomatis terverifikasi.
 - [ ] Verifikasi unggah bukti hanya ke ImageKit privat setelah validasi ImageKit lolos.
 - [ ] Verifikasi URL bukti untuk admin bertanda tangan dan berumur singkat.
