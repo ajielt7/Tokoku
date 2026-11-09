@@ -18,28 +18,28 @@ Gunakan bobot tetap per bagian agar laporan progres konsisten. Nilai tiap bagian
 
 ### Rincian Tahap 12
 
-Tahap 12 dibagi menjadi 5 bagian utama dan 18 subbagian. Status dihitung dari kotak pada subbagian masing-masing; bagian yang seluruh butirnya selesai ditandai **Selesai**, yang sebagian selesai **Berjalan**, dan yang belum ada butir selesai **Belum mulai**.
+Tahap 12 dibagi menjadi 5 bagian utama dan 18 subbagian. Setiap baris merangkum pekerjaan yang sudah diverifikasi dan langkah berikutnya; rincian kotak tugas tetap ada di bagian A–E di bawah. Status dihitung dari kotak pada subbagian masing-masing; bagian yang seluruh butirnya selesai ditandai **Selesai**, yang sebagian selesai **Berjalan**, dan yang belum ada butir selesai **Belum mulai**. Rincian ini tidak mengubah jumlah kotak atau angka progres.
 
-| Subbagian | Fokus | Selesai | Status |
-|---|---|---:|---|
-| A.1 | URL dan hosting | 4/4 | Selesai |
-| A.2 | Gate indeks dan pembaruan katalog | 1/4 | Berjalan |
-| A.3 | Keamanan repository | 1/1 | Selesai |
-| B.1 | Database dan migrasi | 2/2 | Selesai |
-| B.2 | Konfigurasi dan deploy Worker | 5/5 | Selesai |
-| B.3 | Secret dan akses admin | 2/2 | Selesai |
-| B.4 | Validasi layanan dan log runtime | 3/6 | Berjalan |
-| C.1 | Katalog produk | 0/7 | Belum mulai |
-| C.2 | Ongkir dan pembayaran | 1/8 | Berjalan |
-| C.3 | Informasi toko dan kebijakan | 0/6 | Belum mulai |
-| C.4 | Pengiriman dan produksi | 0/6 | Belum mulai |
-| D.1 | Indeks dan metadata | 3/7 | Berjalan |
-| D.2 | Konten produk dan aksesibilitas | 3/6 | Berjalan |
-| D.3 | Performa dan Search Console | 4/7 | Berjalan |
-| E.1 | Backup dan pemulihan | 2/6 | Berjalan |
-| E.2 | Akses pemulihan | 0/5 | Belum mulai |
-| E.3 | Prosedur rollback | 1/1 | Selesai |
-| E.4 | Arsip artifact dan uji bertahap | 2/6 | Berjalan |
+| Subbagian | Fokus | Sudah selesai | Berikutnya | Selesai | Status |
+|---|---|---|---|---:|---|
+| A.1 | URL dan hosting | URL Pages/API dipilih dan aktif; HTTPS dipaksa | — | 4/4 | Selesai |
+| A.2 | Gate indeks dan katalog | Demo tetap noindex; gate konten final tertutup | Jalankan workflow setelah D1 terisi, lalu cek halaman dan sitemap hasil rilis | 1/4 | Berjalan |
+| A.3 | Keamanan repository | Pemindaian file terlacak tidak menemukan secret atau dump | — | 1/1 | Selesai |
+| B.1 | Database dan migrasi | D1 produksi dibuat; migrasi 0001–0008 dan latihan SQLite lokal lulus | Siapkan prosedur backup D1 sebelum order nyata | 2/2 | Selesai |
+| B.2 | Konfigurasi dan deploy Worker | Binding, variabel, limiter, deploy, dan endpoint katalog aktif | — | 5/5 | Selesai |
+| B.3 | Secret dan akses admin | Secret dipasang di Worker; endpoint admin terverifikasi tanpa membuka nilainya | — | 2/2 | Selesai |
+| B.4 | Layanan eksternal dan log | Ringkasan log/issue Worker diperiksa; tidak ada 5xx pada sampel | Pemilik cek paket dan status key ImageKit di dashboard; validasi API setelah 403 dibereskan | 3/6 | Berjalan |
+| C.1 | Katalog produk | Belum ada data produk final | Isi nama, deskripsi, harga, stok, bobot, foto, dan alt text setiap produk | 0/7 | Belum mulai |
+| C.2 | Ongkir dan pembayaran | Cara transaksi dasar sudah didokumentasikan | Pastikan key RajaOngkir aktif, tarif nyata cocok, rekening dan instruksi pembayaran final, lalu uji hitung total | 1/8 | Berjalan |
+| C.3 | Identitas toko dan kebijakan | Belum ada data final | Tetapkan nama/kontak toko, privasi, retur, pembatalan, dan syarat transaksi | 0/6 | Belum mulai |
+| C.4 | Pengiriman dan produksi | Belum disiapkan untuk operasional pelanggan | Tetapkan asal/kurir, proses packing, stok, SLA, dan penanganan pesanan bermasalah | 0/6 | Belum mulai |
+| D.1 | Indeks dan metadata | SITE_URL HTTPS benar; preview lulus pemeriksaan struktur; Product/Offer schema tersedia di kode | Setelah konten final, cek canonical/metadata, noindex halaman privat, sitemap, dan hasil Rich Results | 3/7 | Berjalan |
+| D.2 | Konten dan aksesibilitas | Audit tampilan ponsel, urutan Tab, kontras, label, dan live region lulus pada preview | Masukkan konten/foto final dan uji pembelian keyboard-only | 3/6 | Berjalan |
+| D.3 | Performa dan Search Console | URL demo dan 404 diperiksa; audit Lighthouse lokal dan Pages selesai | Tinjau CWV pengguna nyata, verifikasi Search Console, lalu kirim sitemap | 4/7 | Berjalan |
+| E.1 | Backup dan pemulihan | Time Travel D1 aktif; pemulihan SQLite lokal lulus | Tentukan lokasi terenkripsi, buat dan cek ekspor D1; putuskan perlindungan file ImageKit | 2/6 | Berjalan |
+| E.2 | Akses pemulihan akun | Belum diverifikasi | Cek akses pemulihan GitHub, Cloudflare, ImageKit/RajaOngkir, dan Firebase; simpan di password manager | 0/5 | Belum mulai |
+| E.3 | Prosedur rollback | Langkah rollback Worker/Pages terdokumentasi | — | 1/1 | Selesai |
+| E.4 | Arsip dan uji bertahap | Artifact demo diarsipkan; rencana uji dan kriteria berhenti tersedia | Setelah semua prasyarat siap, lakukan satu order uji, pantau, lalu tinjau hasil | 2/6 | Berjalan |
 
 **Yang sudah selesai sepenuhnya:** A.1, A.3, B.1, B.2, B.3, dan E.3. **Bagian yang sedang dikerjakan:** A.2, B.4, C.2, D.1, D.3, E.1, dan E.4. Sisanya menunggu data toko atau pengujian yang belum tersedia. Rincian kotak tugas tetap ada di bagian A–E di bawah.
 
