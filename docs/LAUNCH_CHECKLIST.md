@@ -21,6 +21,18 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 - [x] Repo publik `ajielt7/Tokoku` terhubung pada branch `main`; Pages memakai sumber GitHub Actions. Workflow berhasil, tetapi deployment dilewati karena gate rilis belum siap.
 - [x] Sumber GitHub Pages sudah diatur ke **GitHub Actions**. Belum ada situs terbit sampai gate rilis dibuka.
 
+## Batas anggaran
+
+Audit paket resmi per 9 November 2026: peluncuran kecil dapat memakai paket gratis selama kuota dipatuhi. Jangan mengaktifkan Workers Paid, paket ImageKit berbayar, atau layanan pembayaran otomatis tanpa persetujuan pemilik.
+
+- GitHub Pages tersedia gratis untuk repository publik dengan GitHub Free ([dokumentasi GitHub](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)).
+- Workers Free mencakup 100.000 request/hari; D1 Free mencakup 5 juta baris baca/hari, 100.000 baris tulis/hari, dan 5 GB total ([harga Cloudflare](https://developers.cloudflare.com/workers/platform/pricing/)). Akun saat ini mencatat satu database D1 (`ruma-store`). Batas gratis yang terlampaui membuat operasi terkait gagal; Workers Paid memiliki minimum US$5/bulan per akun, jadi jangan upgrade otomatis.
+- Paket Workers Free akun belum dapat dikonfirmasi: koneksi Cloudflare yang tersedia tidak punya izin Billing Read. Sebelum produksi, pemilik perlu memastikan paket akun tetap Free di dashboard. Sampling log Worker diturunkan menjadi 10% (traces 5%); mulai 1 Desember 2026, log dan trace memakai kuota Observability gratis 0,5 GB/hari tanpa tambahan ingest berbayar di paket Free ([kuota Observability](https://developers.cloudflare.com/observability/pricing/)).
+- RajaOngkir Starter tercantum gratis dengan 100 HIT cek ongkir per hari ([paket RajaOngkir](https://www.rajaongkir.com/pricing)). Integrasi toko ini memakai cek ongkir; fitur pembayaran otomatis memiliki biaya transaksi terpisah dan tidak diaktifkan.
+- ImageKit Forever Free tercantum $0 dengan batas 20 GB bandwidth bulanan dan 3 GB penyimpanan DAM ([paket ImageKit](https://imagekit.io/plans/)). Pertahankan akun di paket gratis; hentikan upload/penggunaan bila mendekati batas.
+
+Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifkan fitur berbayar atau mengubah paket.
+
 ## A. Domain dan GitHub Pages
 
 - [x] URL publik dipilih: `https://ajielt7.github.io/Tokoku/`. `SITE_URL` menggunakan URL proyek dengan subpath repositori. Domain custom tidak dipakai.
