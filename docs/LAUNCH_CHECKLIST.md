@@ -170,7 +170,7 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 ### D.1 Indeks dan metadata — Berjalan (5/8)
 
-- [x] `SITE_URL` sudah memakai HTTPS `https://ajielt7.github.io/Tokoku`; HTML demo tetap `noindex` tanpa canonical publik. Canonical menunggu katalog final.
+- [x] `SITE_URL` sudah memakai HTTPS `https://ajielt7.github.io/Tokoku`; pemeriksaan Pages pada 9 November 2026 menemukan sembilan rute merespons HTTP 200, semuanya `noindex,nofollow`, dan belum ada canonical publik. Ini sesuai mode demo; canonical menunggu katalog final.
 - [ ] Bangun ulang situs dari katalog final di D1 production.
 - [x] Jalankan `node frontend/src/scripts/check-release.mjs --preview`; pemeriksaan lulus pada 9 November 2026 (9 HTML, 6 halaman publik). Ini hanya memvalidasi pratinjau `noindex`; build indeks publik masih menunggu katalog dan informasi toko final.
 - [ ] Periksa setiap halaman publik memiliki satu H1, title, description, canonical, tautan lokal valid, dan tidak berisi konten demo.
