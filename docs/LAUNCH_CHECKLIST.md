@@ -14,7 +14,7 @@ Gunakan bobot tetap per bagian agar laporan progres konsisten. Nilai tiap bagian
 | D. SEO dan mutu halaman | 20% |
 | E. Backup, pemulihan, dan peluncuran | 15% |
 
-**Progres berbobot per 9 November 2026: 42,5%** (A 6/9, B 12/15, C 1/27, D 7/19, E 5/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
+**Progres berbobot per 9 November 2026: 43,5%** (A 6/9, B 12/15, C 1/27, D 8/19, E 5/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
 
 ### Rincian Tahap 12
 
@@ -34,7 +34,7 @@ Tahap 12 dibagi menjadi 5 bagian utama dan 18 subbagian. Status dihitung dari ko
 | C.3 | Informasi toko dan kebijakan | 0/6 | Belum mulai |
 | C.4 | Pengiriman dan produksi | 0/6 | Belum mulai |
 | D.1 | Indeks dan metadata | 3/7 | Berjalan |
-| D.2 | Konten produk dan aksesibilitas | 0/5 | Belum mulai |
+| D.2 | Konten produk dan aksesibilitas | 1/5 | Berjalan |
 | D.3 | Performa dan Search Console | 4/7 | Berjalan |
 | E.1 | Backup dan pemulihan | 2/6 | Berjalan |
 | E.2 | Akses pemulihan | 0/5 | Belum mulai |
@@ -178,13 +178,13 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 - [ ] Pastikan cart, checkout, dan lacak pesanan tidak masuk sitemap; jangan memblokir crawler di `robots.txt` untuk URL yang perlu membaca arahan noindex.
 - [x] Build produk siap membuat JSON-LD `Product`/`Offer` hanya saat indeks diaktifkan; build memeriksa foto HTTPS, alt text, harga, mata uang, dan URL Offer. Data contoh tetap lokal/noindex. Validasi hasil pada URL yang diterbitkan dan Google Rich Results Test masih menunggu data toko final serta deployment.
 
-### D.2 Konten produk dan aksesibilitas — Belum (0/5)
+### D.2 Konten produk dan aksesibilitas — Berjalan (1/5)
 
 - [ ] Cocokkan nama, deskripsi, harga, dan ketersediaan produk pada HTML hasil build dengan katalog final.
 - [ ] Periksa gambar produk tampil, URL-nya aman, dan alt text sesuai.
 - [ ] Periksa tata letak pada layar ponsel.
 - [ ] Selesaikan navigasi dan alur belanja memakai keyboard saja.
-- [ ] Periksa kontras teks dan kejelasan pesan error/formulir.
+- [x] Audit statis CSS pada 9 November 2026 menghitung 24 pasangan warna teks utama: rasio 4,87–14,63:1; teks error `#a12d24` pada latar putih 7,20:1. Label formulir terhubung langsung dengan input; status dan pesan menggunakan live region, dan JavaScript menulisnya dengan `textContent`. Ini audit sumber/pratinjau, bukan pengujian seluruh keadaan visual di semua perangkat.
 
 ### D.3 Performa dan Search Console — Berjalan (4/7)
 
