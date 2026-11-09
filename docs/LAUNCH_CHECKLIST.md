@@ -14,7 +14,34 @@ Gunakan bobot tetap per bagian agar laporan progres konsisten. Nilai tiap bagian
 | D. SEO dan mutu halaman | 20% |
 | E. Backup, pemulihan, dan peluncuran | 15% |
 
-**Progres berbobot per 9 November 2026: 38,9%** (A 6/9, B 11/15, C 1/27, D 6/19, E 4/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
+**Progres berbobot per 9 November 2026: 39,7%** (A 6/9, B 11/15, C 1/27, D 6/19, E 5/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
+
+### Rincian Tahap 12
+
+Tahap 12 dibagi menjadi 5 bagian utama dan 18 subbagian. Status dihitung dari kotak pada subbagian masing-masing; bagian yang seluruh butirnya selesai ditandai **Selesai**, yang sebagian selesai **Berjalan**, dan yang belum ada butir selesai **Belum mulai**.
+
+| Subbagian | Fokus | Selesai | Status |
+|---|---|---:|---|
+| A.1 | URL dan hosting | 4/4 | Selesai |
+| A.2 | Gate indeks dan pembaruan katalog | 1/4 | Berjalan |
+| A.3 | Keamanan repository | 1/1 | Selesai |
+| B.1 | Database dan migrasi | 2/2 | Selesai |
+| B.2 | Konfigurasi dan deploy Worker | 5/5 | Selesai |
+| B.3 | Secret dan akses admin | 2/2 | Selesai |
+| B.4 | Validasi layanan dan log runtime | 2/6 | Berjalan |
+| C.1 | Katalog produk | 0/7 | Belum mulai |
+| C.2 | Ongkir dan pembayaran | 1/8 | Berjalan |
+| C.3 | Informasi toko dan kebijakan | 0/6 | Belum mulai |
+| C.4 | Pengiriman dan produksi | 0/6 | Belum mulai |
+| D.1 | Indeks dan metadata | 2/7 | Berjalan |
+| D.2 | Konten produk dan aksesibilitas | 0/5 | Belum mulai |
+| D.3 | Performa dan Search Console | 4/7 | Berjalan |
+| E.1 | Backup dan pemulihan | 2/5 | Berjalan |
+| E.2 | Akses pemulihan | 0/5 | Belum mulai |
+| E.3 | Prosedur rollback | 1/1 | Selesai |
+| E.4 | Arsip artifact dan uji bertahap | 2/5 | Berjalan |
+
+**Yang sudah selesai sepenuhnya:** A.1, A.3, B.1, B.2, B.3, dan E.3. **Bagian yang sedang dikerjakan:** A.2, B.4, C.2, D.1, D.3, E.1, dan E.4. Sisanya menunggu data toko atau pengujian yang belum tersedia. Rincian kotak tugas tetap ada di bagian A–E di bawah.
 
 ## Status yang sudah terlihat di workspace
 
@@ -192,10 +219,10 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 - [x] Prosedur rollback Worker dan GitHub Pages beserta versi/run target terdahulu sudah dicatat di [panduan operasional](OPERATIONS.md). Prosedur melarang force-push dan menjelaskan bahwa rollback Worker tidak memulihkan D1.
 
-### E.4 Arsip artifact dan uji bertahap — Berjalan (1/5)
+### E.4 Arsip artifact dan uji bertahap — Berjalan (2/5)
 
 - [x] Artifact Pages workflow run `42576560129` sudah disimpan di arsip lokal luar repo `%LOCALAPPDATA%\Ruma\release-archive\github-pages-demo-60b5e6f.zip` dan checksum SHA-256 diverifikasi; jangan masukkan `dist/` atau dump data ke Git.
-- [ ] Tentukan kelompok uji kecil dan kriteria berhenti sebelum menerima pesanan uji.
+- [x] Rencana uji menetapkan pemilik dan maksimal dua penguji tepercaya, cakupan satu order bernilai rendah setelah persetujuan biaya, syarat lulus, serta kondisi berhenti. Rencana ada di [panduan operasional](OPERATIONS.md); transaksinya belum dijalankan.
 - [ ] Jalankan uji order end-to-end setelah katalog, pembayaran, dan ImageKit siap.
 - [ ] Pantau pesanan gagal, tarif ongkir, dan proses pengiriman selama periode awal.
 - [ ] Pantau upload bukti, notifikasi, dan error Worker tanpa menyimpan data pelanggan di log.
@@ -204,4 +231,3 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 ## Syarat lulus
 
 Peluncuran toko untuk pelanggan baru hanya dimulai setelah semua kotak bagian A sampai E ditinjau dan disetujui pemilik toko. Worker dan demo noindex sudah tayang. Checklist **belum lulus** karena katalog D1 kosong, validasi ImageKit menerima HTTP 403 dan alur bukti belum diuji end-to-end, serta produk, rekening, dan kebijakan toko belum final.
-
