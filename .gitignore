@@ -6,6 +6,8 @@
 **/.dev.vars.*
 !**/.dev.vars.example
 **/ApiKey.txt
+**/imagKit_Key.txt
+**/imageKit_Key.txt
 **/google-services.json
 *.jks
 *.keystore
