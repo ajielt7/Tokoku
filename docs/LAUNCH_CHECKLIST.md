@@ -14,7 +14,7 @@ Gunakan bobot tetap per bagian agar laporan progres konsisten. Nilai tiap bagian
 | D. SEO dan mutu halaman | 20% |
 | E. Backup, pemulihan, dan peluncuran | 15% |
 
-**Progres berbobot per 9 November 2026: 47,2%** (A 6/7, B 9/11, C 1/8, D 2/7, E 2/6). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
+**Progres berbobot per 9 November 2026: 50,7%** (A 6/7, B 9/11, C 1/8, D 2/7, E 4/7). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
 
 ## Status yang sudah terlihat di workspace
 
@@ -144,10 +144,14 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 - [ ] Catat kontak pemulihan akun GitHub, Cloudflare, ImageKit, RajaOngkir, dan Firebase di password manager organisasi, bukan di repositori.
 
-### E.3 Peluncuran kecil dan rollback — Belum (0/2)
+### E.3 Prosedur rollback — Selesai (1/1)
 
-- [ ] Rilis dahulu ke kelompok kecil; pantau pesanan gagal, ongkir, upload bukti, notifikasi, dan log selama periode awal.
-- [ ] Simpan artifact/rilis sebelumnya dan prosedur rollback. Jangan pulihkan database produksi tanpa menentukan titik waktu serta membuat cadangan keadaan saat ini.
+- [x] Prosedur rollback Worker dan GitHub Pages beserta versi/run target terdahulu sudah dicatat di [panduan operasional](OPERATIONS.md). Prosedur melarang force-push dan menjelaskan bahwa rollback Worker tidak memulihkan D1.
+
+### E.4 Arsip artifact dan uji bertahap — Berjalan (1/2)
+
+- [x] Artifact Pages workflow run `42576560129` sudah disimpan di arsip lokal luar repo `%LOCALAPPDATA%\Ruma\release-archive\github-pages-demo-60b5e6f.zip` dan checksum SHA-256 diverifikasi; jangan masukkan `dist/` atau dump data ke Git.
+- [ ] Rilis dahulu ke kelompok kecil setelah transaksi siap; pantau pesanan gagal, ongkir, upload bukti, notifikasi, dan log selama periode awal.
 
 ## Syarat lulus
 

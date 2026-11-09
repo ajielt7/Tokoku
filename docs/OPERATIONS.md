@@ -34,6 +34,28 @@ Jangan pulihkan bookmark ke database produksi sebagai latihan. Saat tersedia tar
 
 Jika produksi perlu dipulihkan, hentikan sementara checkout, ekspor kondisi saat ini, tentukan titik waktu bersama pemilik data, pulihkan sesuai panduan resmi, verifikasi transaksi, lalu aktifkan kembali checkout. Simpan bookmark sebelum restore agar pemulihan dapat dibatalkan bila titik waktu keliru.
 
+## Rilis dan rollback aplikasi
+
+Rollback aplikasi mengembalikan versi kode, bukan isi D1. Hentikan checkout lebih dulu, pastikan penyebab insiden dan versi target, lalu uji endpoint baca setelah rollback. Jangan rollback melewati migrasi D1 yang membuat kode lama tidak kompatibel.
+
+### Cloudflare Worker
+
+Versi Worker production yang aktif per 9 November 2026 adalah `df440313-c47f-4594-a0df-6d3a175b3c50`. Versi tepat sebelumnya adalah `d23b36d7-2e60-4f25-9523-78551eb01c68`; verifikasi daftar versi lagi sebelum menggunakannya. Jalankan dari folder `backend/` dengan Wrangler lokal:
+
+```powershell
+nvm use 23.9.0
+npx wrangler versions list --env production
+npx wrangler rollback d23b36d7-2e60-4f25-9523-78551eb01c68 --env production --message "Rollback after production incident"
+```
+
+Perintah `rollback` langsung membuat deployment baru yang mengarahkan traffic ke versi pilihan. Setelah itu periksa daftar deployment, `GET /api/catalog`, GET admin, dan kecocokan binding sebelum membuka checkout. Worker rollback tidak mengubah D1; perubahan schema atau data perlu prosedur pemulihan D1 terpisah. Lihat [Cloudflare Worker rollbacks](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/) dan [Wrangler rollback command](https://developers.cloudflare.com/workers/wrangler/commands/workers/#rollback).
+
+### GitHub Pages
+
+Pages memakai GitHub Actions, bukan Cloudflare Pages. Rilis demo terakhir yang berhasil dibangun memakai commit `60b5e6f9e4649cc3d83bd62c5210c55cf68b0785` (workflow run `42576560129`). Untuk mengembalikan situs, buat commit baru yang mengembalikan hanya sumber `frontend/` ke rilis yang sehat, push ke `main`, jalankan workflow **Build and deploy store**, lalu cek URL Pages, `noindex`, dan subpath `/Tokoku/`. Jangan force-push branch.
+
+Artifact `github-pages` dari run tersebut memiliki ID `13655227226` dan masa simpan sampai 10 November 2026 pukul 14.00 WIB. Salinannya sudah disimpan di `%LOCALAPPDATA%\Ruma\release-archive\github-pages-demo-60b5e6f.zip` (21.735 byte; SHA-256 `720A2D7ECC9061575AA2E9E7A03D83C7B7F75123F3D47FC17017433CACFAC37D`). Artifact Actions asli bersifat sementara; riwayat Git tetap menjadi sumber untuk membangun ulang situs. Lihat [GitHub Pages workflow](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+
 ## Insiden rahasia atau akun
 
 - Cabut/ganti secret Worker atau token admin yang diduga bocor; jangan menyalin nilai rahasia ke laporan insiden.
