@@ -14,6 +14,7 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 - [x] Environment produksi Wrangler mewajibkan `ADMIN_TOKEN`, `RAJAONGKIR_API_KEY`, dan `IMAGEKIT_PRIVATE_KEY` sebelum deploy berhasil.
 - [x] Request berbiaya dan operasi tulis diberi rate limit Worker; production menolak request jika binding limiter hilang.
 - [x] Endpoint baca katalog/produk mengirim CORS untuk origin Pages yang diizinkan dan menolak origin asing; sudah diverifikasi dengan konfigurasi production secara lokal.
+- [x] Alur RajaOngkir diselaraskan dengan panduan lokal `Pemesanan/worker/README.md`: pencarian tujuan dicache 30 hari, tarif multi-kurir dihitung langsung dengan asal Cimekar `5052`, lalu backend menghitung ulang tarif saat order dibuat. Verifikasi tarif nyata dari Worker Ruma masih menunggu secret API key khusus Ruma.
 - [x] Build Pages memiliki workflow yang menolak rilis bila variabel produksi dan persetujuan indeks belum ada.
 - [x] D1 produksi `ruma-store` sudah dibuat di APAC, ID terpasang pada kedua binding Wrangler, dan migrasi 0001–0008 tercatat di `d1_migrations`; belum ada seed demo atau data toko.
 - [x] URL publik default Pages dipilih: `https://ajielt7.github.io/Tokoku/`; origin frontend production sudah diatur ke `https://ajielt7.github.io`. URL API target sudah disiapkan, tetapi Worker belum dideploy.
@@ -58,7 +59,7 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 ## C. Produk, transaksi, dan kebijakan toko
 
 - [ ] Ganti seluruh produk demo dengan barang yang benar: nama, deskripsi, harga, ukuran, batas personalisasi, stok/ketersediaan, berat paket, dan foto milik toko.
-- [ ] Verifikasi tarif RajaOngkir untuk tujuan dan kurir yang benar. Pastikan titik asal `5052` dan ketentuan Gojek sesuai operasional toko.
+- [ ] Pasang `RAJAONGKIR_API_KEY` sebagai secret pada Worker Ruma lalu verifikasi tarif untuk tujuan/kurir yang benar. Secret Worker `pemesanan-api` tidak dapat diekspor melalui API Cloudflare; file `Pemesanan/worker/ApiKey.txt` tidak ditemukan. API key harus tersedia dari dashboard RajaOngkir dan dipasang langsung sebagai secret, tidak di source atau chat. Pastikan titik asal `5052` dan ketentuan Gojek sesuai operasional toko.
 - [ ] Isi bank, nomor rekening, nama pemilik rekening, waktu konfirmasi, pembatalan, refund, dan cara menghubungi toko.
 - [ ] Siapkan kebijakan privasi dan syarat pembelian yang ditinjau pemilik toko; jangan menampilkan alamat/data pribadi pesanan pada halaman publik.
 - [ ] Uji transfer nyata dengan nominal kecil dan rekonsiliasi manual. Jangan menyatakan pembayaran otomatis terverifikasi.
