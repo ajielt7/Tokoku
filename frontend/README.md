@@ -53,6 +53,8 @@ Sumber halaman ada di `src/templates/`, konfigurasi publikasi ada di `src/data/s
 
 Konfigurasi awal memakai `indexable: false` dan `contentReady: false`. Build memberi halaman `noindex,nofollow`; `robots.txt` tetap mengizinkan perayapan agar mesin pencari dapat membaca arahan `noindex`. Sebelum peluncuran, isi `siteUrl` dengan URL HTTPS situs (termasuk subpath repositori jika memakai GitHub Pages), pastikan data katalog final, lalu ubah kedua nilai kesiapan menjadi `true`. Build publik akan menambahkan canonical, Open Graph, BreadcrumbList, `robots.txt` yang mengizinkan perayapan dan mengumumkan sitemap, serta `sitemap.xml` dari URL halaman yang dibuat. Build menolak aktivasi indeks jika URL publik atau konfirmasi kesiapan konten belum diisi.
 
+> Alat build dan Wrangler untuk menjalankan Worker lokal memerlukan Node.js 22 atau lebih baru (lihat `backend/package.json`). Node.js hanya dipakai sebagai alat pengembangan/build; kode frontend yang dikirim ke browser tetap HTML, CSS, dan vanilla JavaScript.
+
 Jalankan Worker lokal dan isi D1 demo sesuai [panduan backend](../backend/README.md), lalu build dari akar repositori saat API lokal aktif:
 
 ```sh
