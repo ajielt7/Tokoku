@@ -22,6 +22,22 @@ npx wrangler d1 export ruma-store --remote --output="C:\secure-backups\ruma-stor
 
 Ganti folder dengan lokasi terenkripsi yang aksesnya dibatasi. Jangan gunakan folder repo, `frontend/dist`, folder sinkronisasi publik, atau lampiran chat/email untuk dump pelanggan. Setelah ekspor, catat ukuran file dan hasil checksum pada catatan privat; jangan tulis data SQL ke log CI.
 
+### Status dan persiapan backup saat ini
+
+Pemeriksaan baca-saja pada 9 November 2026 menemukan 0 baris pada tabel kategori, produk, pesanan, pembayaran, pengiriman, file, riwayat status, dan perangkat admin di D1 production. Percobaan ekspor belum menghasilkan file: sesi Wrangler memerlukan scope `d1:write`, dan tujuan penyimpanan terenkripsi belum disetujui. Jangan menambahkan scope atau menjalankan ekspor sampai pemilik menyetujuinya. Ekspor awal dapat memakai `--no-data` untuk menyimpan skema saja; sebelum transaksi nyata, ekspor penuh harus disimpan pada tujuan terenkripsi yang dapat dipulihkan.
+
+Jangan menganggap folder lokal otomatis terenkripsi. Status BitLocker pada perangkat ini belum dapat diverifikasi dari sesi non-admin. Perlindungan DPAPI `CurrentUser` hanya dapat dibuka oleh profil Windows yang membuatnya dan bukan cadangan luar perangkat; gunakan hanya sebagai salinan lokal tambahan, lalu siapkan salinan terenkripsi kedua sebelum ada data pelanggan.
+
+## Verifikasi ImageKit sebelum menerima bukti
+
+Validasi read-only API daftar berkas pada 9 November 2026 merespons HTTP 403. Jangan mengulang request atau mengunggah bukti sebelum pemilik memeriksa akun dan key.
+
+1. Masuk ke Dashboard ImageKit dan pastikan akun aktif, paket tetap **Forever Free**, serta pemakaian bandwidth dan penyimpanan belum melewati batas paket.
+2. Buka bagian **Developer / API Keys** dan pastikan private key yang dipakai masih aktif. Jangan menempelkan key ke chat, Git, tangkapan layar, atau log.
+3. Jika key perlu diganti, perbarui Worker secret `IMAGEKIT_PRIVATE_KEY` melalui Wrangler saat pemilik siap; jangan masukkan key ke frontend atau file terlacak.
+4. Setelah itu minta persetujuan pemilik untuk satu validasi GET read-only. HTTP 200 mengonfirmasi autentikasi API; 401/403 berarti hentikan uji bukti dan periksa status akun/key lagi.
+5. Jangan mengaktifkan upload bukti pembayaran sampai validasi lolos dan alur upload/penghapusan sudah diuji secara end-to-end.
+
 ## Titik pemulihan D1
 
 Sebelum tindakan tulis besar atau migrasi, catat bookmark/time-travel yang tersedia:
@@ -37,6 +53,18 @@ Jika produksi perlu dipulihkan, hentikan sementara checkout, ekspor kondisi saat
 ## Rilis dan rollback aplikasi
 
 Rollback aplikasi mengembalikan versi kode, bukan isi D1. Hentikan checkout lebih dulu, pastikan penyebab insiden dan versi target, lalu uji endpoint baca setelah rollback. Jangan rollback melewati migrasi D1 yang membuat kode lama tidak kompatibel.
+
+## Rencana uji toko bertahap
+
+Rencana ini belum memberi izin untuk membuka checkout atau melakukan transaksi. Mulai hanya setelah katalog, rekening, ongkir, kebijakan, dan validasi ImageKit siap serta pemilik menyetujui biaya barang/ongkir yang mungkin timbul.
+
+1. **Kelompok awal:** pemilik sebagai admin dan paling banyak dua orang tepercaya sebagai pembeli uji. Jangan mengundang pelanggan umum atau memakai data pelanggan lain.
+2. **Cakupan:** satu order bernilai rendah dari katalog final; hitung ongkir ke tujuan uji yang disetujui; periksa ringkasan, total server, instruksi transfer manual, unggah bukti privat, tindakan admin, status order, notifikasi, dan informasi resi bila pengiriman diuji.
+3. **Kriteria lulus:** harga/ongkir pada server cocok dengan sumbernya; order tidak terduplikasi; bukti hanya bisa dilihat admin berwenang; status dan notifikasi sesuai tindakan; pembeli melihat informasi yang benar; tidak ada secret atau data pribadi pada log.
+4. **Hentikan uji segera** jika jumlah berubah tanpa penjelasan, ongkir tidak cocok, order ganda, bukti dapat diakses publik, akses admin salah, data pribadi masuk log, notifikasi/status keliru, atau muncul biaya yang belum disetujui.
+5. Setelah satu order uji, hentikan pembuatan order baru. Catat hasil tanpa menyimpan rekening, alamat lengkap, nomor telepon, token, atau isi bukti; perbaiki temuan dan minta tinjauan pemilik sebelum uji berikutnya atau pembukaan toko.
+
+Gunakan checklist bagian C dan E.4 sebagai catatan hasil. Pengujian ini belum dilakukan; rencana hanya menjadi prosedur awal.
 
 ### Cloudflare Worker
 
