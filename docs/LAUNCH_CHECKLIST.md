@@ -14,7 +14,8 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 - [x] D1 produksi `ruma-store` sudah dibuat di APAC, ID terpasang pada kedua binding Wrangler, dan migrasi 0001–0008 tercatat di `d1_migrations`; belum ada seed demo atau data toko.
 - [ ] Domain publik, origin frontend, dan URL API produksi belum ditetapkan.
 - [ ] Katalog, harga, bobot, foto asli, rekening, kebijakan toko, serta kredensial layanan masih contoh/belum diisi.
-- [ ] Workflow belum tersambung ke repositori GitHub dan Pages belum diaktifkan.
+- [x] Repo publik `ajielt7/Tokoku` sudah terhubung pada branch `main`; workflow Pages berhasil berjalan dan melewati deployment saat konfigurasi rilis belum siap.
+- [ ] GitHub Pages belum diaktifkan untuk repo (REST endpoint Pages mengembalikan 404); pilih sumber **GitHub Actions** sebelum rilis.
 
 ## A. Domain dan GitHub Pages
 
