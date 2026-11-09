@@ -14,7 +14,7 @@ Gunakan bobot tetap per bagian agar laporan progres konsisten. Nilai tiap bagian
 | D. SEO dan mutu halaman | 20% |
 | E. Backup, pemulihan, dan peluncuran | 15% |
 
-**Progres berbobot per 9 November 2026: 41,4%** (A 6/9, B 12/15, C 1/27, D 6/19, E 5/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
+**Progres berbobot per 9 November 2026: 42,5%** (A 6/9, B 12/15, C 1/27, D 7/19, E 5/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
 
 ### Rincian Tahap 12
 
@@ -33,7 +33,7 @@ Tahap 12 dibagi menjadi 5 bagian utama dan 18 subbagian. Status dihitung dari ko
 | C.2 | Ongkir dan pembayaran | 1/8 | Berjalan |
 | C.3 | Informasi toko dan kebijakan | 0/6 | Belum mulai |
 | C.4 | Pengiriman dan produksi | 0/6 | Belum mulai |
-| D.1 | Indeks dan metadata | 2/7 | Berjalan |
+| D.1 | Indeks dan metadata | 3/7 | Berjalan |
 | D.2 | Konten produk dan aksesibilitas | 0/5 | Belum mulai |
 | D.3 | Performa dan Search Console | 4/7 | Berjalan |
 | E.1 | Backup dan pemulihan | 2/6 | Berjalan |
@@ -168,11 +168,11 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 ## D. SEO dan mutu halaman
 
-### D.1 Indeks dan metadata — Berjalan (2/7)
+### D.1 Indeks dan metadata — Berjalan (3/7)
 
 - [x] `SITE_URL` sudah memakai HTTPS `https://ajielt7.github.io/Tokoku`; HTML demo tetap `noindex` tanpa canonical publik. Canonical menunggu katalog final.
 - [ ] Bangun ulang situs dari katalog final di D1 production.
-- [ ] Jalankan `check-release.mjs` dan pastikan pemeriksaan rilis lulus.
+- [x] Jalankan `node frontend/src/scripts/check-release.mjs --preview`; pemeriksaan lulus pada 9 November 2026 (9 HTML, 6 halaman publik). Ini hanya memvalidasi pratinjau `noindex`; build indeks publik masih menunggu katalog dan informasi toko final.
 - [ ] Periksa setiap halaman publik memiliki satu H1, title, description, canonical, tautan lokal valid, dan tidak berisi konten demo.
 - [ ] Pastikan cart, checkout, dan lacak pesanan memiliki `noindex`.
 - [ ] Pastikan cart, checkout, dan lacak pesanan tidak masuk sitemap; jangan memblokir crawler di `robots.txt` untuk URL yang perlu membaca arahan noindex.
