@@ -63,7 +63,7 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 
 ## E. Backup, pemulihan, dan peluncuran bertahap
 
-- [ ] Pastikan versi backend D1 yang dipakai mendukung Time Travel; periksa retensi akun sebelum menjadikannya satu-satunya perlindungan.
+- [x] D1 produksi memakai versi `production`; API mengembalikan bookmark Time Travel. Fitur aktif otomatis dengan retensi 30 hari dan tanpa biaya tambahan. Tetap siapkan ekspor terenkripsi terpisah sebelum transaksi untuk perlindungan di luar jendela/akun Cloudflare.
 - [ ] Ekspor D1 ke lokasi terenkripsi di luar repositori dan batasi akses. Buat salinan terpisah untuk bukti ImageKit jika kebijakan layanan memerlukannya.
 - [x] Latihan pemulihan lokal SQLite lulus untuk skema kosong; ini tidak membuktikan pemulihan D1 cloud atau file ImageKit. D1 staging cloud tidak dibuat karena pemilik memilih tanpa resource tambahan berpotensi biaya. Sebelum transaksi nyata, pastikan ekspor D1 produksi dapat dibuat dan simpan salinan terenkripsi; jadwalkan latihan cloud terpisah bila kelak ada lingkungan gratis yang sesuai.
 - [ ] Catat kontak pemulihan akun GitHub, Cloudflare, ImageKit, RajaOngkir, dan Firebase di password manager organisasi, bukan di repositori.

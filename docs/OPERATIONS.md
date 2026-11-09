@@ -4,9 +4,9 @@ Panduan ini berlaku untuk D1 production `ruma-store` yang telah dibuat dan dimig
 
 ## Sebelum ada pesanan nyata
 
-1. D1 produksi `ruma-store` sudah disiapkan; tidak ada D1 staging cloud agar tidak menambah resource yang berpotensi biaya. Simulasi backup/restore lokal SQLite telah lulus, tetapi tidak memverifikasi pemulihan cloud.
+1. D1 produksi `ruma-store` sudah disiapkan dan masih kosong; tidak ada D1 staging cloud agar tidak menambah resource yang berpotensi biaya. Simulasi backup/restore SQLite lokal lulus, sedangkan pemulihan cloud belum diuji. Time Travel D1 aktif otomatis (30 hari, tanpa biaya tambahan menurut dokumentasi Cloudflare).
 2. Terapkan migrasi secara berurutan dan catat nama/ID database, waktu, dan hasil migrasi di password manager atau catatan operasional privat.
-3. Pastikan database memakai storage D1 production yang mendukung Time Travel. Retensi bergantung pada plan Cloudflare; halaman D1 saat ini menyatakan hingga 7 hari pada Workers Free dan 30 hari pada Workers Paid.
+3. D1 `ruma-store` terverifikasi memakai `version: production` dan API mengembalikan bookmark Time Travel saat ini. Dokumentasi Cloudflare menyatakan Time Travel selalu aktif, dapat memulihkan database ke menit dalam 30 hari terakhir, dan tidak menambah biaya. Ini bukan ekspor mandiri dan tidak melindungi dari hilangnya akses akun.
 4. Tentukan frekuensi ekspor SQL tambahan dan lokasi simpan terenkripsi. Ekspor dapat berisi nama, nomor telepon, alamat, serta metadata transaksi.
 5. Tentukan cara mempertahankan file bukti di ImageKit secara terpisah. D1 hanya memuat referensi file; pemulihan D1 saja tidak mengembalikan berkas ImageKit.
 6. Sebelum transaksi nyata, lakukan ekspor D1 produksi dan simpan secara terenkripsi di luar repositori. Jangan uji restore ke produksi. Latihan lokal hanya memverifikasi skema SQLite; latihan pemulihan cloud memerlukan target terpisah yang aman.
@@ -43,5 +43,5 @@ Jika produksi perlu dipulihkan, hentikan sementara checkout, ekspor kondisi saat
 
 ## Referensi resmi
 
-- [D1 Time Travel dan pemulihan](https://developers.cloudflare.com/d1/reference/time-travel/)
+- [D1 Time Travel dan pemulihan](https://developers.cloudflare.com/d1/reference/time-travel/) (retensi 30 hari; selalu aktif; tanpa biaya tambahan, diperiksa 9 November 2026)
 - [Ekspor dan impor D1](https://developers.cloudflare.com/d1/best-practices/import-export-data/)
