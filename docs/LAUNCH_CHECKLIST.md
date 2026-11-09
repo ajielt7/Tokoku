@@ -5,6 +5,7 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 ## Status yang sudah terlihat di workspace
 
 - [x] SEO situs masih nonaktif (`indexable: false`, `contentReady: false`). Build belum bisa menerbitkan canonical atau sitemap publik.
+- [x] Pratinjau lokal dibangun dari 2 kategori dan 3 produk contoh; halaman berstatus `noindex,nofollow`, menampilkan catatan data contoh, dan `frontend/dist/` diabaikan Git. D1 cloud tetap kosong setelah seed lokal.
 - [x] Delapan migrasi SQL lulus diterapkan berurutan pada SQLite sementara. D1 produksi sudah dimigrasikan; latihan ekspor/pemulihan lokal SQLite juga lulus, tetapi bukan pemulihan D1 cloud.
 - [x] Checkout backend menghitung ulang harga/ongkir dan memerlukan API; konfigurasi lokal memakai URL localhost.
 - [x] Token admin dan kunci layanan tidak ditanam di frontend atau APK.
@@ -20,12 +21,12 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 ## A. Domain dan GitHub Pages
 
 - [x] URL publik dipilih: `https://ajielt7.github.io/Tokoku/`. `SITE_URL` menggunakan URL proyek dengan subpath repositori. Domain custom tidak dipakai.
-- [ ] Siapkan Worker API HTTPS dan isi `PUBLIC_API_BASE_URL` di Variables repositori GitHub.
-- [ ] Atur Pages dengan sumber **GitHub Actions**. Workflow memakai branch `main`; ubah trigger bila branch utama berbeda.
-- [ ] Tambahkan repository variables `SITE_URL`, `PUBLIC_API_BASE_URL`, `SEO_INDEXABLE=true`, dan `CONTENT_READY=true` hanya setelah semua pemeriksaan di bawah lulus.
-- [ ] Pastikan HTTPS diwajibkan pada pengaturan GitHub Pages.
+- [x] `PUBLIC_API_BASE_URL` sudah disetel ke target HTTPS `https://ruma-api-production.ajielt7.workers.dev`; Worker belum dideploy atau diuji.
+- [x] Pages memakai sumber **GitHub Actions** dan workflow menargetkan branch `main`.
+- [x] Repository variables `SITE_URL`, `PUBLIC_API_BASE_URL`, `SEO_INDEXABLE`, dan `CONTENT_READY` tersedia. Dua gate indeks/kesiapan tetap `false`; jangan ubah sampai konten dan API siap.
+- [x] GitHub Pages melaporkan `https_enforced: true`.
 - [ ] Setelah katalog D1 berubah, jalankan workflow **Build and deploy store** secara manual agar HTML statis, halaman produk, dan sitemap dibangun ulang dari katalog terbaru.
-- [ ] Jangan commit `.dev.vars`, `.env`, `google-services.json`, token, private key, database export, atau data pelanggan.
+- [x] Pemindaian file terlacak tidak menemukan `.dev.vars`, `.env`, `google-services.json`, private key, dump database, atau pola token umum. Pertahankan aturan ini pada perubahan selanjutnya.
 
 ## B. Cloudflare Worker dan D1
 
@@ -51,7 +52,7 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 
 ## D. SEO dan mutu halaman
 
-- [ ] Isi `SITE_URL` dengan URL kanonis HTTPS dan pastikan URL tidak berubah-ubah antara `www`/non-`www` atau subpath Pages.
+- [x] `SITE_URL` sudah memakai URL kanonis HTTPS `https://ajielt7.github.io/Tokoku`; canonical di HTML hasil build tetap menunggu katalog final dan deployment.
 - [ ] Bangun ulang dari katalog produksi. `check-release.mjs` harus lulus dan semua halaman publik harus memiliki satu H1, title, description, canonical, tautan lokal valid, dan konten bukan demo.
 - [ ] Pastikan cart, checkout, dan lacak pesanan tetap `noindex` dan tidak ada di sitemap; jangan blok crawler pada robots.txt untuk halaman yang perlu dibaca noindex-nya.
 - [ ] Periksa produk dan harga pada HTML hasil build, gambar/alt text, mobile layout, keyboard, kontras, dan pesan error.
