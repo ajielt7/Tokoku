@@ -184,7 +184,7 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 - [ ] Periksa gambar produk tampil, URL-nya aman, dan alt text sesuai.
 - [ ] Periksa tata letak pada layar ponsel.
 - [ ] Selesaikan navigasi dan alur belanja memakai keyboard saja.
-- [x] Audit statis CSS pada 9 November 2026 menghitung 24 pasangan warna teks utama: rasio 4,87–14,63:1; teks error `#a12d24` pada latar putih 7,20:1. Label formulir terhubung langsung dengan input; status dan pesan menggunakan live region, dan JavaScript menulisnya dengan `textContent`. Ini audit sumber/pratinjau, bukan pengujian seluruh keadaan visual di semua perangkat.
+- [x] Audit statis CSS pada 9 November 2026 menghitung 23 pasangan warna teks utama: rasio 4,87–14,63:1; teks error `#a12d24` pada latar putih 7,20:1. Label formulir terhubung langsung dengan input; status dan pesan menggunakan live region, dan JavaScript menulisnya dengan `textContent`. Ini audit sumber/pratinjau, bukan pengujian seluruh keadaan visual di semua perangkat.
 
 ### D.3 Performa dan Search Console — Berjalan (4/7)
 
