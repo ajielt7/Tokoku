@@ -52,7 +52,7 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 - [x] `ALLOWED_ORIGINS` production sudah memakai origin GitHub Pages `https://ajielt7.github.io` (tanpa subpath); `APP_ENV=production` sudah ditetapkan.
 - [x] Wrangler production `deploy --dry-run` lulus; Worker production sudah diunggah dan subdomain workers.dev aktif.
 - [x] `IMAGEKIT_PRIVATE_KEY`, `RAJAONGKIR_API_KEY`, dan `ADMIN_TOKEN` terpasang sebagai Worker secrets; nilainya tidak masuk Git atau frontend.
-- [x] Pencarian tujuan RajaOngkir dan GET admin orders berhasil melalui Worker; uji hanya membaca data, D1 masih kosong.
+- [x] GET admin orders setelah deploy terbaru merespons HTTP 200 dengan 0 pesanan memakai token lokal; nilai token tidak ditampilkan dan D1 tetap kosong.
 - [x] `IMAGEKIT_URL_ENDPOINT` dan `RAJAONGKIR_ORIGIN_ID=5052` tersedia sebagai production vars; endpoint memakai HTTPS.
 - [x] Perubahan logging pada commit `1d3570c` telah dideploy ke Worker `ruma-api-production` pada 9 November 2026 (versi `df440313-c47f-4594-a0df-6d3a175b3c50`); GET `/api/catalog` setelah deploy merespons HTTP 200.
 - [ ] Validasi ImageKit read-only ke API daftar berkas mengembalikan HTTP 403 pada 9 November 2026. Dokumentasi ImageKit menyebut 403 dapat berarti akun tidak terautentikasi dengan key, key kedaluwarsa, atau akun dinonaktifkan; batas upload hanya relevan bagi API upload. Periksa Dashboard ImageKit > Developer > API Keys dan status akun, lalu ulangi validasi setelah penyebab diperbaiki. Jangan mengunggah bukti pembayaran sebelum lolos ([dokumentasi API ImageKit](https://imagekit.io/docs/api-overview)).
