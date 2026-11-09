@@ -5,7 +5,7 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 ## Status yang sudah terlihat di workspace
 
 - [x] SEO situs masih nonaktif (`indexable: false`, `contentReady: false`). Build belum bisa menerbitkan canonical atau sitemap publik.
-- [x] Delapan migrasi SQL lulus diterapkan berurutan pada SQLite sementara; penerapan dan latihan pemulihan D1 produksi tetap belum dilakukan.
+- [x] Delapan migrasi SQL lulus diterapkan berurutan pada SQLite sementara. D1 produksi sudah dimigrasikan; latihan ekspor/pemulihan lokal SQLite juga lulus, tetapi bukan pemulihan D1 cloud.
 - [x] Checkout backend menghitung ulang harga/ongkir dan memerlukan API; konfigurasi lokal memakai URL localhost.
 - [x] Token admin dan kunci layanan tidak ditanam di frontend atau APK.
 - [x] Environment produksi Wrangler mewajibkan `ADMIN_TOKEN`, `RAJAONGKIR_API_KEY`, dan `IMAGEKIT_PRIVATE_KEY` sebelum deploy berhasil.
@@ -14,8 +14,8 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 - [x] D1 produksi `ruma-store` sudah dibuat di APAC, ID terpasang pada kedua binding Wrangler, dan migrasi 0001–0008 tercatat di `d1_migrations`; belum ada seed demo atau data toko.
 - [ ] Domain publik, origin frontend, dan URL API produksi belum ditetapkan.
 - [ ] Katalog, harga, bobot, foto asli, rekening, kebijakan toko, serta kredensial layanan masih contoh/belum diisi.
-- [x] Repo publik `ajielt7/Tokoku` sudah terhubung pada branch `main`; workflow Pages berhasil berjalan dan melewati deployment saat konfigurasi rilis belum siap.
-- [ ] GitHub Pages belum diaktifkan untuk repo (REST endpoint Pages mengembalikan 404); pilih sumber **GitHub Actions** sebelum rilis.
+- [x] Repo publik `ajielt7/Tokoku` terhubung pada branch `main`; Pages memakai sumber GitHub Actions. Workflow berhasil, tetapi deployment dilewati karena gate rilis belum siap.
+- [x] Sumber GitHub Pages sudah diatur ke **GitHub Actions**. Belum ada situs terbit sampai gate rilis dibuka.
 
 ## A. Domain dan GitHub Pages
 
@@ -30,7 +30,7 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 ## B. Cloudflare Worker dan D1
 
 - [x] Buat database produksi terpisah dari database lokal; ID D1 produksi sudah terpasang pada kedua binding `DB` di `backend/wrangler.jsonc`.
-- [x] Tinjau dan terapkan migrasi 0001–0008 ke D1 produksi tanpa menjalankan seed demo; verifikasi urutan catatan migrasi dan `PRAGMA foreign_key_check` kosong. Latihan restore staging tetap belum dilakukan.
+- [x] Tinjau dan terapkan migrasi 0001–0008 ke D1 produksi tanpa seed demo; urutan tercatat dan `PRAGMA foreign_key_check` kosong. Latihan backup/restore SQLite lokal lulus (8 migrasi, integritas OK, foreign key bersih); D1 staging cloud tidak dibuat agar tidak menambah resource yang berpotensi biaya.
 - [x] `ALLOWED_ORIGINS` production sudah memakai origin GitHub Pages `https://ajielt7.github.io` (tanpa subpath); `APP_ENV=production` sudah ditetapkan.
 - [ ] Pasang Worker secrets: `ADMIN_TOKEN`, `RAJAONGKIR_API_KEY`, `IMAGEKIT_PRIVATE_KEY`; pasang FCM secrets hanya jika notifikasi admin akan dipakai.
 - [ ] Isi `IMAGEKIT_URL_ENDPOINT`, `RAJAONGKIR_ORIGIN_ID`, dan pastikan semua URL API memakai HTTPS.
@@ -62,7 +62,7 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 
 - [ ] Pastikan versi backend D1 yang dipakai mendukung Time Travel; periksa retensi akun sebelum menjadikannya satu-satunya perlindungan.
 - [ ] Ekspor D1 ke lokasi terenkripsi di luar repositori dan batasi akses. Buat salinan terpisah untuk bukti ImageKit jika kebijakan layanan memerlukannya.
-- [ ] Lakukan latihan pemulihan ke database staging dan verifikasi jumlah data, relasi, migrasi, akses Worker, serta file ImageKit sebelum ada transaksi nyata.
+- [x] Latihan pemulihan lokal SQLite lulus untuk skema kosong; ini tidak membuktikan pemulihan D1 cloud atau file ImageKit. D1 staging cloud tidak dibuat karena pemilik memilih tanpa resource tambahan berpotensi biaya. Sebelum transaksi nyata, pastikan ekspor D1 produksi dapat dibuat dan simpan salinan terenkripsi; jadwalkan latihan cloud terpisah bila kelak ada lingkungan gratis yang sesuai.
 - [ ] Catat kontak pemulihan akun GitHub, Cloudflare, ImageKit, RajaOngkir, dan Firebase di password manager organisasi, bukan di repositori.
 - [ ] Rilis dahulu ke kelompok kecil; pantau pesanan gagal, ongkir, upload bukti, notifikasi, dan log selama periode awal.
 - [ ] Simpan artifact/rilis sebelumnya dan prosedur rollback. Jangan pulihkan database produksi tanpa menentukan titik waktu serta membuat cadangan keadaan saat ini.

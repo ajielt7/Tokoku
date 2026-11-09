@@ -4,12 +4,12 @@ Panduan ini berlaku untuk D1 production `ruma-store` yang telah dibuat dan dimig
 
 ## Sebelum ada pesanan nyata
 
-1. Buat database staging dan produksi yang terpisah; pastikan `backend/wrangler.jsonc` menunjuk ke target yang tepat.
+1. D1 produksi `ruma-store` sudah disiapkan; tidak ada D1 staging cloud agar tidak menambah resource yang berpotensi biaya. Simulasi backup/restore lokal SQLite telah lulus, tetapi tidak memverifikasi pemulihan cloud.
 2. Terapkan migrasi secara berurutan dan catat nama/ID database, waktu, dan hasil migrasi di password manager atau catatan operasional privat.
 3. Pastikan database memakai storage D1 production yang mendukung Time Travel. Retensi bergantung pada plan Cloudflare; halaman D1 saat ini menyatakan hingga 7 hari pada Workers Free dan 30 hari pada Workers Paid.
 4. Tentukan frekuensi ekspor SQL tambahan dan lokasi simpan terenkripsi. Ekspor dapat berisi nama, nomor telepon, alamat, serta metadata transaksi.
 5. Tentukan cara mempertahankan file bukti di ImageKit secara terpisah. D1 hanya memuat referensi file; pemulihan D1 saja tidak mengembalikan berkas ImageKit.
-6. Uji pemulihan ke database staging terlebih dahulu, bukan langsung ke produksi.
+6. Sebelum transaksi nyata, lakukan ekspor D1 produksi dan simpan secara terenkripsi di luar repositori. Jangan uji restore ke produksi. Latihan lokal hanya memverifikasi skema SQLite; latihan pemulihan cloud memerlukan target terpisah yang aman.
 
 ## Ekspor manual
 
@@ -30,7 +30,7 @@ Sebelum tindakan tulis besar atau migrasi, catat bookmark/time-travel yang terse
 npx wrangler d1 time-travel info ruma-store
 ```
 
-Untuk latihan, pulihkan bookmark ke database staging sesuai panduan Cloudflare dan pastikan data yang diharapkan ada. Pemulihan Time Travel menimpa database target; jangan jalankan perintah restore pada produksi sebagai uji coba. Setelah pemulihan staging, panggil health/catalog, periksa migrasi dan jumlah baris, lalu minta admin meninjau data sampel.
+Jangan pulihkan bookmark ke database produksi sebagai latihan. Saat tersedia target staging yang aman, pulihkan bookmark di sana sesuai panduan Cloudflare dan pastikan data yang diharapkan ada. Simulasi lokal yang sudah lulus tidak menggantikan pemulihan D1 cloud. Pemulihan Time Travel menimpa database target; jangan jalankan perintah restore pada produksi sebagai uji coba. Setelah pemulihan staging, panggil health/catalog dan periksa migrasi serta jumlah baris.
 
 Jika produksi perlu dipulihkan, hentikan sementara checkout, ekspor kondisi saat ini, tentukan titik waktu bersama pemilik data, pulihkan sesuai panduan resmi, verifikasi transaksi, lalu aktifkan kembali checkout. Simpan bookmark sebelum restore agar pemulihan dapat dibatalkan bila titik waktu keliru.
 
