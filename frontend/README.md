@@ -176,6 +176,8 @@ CSS mengatur presentasi dan tata letak; jangan mengandalkannya untuk menyampaika
 
 Urutan prioritas halaman adalah: konten bermanfaat dan akurat, URL stabil serta tautan yang dapat dirayapi, HTML semantik dengan konten utama yang sudah tersedia, metadata/structured data yang sesuai, lalu kinerja dan pengalaman pengguna. CSS dan JavaScript harus mendukung halaman yang sama untuk pelanggan dan perayap; keduanya tidak menggantikan konten atau struktur HTML.
 
+Saat `SEO_INDEXABLE=true` dan `CONTENT_READY=true`, halaman produk juga memuat structured data `Product` dan `Offer` (nama, deskripsi, foto HTTPS, harga, mata uang, serta URL produk). Build publik menolak produk tanpa foto HTTPS/teks alt atau harga yang valid; pemeriksa rilis memeriksa JSON-LD produk. Markup ini harus cocok dengan informasi yang tampak di halaman dan tidak menjamin cuplikan khusus atau penayangan di Google Shopping. Ikuti [panduan Google untuk listing produk](https://developers.google.com/search/docs/appearance/structured-data/merchant-listing) dan [cuplikan produk](https://developers.google.com/search/docs/appearance/structured-data/product-snippet), lalu validasi URL produk yang sudah terbit sebelum mendaftarkan feed atau mengirim sitemap.
+
 ## File teknis SEO
 
 `robots.txt` dan `sitemap.xml` ditempatkan di akar situs yang diterbitkan. Isi finalnya dibuat saat domain dan URL publik sudah ditetapkan; jangan mengirim sitemap berisi alamat contoh ke mesin pencari.

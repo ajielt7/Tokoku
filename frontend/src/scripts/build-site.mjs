@@ -53,7 +53,7 @@ function absoluteUrl(pathname) {
   return `${site.siteUrl.replace(/\/$/, "")}/${pathname.replace(/^\//, "")}`;
 }
 
-function addSeo(html, { title, description, pathname, breadcrumbs }) {
+function addSeo(html, { title, description, pathname, breadcrumbs, structuredData = [] }) {
   const robots = site.indexable ? "index,follow" : "noindex,nofollow";
   const tags = [`<meta name="robots" content="${robots}">`];
   if (site.indexable && site.siteUrl) {
@@ -65,14 +65,16 @@ function addSeo(html, { title, description, pathname, breadcrumbs }) {
     tags.push(`<meta property="og:description" content="${escapeHtml(description)}">`);
     tags.push(`<meta property="og:url" content="${escapeHtml(canonical)}">`);
     tags.push(`<meta property="og:locale" content="${escapeHtml(site.language)}">`);
-    const schema = {
+    const breadcrumbSchema = {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
       itemListElement: breadcrumbs.map((item, index) => ({
         "@type": "ListItem", position: index + 1, name: item.name, item: absoluteUrl(item.path),
       })),
     };
-    tags.push(`<script type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>`);
+    for (const schema of [breadcrumbSchema, ...structuredData]) {
+      tags.push(`<script type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>`);
+    }
   }
   return html.replace("</head>", `    ${tags.join("\n    ")}\n  </head>`);
 }
@@ -201,6 +203,18 @@ const catalog = await loadCatalog();
 if (site.contentReady && (!catalog.categories.length || !catalog.products.length)) {
   throw new Error("Katalog production harus memiliki minimal satu kategori dan satu produk sebelum contentReady diaktifkan.");
 }
+if (site.contentReady) {
+  const productsWithoutPhotos = catalog.products.filter((product) => !imageUrl(product) || !String(product.image_alt || "").trim());
+  if (productsWithoutPhotos.length) {
+    throw new Error(`Setiap produk harus memiliki foto HTTPS dan teks alt sebelum contentReady diaktifkan: ${productsWithoutPhotos.map((product) => product.slug).join(", ")}`);
+  }
+  const productsWithInvalidOffers = catalog.products.filter((product) =>
+    !Number.isSafeInteger(product.price_amount) || product.price_amount <= 0 || !/^[A-Z]{3}$/.test(product.currency || "")
+  );
+  if (productsWithInvalidOffers.length) {
+    throw new Error(`Setiap produk harus memiliki harga positif dan kode mata uang ISO 4217: ${productsWithInvalidOffers.map((product) => product.slug).join(", ")}`);
+  }
+}
 const homeTemplate = await readFile(path.join(templateDirectory, "home.html"), "utf8");
 const categoryTemplate = await readFile(path.join(templateDirectory, "category.html"), "utf8");
 const productTemplate = await readFile(path.join(templateDirectory, "product.html"), "utf8");
@@ -312,6 +326,20 @@ for (const product of catalog.products) {
       { name: category.name, path: `/kategori/${category.slug}/` },
       { name: product.name, path: `/produk/${product.slug}/` },
     ],
+    structuredData: site.indexable ? [{
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: product.name,
+      description: product.description,
+      image: [image],
+      category: category.name,
+      offers: {
+        "@type": "Offer",
+        url: absoluteUrl(`/produk/${product.slug}/`),
+        priceCurrency: product.currency,
+        price: product.price_amount,
+      },
+    }] : [],
   });
   const destination = path.join(outputDirectory, "produk", product.slug);
   await mkdir(destination, { recursive: true });

@@ -6,6 +6,7 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 
 - [x] SEO situs masih nonaktif (`indexable: false`, `contentReady: false`). Build belum bisa menerbitkan canonical atau sitemap publik.
 - [x] Pratinjau lokal dibangun dari 2 kategori dan 3 produk contoh; halaman berstatus `noindex,nofollow`, menampilkan catatan data contoh, dan `frontend/dist/` diabaikan Git. D1 cloud tetap kosong setelah seed lokal.
+- [x] Alur lokal diverifikasi ulang melalui API dan server Pages: API menyediakan 2 kategori/3 produk, halaman beranda dan produk tampil dengan `noindex`, dan konten contoh terlihat. Saat `CONTENT_READY=true` dicoba pada data tersebut, build ditolak karena foto HTTPS/alt belum ada dan berkas pratinjau sebelumnya tidak berubah.
 - [x] Delapan migrasi SQL lulus diterapkan berurutan pada SQLite sementara. D1 produksi sudah dimigrasikan; latihan ekspor/pemulihan lokal SQLite juga lulus, tetapi bukan pemulihan D1 cloud.
 - [x] Checkout backend menghitung ulang harga/ongkir dan memerlukan API; konfigurasi lokal memakai URL localhost.
 - [x] Token admin dan kunci layanan tidak ditanam di frontend atau APK.
@@ -35,6 +36,7 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 - [x] Buat database produksi terpisah dari database lokal; ID D1 produksi sudah terpasang pada kedua binding `DB` di `backend/wrangler.jsonc`.
 - [x] Tinjau dan terapkan migrasi 0001–0008 ke D1 produksi tanpa seed demo; urutan tercatat dan `PRAGMA foreign_key_check` kosong. Latihan backup/restore SQLite lokal lulus (8 migrasi, integritas OK, foreign key bersih); D1 staging cloud tidak dibuat agar tidak menambah resource yang berpotensi biaya.
 - [x] `ALLOWED_ORIGINS` production sudah memakai origin GitHub Pages `https://ajielt7.github.io` (tanpa subpath); `APP_ENV=production` sudah ditetapkan.
+- [x] Wrangler production `deploy --dry-run` berhasil memaketkan Worker dan menampilkan binding D1 `ruma-store` serta empat rate limiter dengan namespace berbeda. Ini hanya validasi lokal; belum mengunggah Worker atau memverifikasi layanan eksternal.
 - [ ] Pasang Worker secrets: `ADMIN_TOKEN`, `RAJAONGKIR_API_KEY`, `IMAGEKIT_PRIVATE_KEY`; pasang FCM secrets hanya jika notifikasi admin akan dipakai.
 - [ ] Isi `IMAGEKIT_URL_ENDPOINT`, `RAJAONGKIR_ORIGIN_ID`, dan pastikan semua URL API memakai HTTPS.
 - [ ] Verifikasi empat binding rate limiter dan pastikan setiap `namespace_id` unik di akun Cloudflare. Limit Worker ini per lokasi dan bersifat perkiraan; pantau trafik dan sesuaikan setelah penggunaan nyata.
@@ -58,6 +60,7 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 - [ ] Bangun ulang dari katalog produksi. `check-release.mjs` harus lulus dan semua halaman publik harus memiliki satu H1, title, description, canonical, tautan lokal valid, dan konten bukan demo.
 - [ ] Pastikan cart, checkout, dan lacak pesanan tetap `noindex` dan tidak ada di sitemap; jangan blok crawler pada robots.txt untuk halaman yang perlu dibaca noindex-nya.
 - [ ] Periksa produk dan harga pada HTML hasil build, gambar/alt text, mobile layout, keyboard, kontras, dan pesan error.
+- [x] Build produk siap membuat JSON-LD `Product`/`Offer` hanya saat indeks diaktifkan; build memeriksa foto HTTPS, alt text, harga, mata uang, dan URL Offer. Data contoh tetap lokal/noindex. Validasi hasil pada URL yang diterbitkan dan Google Rich Results Test masih menunggu data toko final serta deployment.
 - [ ] Uji semua URL publik setelah deployment, termasuk 404 dan subpath Pages. Jalankan pemeriksaan Lighthouse seluler dan tinjau Core Web Vitals setelah data lapangan tersedia.
 - [ ] Verifikasi properti domain di Google Search Console, periksa URL dengan URL Inspection, lalu kirim sitemap. Pengiriman sitemap membantu penemuan URL tetapi tidak menjamin pengindeksan atau peringkat.
 

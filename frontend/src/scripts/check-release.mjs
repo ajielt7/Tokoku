@@ -119,8 +119,34 @@ for (const [file, { html, route }] of pageData) {
   const images = html.match(/<img\b[^>]*>/gi) || [];
   for (const image of images) if (!/\balt\s*=\s*["'][^"']*["']/i.test(image)) fail(`${file}: gambar tanpa atribut alt.`);
   const jsonLdBlocks = [...html.matchAll(/<script\s+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+  const parsedSchemas = [];
   for (const [, block] of jsonLdBlocks) {
-    try { JSON.parse(block); } catch { fail(`${file}: structured data JSON-LD tidak valid.`); }
+    try { parsedSchemas.push(JSON.parse(block)); } catch { fail(`${file}: structured data JSON-LD tidak valid.`); }
+  }
+  if (!previewMode && route.startsWith("/produk/")) {
+    const productSchema = parsedSchemas.find((schema) => schema?.["@type"] === "Product");
+    if (!productSchema) {
+      fail(`${file}: halaman produk harus memiliki structured data Product.`);
+    } else {
+      const offer = productSchema.offers;
+      if (!productSchema.name || !Array.isArray(productSchema.image) || !productSchema.image.length) {
+        fail(`${file}: Product harus menyertakan nama dan foto produk.`);
+      }
+      if (!offer || offer["@type"] !== "Offer" || !Number.isSafeInteger(offer.price) || offer.price <= 0 || !/^[A-Z]{3}$/.test(offer.priceCurrency || "")) {
+        fail(`${file}: Product harus memiliki Offer dengan harga dan mata uang yang valid.`);
+      }
+      if (offer?.url !== `${siteUrl.replace(/\/$/, "")}${route}`) {
+        fail(`${file}: URL Offer harus sama dengan canonical produk.`);
+      }
+      for (const image of productSchema.image || []) {
+        try {
+          if (new URL(image).protocol !== "https:") fail(`${file}: foto Product harus memakai HTTPS.`);
+        } catch { fail(`${file}: URL foto Product tidak valid.`); }
+      }
+    }
+    if (/detail-image-placeholder|product-image-placeholder/.test(html)) {
+      fail(`${file}: produk publik tidak boleh memakai placeholder foto.`);
+    }
   }
   if (!previewMode && /localhost|127\.0\.0\.1|REPLACE_WITH|pratinjau katalog|data lokal|\(contoh\)/i.test(html)) {
     fail(`${file}: masih memuat URL lokal atau konten contoh.`);
