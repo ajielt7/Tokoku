@@ -2,6 +2,20 @@
 
 Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Pratinjau demo boleh tayang tanpa indeks; rilis toko untuk pelanggan menunggu identitas toko, katalog, domain, layanan, dan rekening final.
 
+## Pengukuran progres
+
+Gunakan bobot tetap per bagian agar laporan progres konsisten. Nilai tiap bagian adalah `bobot × butir selesai ÷ seluruh butir` di bagian itu; total adalah jumlah kontribusi A–E. Butir ringkasan di luar bagian A–E tidak dihitung agar pekerjaan duplikat tidak menggandakan nilai.
+
+| Bagian | Bobot |
+|---|---:|
+| A. Domain dan GitHub Pages | 15% |
+| B. Cloudflare Worker dan D1 | 25% |
+| C. Produk, transaksi, dan kebijakan toko | 25% |
+| D. SEO dan mutu halaman | 20% |
+| E. Backup, pemulihan, dan peluncuran | 15% |
+
+**Progres berbobot per 9 November 2026: 47,2%** (A 6/7, B 9/11, C 1/8, D 2/7, E 2/6). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
+
 ## Status yang sudah terlihat di workspace
 
 - [x] SEO situs masih nonaktif (`indexable: false`, `contentReady: false`). Build belum bisa menerbitkan canonical atau sitemap publik.
