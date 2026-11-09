@@ -174,7 +174,7 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 - [x] `SITE_URL` sudah memakai HTTPS `https://ajielt7.github.io/Tokoku`; pemeriksaan Pages pada 9 November 2026 menemukan sembilan rute merespons HTTP 200, semuanya `noindex,nofollow`, dan belum ada canonical publik. Ini sesuai mode demo; canonical menunggu katalog final.
 - [ ] Bangun ulang situs dari katalog final di D1 production.
 - [x] Jalankan `node frontend/src/scripts/check-release.mjs --preview`; pemeriksaan lulus pada 9 November 2026 (9 HTML, 6 halaman publik). Ini hanya memvalidasi pratinjau `noindex`; build indeks publik masih menunggu katalog dan informasi toko final.
-- [x] Periksa struktur halaman preview: sembilan rute live memiliki tepat satu H1, title, dan description; pemeriksaan lokal memastikan tautan internal valid. GET Pages pada 9 November 2026 juga tidak menemukan gambar tanpa atribut alt.
+- [x] Periksa struktur halaman preview: sembilan rute live memiliki tepat satu H1, title, dan description; pemeriksaan lokal memastikan tautan internal valid. Pada deployment Pages run `42632783168`, kesembilan rute tetap `noindex,nofollow`, masing-masing punya satu title, description, dan H1. Pemeriksaan live pada 9 November 2026 tidak menemukan gambar tanpa atribut alt.
 - [ ] Pada rilis final, periksa setiap halaman publik memiliki canonical yang benar dan tidak berisi konten demo.
 - [x] Pastikan keranjang, checkout, dan lacak pesanan memiliki `noindex`. Build preview dan pemeriksaan `check-release.mjs --preview` lulus pada 9 November 2026; keluaran saat ini mencakup ketiga halaman tersebut.
 - [x] Pastikan `robots.txt` preview membolehkan crawler membaca halaman noindex dan tidak menunjuk sitemap demo. Pemeriksaan `check-release.mjs --preview` lulus pada 9 November 2026.
@@ -192,7 +192,7 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 ### D.3 Performa dan Search Console — Berjalan (4/7)
 
-- [x] Buka seluruh URL yang ada pada deployment demo: beranda, checkout, keranjang, lacak pesanan, 2 kategori, dan 3 produk; semuanya merespons HTTP 200.
+- [x] Buka seluruh URL yang ada pada deployment demo: beranda, checkout, keranjang, lacak pesanan, 2 kategori, dan 3 produk; semuanya merespons HTTP 200, diverifikasi ulang setelah run Pages `42632783168`. Worker health dan katalog masing-masing HTTP 200; katalog D1 production tetap kosong.
 - [x] URL acak merespons 404; subpath proyek `/Tokoku/` berfungsi pada halaman-halaman tersebut. Sitemap merespons 404 sesuai status demo `noindex` dan katalog demo tidak dikirim sebagai sitemap publik.
 - [x] Audit Lighthouse seluler pada build lokal setelah perbaikan: beranda mendapat skor performance/accessibility/best-practices 100/100/100 (LCP 1,5 dtk, CLS 0,004, TBT 0); halaman produk, kategori, keranjang, checkout, dan lacak pesanan juga mendapat accessibility/best-practices 100/100. Laporan tersimpan di luar repo pada `%LOCALAPPDATA%\Ruma\lighthouse-stage12-local.json` dan laporan halaman terkait.
 - [x] Audit ulang Lighthouse seluler pada Pages publik setelah perbaikan terbit: performance 98, accessibility 100, best-practices 100; LCP 1,9 dtk, CLS 0, TBT 0 ms, tanpa mismatch label atau error konsol. Temuan untuk optimasi berikutnya: CSS render-blocking diperkirakan 650 ms dan cache aset statis berpotensi menghemat sekitar 11 KiB saat kunjungan ulang. Laporan disimpan di luar repo pada `%LOCALAPPDATA%\Ruma\lighthouse-stage12-production.json`.
