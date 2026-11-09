@@ -93,7 +93,7 @@ async function getRouteDistance(latitude, longitude) {
       return { distanceMeters: meters, distanceKm: Math.round(meters / 10) / 100, provider: "OSRM" };
     }
   } catch (error) {
-    console.warn("OSRM route failed; trying Valhalla", error instanceof Error ? error.message : String(error));
+    logOperationalError("osrm_route", error);
   }
   try {
     const response = await fetch(valhallaRouteUrl, {
@@ -111,7 +111,7 @@ async function getRouteDistance(latitude, longitude) {
       return { distanceMeters: distanceKm * 1000, distanceKm: Math.round(distanceKm * 100) / 100, provider: "Valhalla" };
     }
   } catch (error) {
-    console.warn("Valhalla route failed", error instanceof Error ? error.message : String(error));
+    logOperationalError("valhalla_route", error);
   }
   return null;
 }
@@ -206,7 +206,7 @@ async function searchShippingDestinations(request, env, headers) {
     }
     return jsonResponse(body, 200, { ...headers, "cache-control": data.length ? "public, max-age=300" : "no-store" });
   } catch (error) {
-    console.error("RajaOngkir destination search failed", error instanceof Error ? error.message : String(error));
+    logOperationalError("rajaongkir_destination_search", error);
     return jsonResponse({ error: "shipping_provider_error", message: "Pencarian tujuan belum berhasil. Coba lagi." }, 502, headers);
   }
 }
@@ -237,7 +237,7 @@ async function quoteShipping(request, env, headers) {
   } catch (error) {
     if (error.status === 400) return jsonResponse({ error: "validation_error", message: error.message }, 400, headers);
     if (error.status === 503) return jsonResponse({ error: "shipping_not_configured", message: error.message }, 503, headers);
-    console.error("RajaOngkir shipping quote failed", error instanceof Error ? error.message : String(error));
+    logOperationalError("rajaongkir_shipping_quote", error);
     return jsonResponse({ error: "shipping_provider_error", message: "Tarif ongkir belum berhasil dimuat. Coba lagi." }, 502, headers);
   }
 }
@@ -273,7 +273,7 @@ async function uploadPrivatePaymentProof(file, paymentId, env) {
       body: form,
     });
   } catch (error) {
-    console.error("ImageKit upload request failed", error instanceof Error ? error.message : String(error));
+    logOperationalError("imagekit_upload", error);
     const upstreamError = new Error("ImageKit belum dapat menerima bukti. Coba lagi nanti.");
     upstreamError.status = 502;
     throw upstreamError;
@@ -404,7 +404,7 @@ async function enforceRateLimit(request, env, pathname) {
       return jsonResponse({ error: "rate_limited", message: "Terlalu banyak permintaan. Coba lagi sebentar." }, 429, { "retry-after": "60" });
     }
   } catch (error) {
-    console.error("Rate limit check failed", error instanceof Error ? error.message : String(error));
+    logOperationalError("rate_limit_check", error);
     if (env.APP_ENV === "production") {
       return jsonResponse({ error: "rate_limit_unavailable", message: "Layanan sementara tidak tersedia." }, 503);
     }
@@ -853,7 +853,7 @@ async function sendAdminNewOrderNotification(env, order) {
       }
     }));
   } catch (error) {
-    console.warn("Admin order notification failed", error instanceof Error ? error.message : String(error));
+    logOperationalError("admin_order_notification", error);
   }
 }
 
@@ -982,7 +982,7 @@ async function deleteImageKitFile(fileId, env) {
     });
     if (!response.ok) console.warn("ImageKit cleanup failed", response.status);
   } catch (error) {
-    console.warn("ImageKit cleanup request failed", error instanceof Error ? error.message : String(error));
+    logOperationalError("imagekit_cleanup", error);
   }
 }
 
@@ -1044,10 +1044,14 @@ async function reviewAdminPayment(request, env, headers, paymentReference) {
 }
 
 function logDatabaseError(operation, error) {
+  logOperationalError(operation, error, "Database operation failed");
+}
+
+function logOperationalError(operation, error, message = "Operation failed") {
   console.error(JSON.stringify({
-    message: "Database operation failed",
+    message,
     operation,
-    error: error instanceof Error ? error.message : String(error),
+    error_type: error instanceof Error ? error.name : "UnknownError",
   }));
 }
 

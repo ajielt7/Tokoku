@@ -1,6 +1,6 @@
 # Ongkir dan Pembayaran
 
-**Status:** Implementasi kode lokal tahap 8 selesai: RajaOngkir, Gojek Same Day, transfer manual, bukti privat ImageKit, dan API pemeriksaan pembayaran admin. Migrasi schema payments sudah diterapkan ke D1 production yang masih kosong. Kredensial layanan, data rekening, bobot final, dan transaksi nyata tetap menunggu konfigurasi online. Alur ongkir disesuaikan dari `C:\Users\Ajiee\OneDrive\Dokumen\Pemesanan`.
+**Status:** Implementasi kode lokal tahap 8 selesai: RajaOngkir, Gojek Same Day, transfer manual, bukti privat ImageKit, dan API pemeriksaan pembayaran admin. Migrasi schema payments sudah diterapkan ke D1 production yang masih kosong. Secret RajaOngkir, ImageKit, dan admin sudah terpasang di Worker; pencarian tujuan RajaOngkir berhasil. Validasi API ImageKit read-only mengembalikan HTTP 403 pada 9 November 2026, sehingga key/akun dan upload bukti belum tervalidasi. Data rekening, bobot final, dan transaksi nyata masih menunggu. Alur ongkir disesuaikan dari `C:\Users\Ajiee\OneDrive\Dokumen\Pemesanan`.
 
 ## Alur yang dipakai
 
@@ -22,9 +22,10 @@
 
 ## Yang tersisa untuk penerapan online
 
-- Pasang `RAJAONGKIR_API_KEY` sebagai secret Worker dan terapkan migrasi ke D1 cloud.
-- Pasang `IMAGEKIT_PRIVATE_KEY` dan `ADMIN_TOKEN` sebagai secret Worker; isi `IMAGEKIT_URL_ENDPOINT` sesuai ImageKit.
+- Periksa private API key dan status akun di ImageKit Dashboard > Developer > API Keys. Dokumentasi ImageKit menyebut HTTP 403 dapat berarti akun tidak dapat diautentikasi dengan key, key kedaluwarsa, atau akun dinonaktifkan; batas upload berlaku pada API upload. API memakai Basic Auth dengan private key sebagai username dan password kosong ([dokumentasi API ImageKit](https://imagekit.io/docs/api-overview)). Jangan menaruh key di chat, Git, frontend, atau log.
+- Setelah masalah HTTP 403 dibereskan, validasi API ImageKit read-only dan lakukan uji upload bukti terbatas sebelum membuka checkout.
+- Secret RajaOngkir, ImageKit, dan admin serta migrasi D1 cloud sudah dikonfigurasi. Jangan mengganti secret dengan nilai baru kecuali key yang benar sudah diambil dari dashboard masing-masing layanan.
 - Tinjau endpoint rute publik OSRM/Valhalla yang dipakai prototipe; pilih penyedia rute yang sesuai sebelum checkout publik.
 - Ganti bobot default 500 gram dengan berat final produk + kemasan, dan verifikasi ID asal `5052`.
 - Masukkan nama bank, nomor rekening, dan nama pemilik rekening.
-- Uji pencarian tujuan, tarif nyata, transfer, unggah bukti, dan persetujuan admin pada lingkungan yang sudah dikonfigurasi.
+- Uji pencarian tujuan dan tarif nyata, transfer, unggah bukti privat, URL admin bertanda tangan, pembersihan saat ditolak, serta persetujuan admin pada lingkungan yang sudah dikonfigurasi.

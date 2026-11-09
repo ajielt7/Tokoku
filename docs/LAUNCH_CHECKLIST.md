@@ -14,6 +14,7 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Pratinjau demo
 - [x] Environment produksi Wrangler mewajibkan `ADMIN_TOKEN`, `RAJAONGKIR_API_KEY`, dan `IMAGEKIT_PRIVATE_KEY` sebelum deploy berhasil.
 - [x] Request berbiaya dan operasi tulis diberi rate limit Worker; production menolak request jika binding limiter hilang.
 - [x] Endpoint baca katalog/produk mengirim CORS untuk origin Pages yang diizinkan dan menolak origin asing; sudah diverifikasi dengan konfigurasi production secara lokal.
+- [x] Logging backend ditinjau dan diperketat: error upstream/database hanya mencatat nama operasi dan tipe error; kegagalan upload ImageKit mencatat status serta request ID, tanpa isi bukti atau pesan upstream.
 - [x] Alur RajaOngkir diselaraskan dengan panduan lokal `Pemesanan/worker/README.md`: pencarian tujuan dicache 30 hari, tarif multi-kurir dihitung langsung dengan asal Cimekar `5052`, lalu backend menghitung ulang tarif saat order dibuat. Verifikasi tarif nyata dari Worker Ruma masih menunggu secret API key khusus Ruma.
 - [x] Build Pages memiliki workflow yang menolak rilis bila variabel produksi dan persetujuan indeks belum ada.
 - [x] D1 produksi `ruma-store` sudah dibuat di APAC, ID terpasang pada kedua binding Wrangler, dan migrasi 0001–0008 tercatat di `d1_migrations`; belum ada seed demo atau data toko.
@@ -53,8 +54,9 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 - [x] `IMAGEKIT_PRIVATE_KEY`, `RAJAONGKIR_API_KEY`, dan `ADMIN_TOKEN` terpasang sebagai Worker secrets; nilainya tidak masuk Git atau frontend.
 - [x] Pencarian tujuan RajaOngkir dan GET admin orders berhasil melalui Worker; uji hanya membaca data, D1 masih kosong.
 - [x] `IMAGEKIT_URL_ENDPOINT` dan `RAJAONGKIR_ORIGIN_ID=5052` tersedia sebagai production vars; endpoint memakai HTTPS.
+- [ ] Validasi ImageKit read-only ke API daftar berkas mengembalikan HTTP 403 pada 9 November 2026. Dokumentasi ImageKit menyebut 403 dapat berarti akun tidak terautentikasi dengan key, key kedaluwarsa, atau akun dinonaktifkan; batas upload hanya relevan bagi API upload. Periksa Dashboard ImageKit > Developer > API Keys dan status akun, lalu ulangi validasi setelah penyebab diperbaiki. Jangan mengunggah bukti pembayaran sebelum lolos ([dokumentasi API ImageKit](https://imagekit.io/docs/api-overview)).
 - [x] Worker production memuat binding D1 produksi `ruma-store` serta empat rate limiter; katalog API runtime merespons HTTP 200.
-- [ ] Tinjau log/error tanpa mencatat bukti pembayaran, alamat, nomor telepon, token, atau kredensial.
+- [ ] Tinjau log/error Worker production melalui dashboard Cloudflare tanpa mencatat bukti pembayaran, alamat, nomor telepon, token, atau kredensial. Pemeriksaan sumber kode sudah dilakukan, tetapi log runtime belum dapat diperiksa pada sesi ini.
 
 ## C. Produk, transaksi, dan kebijakan toko
 
@@ -88,4 +90,4 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 ## Syarat lulus
 
-Peluncuran toko untuk pelanggan baru hanya dimulai setelah semua kotak bagian A sampai E ditinjau dan disetujui pemilik toko. Worker dan demo noindex sudah tayang, serta secret admin/RajaOngkir terpasang. Checklist **belum lulus** karena katalog D1 kosong, bukti pembayaran ImageKit belum diuji end-to-end, serta produk, rekening, dan kebijakan toko belum final.
+Peluncuran toko untuk pelanggan baru hanya dimulai setelah semua kotak bagian A sampai E ditinjau dan disetujui pemilik toko. Worker dan demo noindex sudah tayang. Checklist **belum lulus** karena katalog D1 kosong, validasi ImageKit menerima HTTP 403 dan alur bukti belum diuji end-to-end, serta produk, rekening, dan kebijakan toko belum final.

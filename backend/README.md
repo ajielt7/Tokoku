@@ -2,6 +2,8 @@
 
 Backend memakai Cloudflare Workers untuk API dan Cloudflare D1 untuk data transaksi. API menyediakan katalog, ongkir RajaOngkir dan Gojek Same Day, checkout transfer manual, unggah bukti privat ke ImageKit, pengelolaan pesanan/pengiriman, status lacak publik tanpa data pribadi, dan notifikasi pesanan baru ke perangkat admin melalui FCM HTTP v1.
 
+Log operasional hanya mencatat nama operasi, tipe error, dan metadata aman yang diperlukan (misalnya status/request ID ImageKit). Jangan menambahkan isi request, data pelanggan, file bukti, token, atau pesan upstream mentah ke log.
+
 ## Struktur
 
 ```text
