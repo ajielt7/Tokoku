@@ -4,7 +4,7 @@ Roadmap ini menggambarkan urutan kerja tingkat tinggi, bukan jadwal atau janji r
 
 **Status terkini:** tahap 1 sampai 11 selesai di kode lokal. Tahap 11 menambahkan preview personalisasi, snapshot aturan template pada pesanan, serta pembuatan dan unduhan gambar DXF berversi dari aplikasi admin. D1 produksi `ruma-store` sudah tersedia di APAC dan migrasi 0001–0008 sudah diterapkan; database masih kosong. Worker production, kredensial layanan, data produk final, penerapan rate limit produksi, dan spesifikasi mesin/CAM belum siap; gambar DXF lokal adalah gambar CAD 2D dasar, bukan toolpath siap mesin.
 
-Tahap 12 sedang disiapkan. Repo publik `ajielt7/Tokoku` sudah tersambung pada branch `main`, dan workflow Pages berhasil berjalan tetapi melewati deployment karena konfigurasi rilis belum siap. URL target adalah `https://ajielt7.github.io/Tokoku/`; Sumber Pages sudah dikonfigurasi ke GitHub Actions, tetapi belum ada deployment; gate rilis tetap tertutup. Worker belum dideploy, dan kredensial/katalog produksi belum tersedia. Gerbang rilis publik tetap tertutup.
+Tahap 12 sedang dikerjakan. Demo `noindex` sudah tayang di `https://ajielt7.github.io/Tokoku/`; Worker production aktif di `https://ruma-api-production.ajielt7.workers.dev`. Katalog dan pencarian tujuan RajaOngkir merespons HTTP 200, serta akses admin terverifikasi. Tiga secret inti sudah terpasang. Gerbang transaksi dan SEO tetap tertutup sampai katalog, rekening, kebijakan toko, dan uji bukti ImageKit siap.
 
 | Tahap | Fokus | Hasil yang dituju | Status |
 |---|---|---|---|
@@ -19,7 +19,7 @@ Tahap 12 sedang disiapkan. Repo publik `ajielt7/Tokoku` sudah tersambung pada br
 | 9 | Aplikasi admin | Android untuk melihat pesanan, memeriksa pembayaran, dan memperbarui status pesanan/produksi | Selesai di kode lokal; konfigurasi online menyusul |
 | 10 | Operasional toko | Produksi, pengiriman, tracking publik, dan notifikasi pesanan baru via FCM ke Android admin | Selesai di kode lokal; kredensial layanan menyusul |
 | 11 | Produk custom dan DXF | Preview, snapshot konfigurasi, dan gambar DXF dasar berversi yang terhubung ke item pesanan | Selesai di kode lokal; konfigurasi produksi mesin/CAM menyusul |
-| 12 | Persiapan peluncuran | Cek keamanan, backup/pemulihan, SEO, performa, dan deployment Pages dengan gate otomatis | Sedang dikerjakan; fondasi lokal tersedia, gerbang produksi belum lulus |
+| 12 | Persiapan peluncuran | Cek keamanan, backup/pemulihan, SEO, performa, dan deployment Pages dengan gate otomatis | Sedang dikerjakan; demo dan Worker tayang, transaksi/SEO menunggu data final dan uji ImageKit |
 
 ## Cara memperbarui roadmap
 
