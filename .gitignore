@@ -5,6 +5,7 @@
 **/.dev.vars
 **/.dev.vars.*
 !**/.dev.vars.example
+**/ApiKey.txt
 **/google-services.json
 *.jks
 *.keystore

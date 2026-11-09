@@ -27,12 +27,15 @@ jobs:
       release_ready: ${{ steps.release_settings.outputs.ready }}
     permissions:
       contents: read
+      pages: write
+      id-token: write
     env:
       SITE_URL: ${{ vars.SITE_URL }}
       PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
       CATALOG_API_URL: ${{ vars.PUBLIC_API_BASE_URL }}/api/catalog
       SEO_INDEXABLE: ${{ vars.SEO_INDEXABLE }}
       CONTENT_READY: ${{ vars.CONTENT_READY }}
+      DEMO_SITE_URL: https://ajielt7.github.io/Tokoku
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -50,12 +53,48 @@ jobs:
             exit 0
           fi
           echo "ready=true" >> "$GITHUB_OUTPUT"
+      - name: Set up demo preview when production is not ready
+        if: steps.release_settings.outputs.ready != 'true' && github.event_name != 'pull_request'
+        run: |
+          echo "site_url=$DEMO_SITE_URL" >> "$GITHUB_ENV"
+          echo "api_url=https://ruma-api-production.workers.dev" >> "$GITHUB_ENV"
+          echo "catalog_url=http://127.0.0.1:8787/api/catalog" >> "$GITHUB_ENV"
+          echo "seo_indexable=false" >> "$GITHUB_ENV"
+          echo "content_ready=false" >> "$GITHUB_ENV"
+      - name: Install backend tooling for local demo catalog
+        if: steps.release_settings.outputs.ready != 'true' && github.event_name != 'pull_request'
+        run: npm ci --prefix backend
+      - name: Build noindex demo preview
+        if: steps.release_settings.outputs.ready != 'true' && github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          cd backend
+          npx wrangler d1 migrations apply ruma-store --local
+          npx wrangler d1 execute ruma-store --local --file=seeds/demo.sql
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/ruma-preview-worker.log 2>&1 &
+          worker_pid=$!
+          trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:8787/api/catalog > /dev/null; then break; fi
+            sleep 2
+          done
+          cd ..
+          SITE_URL="$DEMO_SITE_URL" PUBLIC_API_BASE_URL=https://ruma-api-production.workers.dev CATALOG_API_URL=http://127.0.0.1:8787/api/catalog SEO_INDEXABLE=false CONTENT_READY=false node frontend/src/scripts/build-site.mjs
+          SITE_URL="$DEMO_SITE_URL" PUBLIC_API_BASE_URL=https://ruma-api-production.workers.dev SEO_INDEXABLE=false CONTENT_READY=false node frontend/src/scripts/check-release.mjs --preview
       - name: Build static site from public catalog
         if: steps.release_settings.outputs.ready == 'true'
         run: node frontend/src/scripts/build-site.mjs
       - name: Check production output
         if: steps.release_settings.outputs.ready == 'true'
         run: node frontend/src/scripts/check-release.mjs
+      - name: Configure GitHub Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+      - name: Upload demo Pages artifact
+        if: steps.release_settings.outputs.ready != 'true' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
       - name: Upload Pages artifact
         if: steps.release_settings.outputs.ready == 'true'
         uses: actions/upload-pages-artifact@v3
@@ -63,7 +102,7 @@ jobs:
           path: frontend/dist
 
   deploy:
-    if: needs.build.outputs.release_ready == 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     environment:

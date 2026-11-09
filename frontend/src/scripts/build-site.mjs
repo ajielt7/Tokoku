@@ -222,8 +222,8 @@ const cartTemplate = await readFile(path.join(templateDirectory, "cart.html"), "
 const checkoutTemplate = await readFile(path.join(templateDirectory, "checkout.html"), "utf8");
 const trackingTemplate = await readFile(path.join(templateDirectory, "lacak-pesanan.html"), "utf8");
 const previewMode = !site.contentReady;
-const previewBanner = previewMode ? '<p class="preview-banner">Pratinjau katalog · Data lokal</p>' : "";
-const demoNote = previewMode ? '<p class="demo-note">Data dan harga katalog ini hanya untuk pratinjau lokal.</p>' : "";
+const previewBanner = previewMode ? '<p class="preview-banner">DEMO · Produk dan harga contoh</p>' : "";
+const demoNote = previewMode ? '<p class="demo-note">Harga contoh. Toko belum menerima pesanan.</p>' : "";
 const footerCopy = `© ${new Date().getUTCFullYear()} ${escapeHtml(site.name)}`;
 const homePrefix = "./";
 const homeCategoryLinks = catalog.categories.map((category) =>
@@ -350,9 +350,10 @@ for (const [slug, template] of [["keranjang", cartTemplate], ["checkout", checko
   const html = replaceTokens(template, {
     ROOT_PREFIX: "../",
     PREVIEW_BANNER: previewBanner,
+    PREVIEW_CHECKOUT_NOTICE: previewMode ? '<p class="demo-note">Checkout belum aktif. Ini hanya pratinjau katalog.</p>' : "",
     FOOTER_COPY: footerCopy,
     API_BASE_URL: escapeHtml(apiBaseUrl),
-  });
+  }).replace(previewMode ? 'data-checkout-layout>' : "\u0000", previewMode ? 'data-checkout-layout hidden>' : "\u0000");
   const destination = path.join(outputDirectory, slug);
   await mkdir(destination, { recursive: true });
   await writeFile(path.join(destination, "index.html"), addNoIndex(html), "utf8");
