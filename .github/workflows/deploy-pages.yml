@@ -92,12 +92,12 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Upload demo Pages artifact
         if: steps.release_settings.outputs.ready != 'true' && github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: frontend/dist
       - name: Upload Pages artifact
         if: steps.release_settings.outputs.ready == 'true'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: frontend/dist
 
