@@ -41,7 +41,7 @@ Tahap 12 dibagi menjadi 5 bagian utama dan 18 subbagian. Setiap baris merangkum 
 | E.3 | Prosedur rollback | Langkah rollback Worker/Pages terdokumentasi | — | 1/1 | Selesai |
 | E.4 | Arsip dan uji bertahap | Artifact demo diarsipkan; rencana uji dan kriteria berhenti tersedia | Setelah semua prasyarat siap, lakukan satu order uji, pantau, lalu tinjau hasil | 2/6 | Berjalan |
 
-**Yang sudah selesai sepenuhnya:** A.1, A.3, B.1, B.2, B.3, dan E.3. **Bagian yang sedang dikerjakan:** A.2, B.4, C.2, D.1, D.3, E.1, dan E.4. Sisanya menunggu data toko atau pengujian yang belum tersedia. Rincian kotak tugas tetap ada di bagian A–E di bawah.
+**Yang sudah selesai sepenuhnya:** A.1, A.3, B.1, B.2, B.3, dan E.3. **Bagian yang sedang dikerjakan:** A.2, B.4, C.2, D.1, D.2, D.3, E.1, dan E.4. Subbagian lain menunggu data toko atau pengujian yang belum tersedia.
 
 ## Status yang sudah terlihat di workspace
 
