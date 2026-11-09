@@ -14,7 +14,7 @@ Gunakan bobot tetap per bagian agar laporan progres konsisten. Nilai tiap bagian
 | D. SEO dan mutu halaman | 20% |
 | E. Backup, pemulihan, dan peluncuran | 15% |
 
-**Progres berbobot per 9 November 2026: 39,7%** (A 6/9, B 11/15, C 1/27, D 6/19, E 5/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
+**Progres berbobot per 9 November 2026: 41,4%** (A 6/9, B 12/15, C 1/27, D 6/19, E 5/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
 
 ### Rincian Tahap 12
 
@@ -28,7 +28,7 @@ Tahap 12 dibagi menjadi 5 bagian utama dan 18 subbagian. Status dihitung dari ko
 | B.1 | Database dan migrasi | 2/2 | Selesai |
 | B.2 | Konfigurasi dan deploy Worker | 5/5 | Selesai |
 | B.3 | Secret dan akses admin | 2/2 | Selesai |
-| B.4 | Validasi layanan dan log runtime | 2/6 | Berjalan |
+| B.4 | Validasi layanan dan log runtime | 3/6 | Berjalan |
 | C.1 | Katalog produk | 0/7 | Belum mulai |
 | C.2 | Ongkir dan pembayaran | 1/8 | Berjalan |
 | C.3 | Informasi toko dan kebijakan | 0/6 | Belum mulai |
@@ -116,12 +116,12 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 - [x] `IMAGEKIT_PRIVATE_KEY`, `RAJAONGKIR_API_KEY`, dan `ADMIN_TOKEN` terpasang sebagai Worker secrets; nilainya tidak masuk Git atau frontend.
 - [x] GET admin orders setelah deploy terbaru merespons HTTP 200 dengan 0 pesanan memakai token lokal; nilai token tidak ditampilkan dan D1 tetap kosong.
 
-### B.4 Validasi layanan dan log runtime — Berjalan (2/6)
+### B.4 Validasi layanan dan log runtime — Berjalan (3/6)
 
 - [ ] Di Dashboard ImageKit, periksa apakah akun aktif dan masih pada paket yang diinginkan.
 - [ ] Di Dashboard ImageKit > Developer > API Keys, periksa status private key tanpa menyalin nilainya ke chat, Git, atau log.
 - [ ] Setelah penyebab HTTP 403 diperbaiki, minta pemilik menjalankan validasi API daftar berkas yang aman sebelum alur upload bukti dipakai. Jangan mengulang request validasi tanpa persetujuan pemilik.
-- [ ] Buka log Worker production di dashboard Cloudflare dan periksa apakah ada error runtime yang perlu ditangani.
+- [x] Tinjauan agregat Workers Observability untuk 7 hari sampai 9 November 2026: tidak ada event berisi `$metadata.error` atau respons 5xx; hasil mengelompokkan 11 status 200, 10 status 404, dan dua log `d1_all OK` tanpa status HTTP. Tidak ada teks log pesanan/bukti yang diambil. Tinjauan agregat tidak menggantikan pemantauan rutin.
 - [x] Ringkasan issue Cloudflare Observability untuk Worker diperiksa pada 9 November 2026: tidak ada issue aktif atau occurrence; ringkasan ini bukan pemeriksaan event log lengkap.
 - [x] Audit kode logging memastikan bukti pembayaran, alamat, nomor telepon, token, kredensial, dan isi data pesanan tidak ditulis ke log; error dibatasi ke operasi/jenis error, status upstream, atau request ID.
 
