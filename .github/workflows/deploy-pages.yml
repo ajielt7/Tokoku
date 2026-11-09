@@ -57,7 +57,7 @@ jobs:
         if: steps.release_settings.outputs.ready != 'true' && github.event_name != 'pull_request'
         run: |
           echo "site_url=$DEMO_SITE_URL" >> "$GITHUB_ENV"
-          echo "api_url=https://ruma-api-production.workers.dev" >> "$GITHUB_ENV"
+          echo "api_url=https://ruma-api-production.ajielt7.workers.dev" >> "$GITHUB_ENV"
           echo "catalog_url=http://127.0.0.1:8787/api/catalog" >> "$GITHUB_ENV"
           echo "seo_indexable=false" >> "$GITHUB_ENV"
           echo "content_ready=false" >> "$GITHUB_ENV"
@@ -79,8 +79,8 @@ jobs:
             sleep 2
           done
           cd ..
-          SITE_URL="$DEMO_SITE_URL" PUBLIC_API_BASE_URL=https://ruma-api-production.workers.dev CATALOG_API_URL=http://127.0.0.1:8787/api/catalog SEO_INDEXABLE=false CONTENT_READY=false node frontend/src/scripts/build-site.mjs
-          SITE_URL="$DEMO_SITE_URL" PUBLIC_API_BASE_URL=https://ruma-api-production.workers.dev SEO_INDEXABLE=false CONTENT_READY=false node frontend/src/scripts/check-release.mjs --preview
+          SITE_URL="$DEMO_SITE_URL" PUBLIC_API_BASE_URL=https://ruma-api-production.ajielt7.workers.dev CATALOG_API_URL=http://127.0.0.1:8787/api/catalog SEO_INDEXABLE=false CONTENT_READY=false node frontend/src/scripts/build-site.mjs
+          SITE_URL="$DEMO_SITE_URL" PUBLIC_API_BASE_URL=https://ruma-api-production.ajielt7.workers.dev SEO_INDEXABLE=false CONTENT_READY=false node frontend/src/scripts/check-release.mjs --preview
       - name: Build static site from public catalog
         if: steps.release_settings.outputs.ready == 'true'
         run: node frontend/src/scripts/build-site.mjs

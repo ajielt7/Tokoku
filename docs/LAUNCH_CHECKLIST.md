@@ -1,6 +1,6 @@
 # Checklist Persiapan Peluncuran
 
-Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal siap diperiksa, tetapi rilis publik tetap harus gagal sampai identitas toko, katalog, domain, layanan, dan rekening benar-benar disiapkan.
+Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Pratinjau demo boleh tayang tanpa indeks; rilis toko untuk pelanggan menunggu identitas toko, katalog, domain, layanan, dan rekening final.
 
 ## Status yang sudah terlihat di workspace
 
@@ -17,10 +17,10 @@ Checklist ini adalah gerbang sebelum toko dibuka untuk pelanggan. Kode lokal sia
 - [x] Alur RajaOngkir diselaraskan dengan panduan lokal `Pemesanan/worker/README.md`: pencarian tujuan dicache 30 hari, tarif multi-kurir dihitung langsung dengan asal Cimekar `5052`, lalu backend menghitung ulang tarif saat order dibuat. Verifikasi tarif nyata dari Worker Ruma masih menunggu secret API key khusus Ruma.
 - [x] Build Pages memiliki workflow yang menolak rilis bila variabel produksi dan persetujuan indeks belum ada.
 - [x] D1 produksi `ruma-store` sudah dibuat di APAC, ID terpasang pada kedua binding Wrangler, dan migrasi 0001–0008 tercatat di `d1_migrations`; belum ada seed demo atau data toko.
-- [x] URL publik default Pages dipilih: `https://ajielt7.github.io/Tokoku/`; origin frontend production sudah diatur ke `https://ajielt7.github.io`. URL API target sudah disiapkan, tetapi Worker belum dideploy.
-- [ ] Katalog, harga, bobot, foto asli, rekening, kebijakan toko, serta kredensial layanan masih contoh/belum diisi.
-- [x] Repo publik `ajielt7/Tokoku` terhubung pada branch `main`; Pages memakai sumber GitHub Actions. Workflow berhasil, tetapi deployment dilewati karena gate rilis belum siap.
-- [x] Sumber GitHub Pages sudah diatur ke **GitHub Actions**. Belum ada situs terbit sampai gate rilis dibuka.
+- [x] URL Pages `https://ajielt7.github.io/Tokoku/` dan API `https://ruma-api-production.ajielt7.workers.dev` sudah tayang. API merespons HTTP 200; katalog D1 produksi masih kosong.
+- [ ] Katalog, harga, bobot, foto asli, rekening, dan kebijakan toko belum final; secret RajaOngkir dan admin belum terpasang.
+- [x] Repo publik `ajielt7/Tokoku` terhubung pada branch `main`; Pages memakai sumber GitHub Actions dan workflow demo preview berhasil.
+- [x] Situs demo sudah terbit, memakai `noindex`, data contoh lokal, dan tidak menerima checkout. Rilis indeks tetap menunggu konten final.
 
 ## Batas anggaran
 
@@ -37,9 +37,9 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 ## A. Domain dan GitHub Pages
 
 - [x] URL publik dipilih: `https://ajielt7.github.io/Tokoku/`. `SITE_URL` menggunakan URL proyek dengan subpath repositori. Domain custom tidak dipakai.
-- [x] `PUBLIC_API_BASE_URL` sudah disetel ke target HTTPS `https://ruma-api-production.ajielt7.workers.dev`; Worker belum dideploy atau diuji.
+- [x] Worker `ruma-api-production` aktif di `https://ruma-api-production.ajielt7.workers.dev`; `GET /api/catalog` terverifikasi HTTP 200 dengan 0 kategori dan 0 produk.
 - [x] Pages memakai sumber **GitHub Actions** dan workflow menargetkan branch `main`.
-- [x] Repository variables `SITE_URL`, `PUBLIC_API_BASE_URL`, `SEO_INDEXABLE`, dan `CONTENT_READY` tersedia. Dua gate indeks/kesiapan tetap `false`; jangan ubah sampai konten dan API siap.
+- [x] Gate indeks/kesiapan tetap tertutup sampai konten final siap; pratinjau Pages tetap `noindex`.
 - [x] GitHub Pages melaporkan `https_enforced: true`.
 - [ ] Setelah katalog D1 berubah, jalankan workflow **Build and deploy store** secara manual agar HTML statis, halaman produk, dan sitemap dibangun ulang dari katalog terbaru.
 - [x] Pemindaian file terlacak tidak menemukan `.dev.vars`, `.env`, `google-services.json`, private key, dump database, atau pola token umum. Pertahankan aturan ini pada perubahan selanjutnya.
@@ -49,17 +49,17 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 - [x] Buat database produksi terpisah dari database lokal; ID D1 produksi sudah terpasang pada kedua binding `DB` di `backend/wrangler.jsonc`.
 - [x] Tinjau dan terapkan migrasi 0001–0008 ke D1 produksi tanpa seed demo; urutan tercatat dan `PRAGMA foreign_key_check` kosong. Latihan backup/restore SQLite lokal lulus (8 migrasi, integritas OK, foreign key bersih); D1 staging cloud tidak dibuat agar tidak menambah resource yang berpotensi biaya.
 - [x] `ALLOWED_ORIGINS` production sudah memakai origin GitHub Pages `https://ajielt7.github.io` (tanpa subpath); `APP_ENV=production` sudah ditetapkan.
-- [x] Wrangler production `deploy --dry-run` berhasil memaketkan Worker dan menampilkan binding D1 `ruma-store` serta empat rate limiter dengan namespace berbeda. Ini hanya validasi lokal; belum mengunggah Worker atau memverifikasi layanan eksternal.
-- [ ] Pasang Worker secrets: `ADMIN_TOKEN`, `RAJAONGKIR_API_KEY`, `IMAGEKIT_PRIVATE_KEY`; pasang FCM secrets hanya jika notifikasi admin akan dipakai.
-- [ ] Isi `IMAGEKIT_URL_ENDPOINT`, `RAJAONGKIR_ORIGIN_ID`, dan pastikan semua URL API memakai HTTPS.
-- [ ] Verifikasi empat binding rate limiter dan pastikan setiap `namespace_id` unik di akun Cloudflare. Limit Worker ini per lokasi dan bersifat perkiraan; pantau trafik dan sesuaikan setelah penggunaan nyata.
-- [ ] Pastikan Worker production memakai binding `DB` ke database produksi, bukan database lokal atau database proyek lain.
+- [x] Wrangler production `deploy --dry-run` lulus; Worker production sudah diunggah dan subdomain workers.dev aktif.
+- [x] `IMAGEKIT_PRIVATE_KEY` terpasang sebagai secret Worker; key tidak dimasukkan ke Git atau frontend.
+- [ ] `ADMIN_TOKEN` dan `RAJAONGKIR_API_KEY` belum terpasang. Checkout ongkir dan endpoint admin belum siap.
+- [x] `IMAGEKIT_URL_ENDPOINT` dan `RAJAONGKIR_ORIGIN_ID=5052` tersedia sebagai production vars; endpoint memakai HTTPS.
+- [x] Worker production memuat binding D1 produksi `ruma-store` serta empat rate limiter; katalog API runtime merespons HTTP 200.
 - [ ] Tinjau log/error tanpa mencatat bukti pembayaran, alamat, nomor telepon, token, atau kredensial.
 
 ## C. Produk, transaksi, dan kebijakan toko
 
 - [ ] Ganti seluruh produk demo dengan barang yang benar: nama, deskripsi, harga, ukuran, batas personalisasi, stok/ketersediaan, berat paket, dan foto milik toko.
-- [ ] Pasang `RAJAONGKIR_API_KEY` sebagai secret pada Worker Ruma lalu verifikasi tarif untuk tujuan/kurir yang benar. Secret Worker `pemesanan-api` tidak dapat diekspor melalui API Cloudflare; file `Pemesanan/worker/ApiKey.txt` tidak ditemukan. API key harus tersedia dari dashboard RajaOngkir dan dipasang langsung sebagai secret, tidak di source atau chat. Pastikan titik asal `5052` dan ketentuan Gojek sesuai operasional toko.
+- [ ] Pasang `RAJAONGKIR_API_KEY` dari berkas lokal yang diabaikan Git setelah pemilik menyetujui pengiriman credential itu ke Worker production; verifikasi tarif untuk tujuan/kurir yang benar. Pastikan titik asal `5052` dan ketentuan Gojek sesuai operasional toko.
 - [ ] Isi bank, nomor rekening, nama pemilik rekening, waktu konfirmasi, pembatalan, refund, dan cara menghubungi toko.
 - [ ] Siapkan kebijakan privasi dan syarat pembelian yang ditinjau pemilik toko; jangan menampilkan alamat/data pribadi pesanan pada halaman publik.
 - [ ] Uji transfer nyata dengan nominal kecil dan rekonsiliasi manual. Jangan menyatakan pembayaran otomatis terverifikasi.
@@ -69,7 +69,7 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 ## D. SEO dan mutu halaman
 
-- [x] `SITE_URL` sudah memakai URL kanonis HTTPS `https://ajielt7.github.io/Tokoku`; canonical di HTML hasil build tetap menunggu katalog final dan deployment.
+- [x] `SITE_URL` sudah memakai HTTPS `https://ajielt7.github.io/Tokoku`; HTML demo tetap `noindex` tanpa canonical publik. Canonical menunggu katalog final.
 - [ ] Bangun ulang dari katalog produksi. `check-release.mjs` harus lulus dan semua halaman publik harus memiliki satu H1, title, description, canonical, tautan lokal valid, dan konten bukan demo.
 - [ ] Pastikan cart, checkout, dan lacak pesanan tetap `noindex` dan tidak ada di sitemap; jangan blok crawler pada robots.txt untuk halaman yang perlu dibaca noindex-nya.
 - [ ] Periksa produk dan harga pada HTML hasil build, gambar/alt text, mobile layout, keyboard, kontras, dan pesan error.
@@ -88,4 +88,4 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 ## Syarat lulus
 
-Peluncuran baru boleh dimulai setelah semua kotak pada bagian A–E ditinjau dan disetujui pemilik toko. Saat ini checklist **belum lulus** karena Worker belum dideploy, secret layanan dan pengaturan ImageKit belum lengkap, serta katalog, rekening, dan kebijakan toko belum final.
+Peluncuran toko untuk pelanggan baru boleh dimulai setelah semua kotak pada bagian A–E ditinjau dan disetujui pemilik toko. Worker dan demo noindex sudah tayang. Checklist **belum lulus** karena secret admin/RajaOngkir belum lengkap, katalog D1 kosong, serta produk, rekening, dan kebijakan toko belum final.

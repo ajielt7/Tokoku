@@ -39,7 +39,8 @@
       "vars": {
         "APP_ENV": "production",
         "ALLOWED_ORIGINS": "https://ajielt7.github.io",
-        "RAJAONGKIR_ORIGIN_ID": "5052"
+        "RAJAONGKIR_ORIGIN_ID": "5052",
+        "IMAGEKIT_URL_ENDPOINT": "https://ik.imagekit.io/ajielt7"
       },
       "secrets": {
         "required": ["ADMIN_TOKEN", "RAJAONGKIR_API_KEY", "IMAGEKIT_PRIVATE_KEY"]

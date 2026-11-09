@@ -71,7 +71,7 @@ Jangan jalankan langkah ini sebelum domain frontend, URL Worker, katalog, konfig
    npx wrangler deploy --env production --secrets-file "C:\lokasi-aman\ruma-worker.production.env"
    ```
 
-6. Catat URL Worker yang diterbitkan, lalu periksa `GET /api/health` dan `GET /api/catalog` melalui HTTPS. Pastikan respons katalog berisi data toko final, CORS hanya menerima origin toko, limiter bekerja, dan checkout uji tidak membuat pesanan nyata. Setelah endpoint lolos, isi `PUBLIC_API_BASE_URL` pada GitHub dan lanjutkan workflow Pages sesuai [checklist peluncuran](../docs/LAUNCH_CHECKLIST.md).
+6. Worker production saat ini tersedia di `https://ruma-api-production.ajielt7.workers.dev`; `GET /api/catalog` merespons HTTP 200, tetapi D1 masih kosong. `IMAGEKIT_PRIVATE_KEY` sudah terpasang. Sebelum checkout/admin dipakai, pasang `ADMIN_TOKEN` dan `RAJAONGKIR_API_KEY`, lalu verifikasi `/api/health`, ongkir, CORS, limiter, dan alur pesanan uji. Jangan membuka checkout ke pelanggan atau mengaktifkan SEO sebelum katalog dan kebijakan toko final tersedia. Lihat [checklist peluncuran](../docs/LAUNCH_CHECKLIST.md).
 
 Migrasi remote dan deploy di atas mengubah resource produksi. Jangan menjalankannya sebelum target akun, database, dan konfigurasi diverifikasi kembali. Lihat [dokumentasi migrasi D1](https://developers.cloudflare.com/d1/reference/migrations/), [environment Wrangler](https://developers.cloudflare.com/workers/wrangler/environments/), dan [rahasia Worker](https://developers.cloudflare.com/workers/configuration/secrets/) untuk perilaku perintah dan environment. Opsi `--secrets-file` mengunggah rahasia bersama versi Worker, sehingga tidak ada deploy per secret.
 
