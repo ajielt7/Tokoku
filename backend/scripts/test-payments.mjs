@@ -137,6 +137,7 @@ async function setOrderExpired(order) {
 
 async function run() {
   let worker;
+  let workerOutput = "";
   try {
     await mkdir(path.dirname(testEnvFile), { recursive: true });
     await writeFile(testEnvFile, [
@@ -160,7 +161,9 @@ async function run() {
       wranglerCli, "dev",
       "--local", "--ip", "127.0.0.1", "--port", "8791", "--persist-to", stateDirectory, "--test-scheduled",
       "--config", "wrangler.jsonc", "--env", "test", "--env-file", testEnvFile,
-  ], { cwd: backendDirectory, env: childEnvironment, stdio: "ignore", windowsHide: true });
+    ], { cwd: backendDirectory, env: childEnvironment, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+    worker.stdout.on("data", (chunk) => { workerOutput = `${workerOutput}${chunk}`.slice(-4000); });
+    worker.stderr.on("data", (chunk) => { workerOutput = `${workerOutput}${chunk}`.slice(-4000); });
 
     await waitForWorker(worker);
 
@@ -248,7 +251,7 @@ async function run() {
       if (expiredStatus.response.status === 404) break;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    assert.equal(expiredStatus.response.status, 404, "Order tanpa bukti yang kedaluwarsa harus terhapus.");
+    assert.equal(expiredStatus.response.status, 404, `Order tanpa bukti yang kedaluwarsa harus terhapus. Worker log: ${workerOutput}`);
 
     const retained = await createOrder();
     const retainedProof = await uploadProof(retained);
