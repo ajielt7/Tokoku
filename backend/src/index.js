@@ -1707,14 +1707,13 @@ async function createOrder(request, env, origin, executionContext) {
 }
 
 export default {
-  async scheduled(controller, env, executionContext) {
-    const cleanup = expireUnpaidOrders(env)
-      .then((count) => {
-        if (count > 0) console.info(JSON.stringify({ operation: "expire_unpaid_orders", deleted_orders: count }));
-      })
-      .catch((error) => logDatabaseError("expire_unpaid_orders", error));
-    if (executionContext?.waitUntil) executionContext.waitUntil(cleanup);
-    else await cleanup;
+  async scheduled(controller, env) {
+    try {
+      const count = await expireUnpaidOrders(env);
+      if (count > 0) console.info(JSON.stringify({ operation: "expire_unpaid_orders", deleted_orders: count }));
+    } catch (error) {
+      logDatabaseError("expire_unpaid_orders", error);
+    }
   },
   async fetch(request, env, executionContext) {
     const url = new URL(request.url);
