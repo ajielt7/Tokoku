@@ -84,7 +84,7 @@ Urutan skenario:
 
 **Batas verifikasi:** simulasi lokal memvalidasi alur backend dan D1 dengan bukti tiruan. Simulasi tidak memvalidasi ImageKit, transfer bank, ongkir live RajaOngkir, atau notifikasi FCM. ImageKit pernah membalas HTTP 403; unggah production tetap ditunda sampai konfigurasi akun diperiksa dan validasi layanan dilakukan menjelang rilis.
 
-**Hasil simulasi terakhir:** lulus pada GitHub Actions, Node.js 22, commit `2131abb`. Berhasil mencakup checkout, upload bukti tiruan, review admin, refund manual simulasi, larangan refund setelah produksi, dan cleanup/retensi order. Mesin pengembangan lokal Node.js 20.13.1 belum dapat menjalankan Wrangler yang mensyaratkan Node.js 22+.
+**Hasil verifikasi terakhir:** simulasi pembayaran/refund dan compile Java aplikasi Android admin lulus pada GitHub Actions, commit `1768461`. Simulasi mencakup checkout, bukti tiruan, review admin, refund, larangan refund setelah produksi, serta cleanup/retensi order. Mesin lokal Node.js 20.13.1 belum dapat menjalankan Wrangler yang mensyaratkan Node.js 22+; Android compile dijalankan dengan Java 17 dan Android SDK 36.
 
 ### Cloudflare Worker
 
