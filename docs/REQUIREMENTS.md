@@ -77,6 +77,7 @@ Membangun toko online mandiri yang ringan dan mudah dikembangkan. Toko perlu men
 - Berat aktual tiap produk dan aturan kurir lokal.
 - Login/role admin individual. MVP lokal menggunakan `ADMIN_TOKEN` Worker bersama; pengelolaan akun dan hak akses per admin belum ditetapkan.
 - Refund diperbolehkan sebelum produksi dimulai; setelah produksi berjalan tidak ada pengembalian dana. Pelanggan mengajukan pembatalan dari halaman lacak; permintaan muncul di tab refund Android. Admin mengirim refund terlebih dahulu, lalu menekan “Proses” agar status tampil di web. Setelah produksi dimulai, pelanggan diarahkan ke chat. Retensi kedaluwarsa pembayaran: pesanan tanpa bukti dihapus setelah 24 jam; pesanan dengan bukti menunggu admin.
+- Refund hanya dikirim ke rekening asal pengirim pembayaran, bukan rekening alternatif. Waktu penyelesaian refund setelah persetujuan admin belum ditetapkan.
 - Spesifikasi mesin/CAM, bahan, toleransi, kompensasi alat, font/konversi teks menjadi kurva, dan uji kompatibilitas DXF untuk produksi nyata.
 - Detail biaya layanan serta kebutuhan kapasitas saat peluncuran.
 

@@ -153,6 +153,8 @@ Metode pembayaran rilis awal yang dipilih: transfer bank SeaBank, batas pembayar
 
 Kebijakan pembatalan/refund yang dipilih: refund boleh jika produksi belum dimulai; setelah produksi berjalan, dana tidak dikembalikan. Pelanggan dapat mengajukan pembatalan dari halaman lacak; permintaan masuk ke tab pembatalan/refund pada aplikasi admin Android. Admin mengirim refund lebih dahulu, lalu menekan “Proses”; statusnya diperbarui pada web. Setelah produksi dimulai, pelanggan diarahkan ke chat untuk koordinasi. Alur ini belum diimplementasikan.
 
+Refund hanya dikirim kembali ke rekening asal yang mengirim pembayaran ke SeaBank toko; pembeli tidak dapat memilih rekening tujuan lain. Perkiraan waktu pengiriman refund setelah admin menyetujui permintaan masih perlu ditetapkan.
+
 - [x] `RAJAONGKIR_API_KEY` dari berkas lokal yang diabaikan Git terpasang pada Worker; pencarian tujuan merespons HTTP 200.
 - [x] Pemilik mengonfirmasi titik asal RajaOngkir `5052` sesuai lokasi operasional toko; verifikasi tarif kurir nyata masih perlu dilakukan.
 - [ ] Pemilik memilih Gojek, JNE, J&T, SPX, SiCepat, Wahana, dan Anteraja; verifikasi bahwa kurir serta tarifnya tersedia dan sesuai pada akun RajaOngkir.
