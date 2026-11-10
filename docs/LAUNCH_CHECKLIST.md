@@ -135,7 +135,7 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 ### C.1 Katalog produk — Belum (0/7)
 
-Ruang lingkup rilis awal: satu model nomor rumah dari akrilik hasil potong laser CO₂ dengan angka dan huruf yang dapat disesuaikan. Pemilik akan memeriksa model satu per satu sebelum katalog ditambah. CNC router dan 3D printing direncanakan untuk tahap berikutnya. Ketebalan, ukuran, harga, stok, foto, dan detail produksi masih menunggu.
+Ruang lingkup rilis awal: satu model nomor rumah dari akrilik 3 mm hasil potong laser CO₂ dengan angka dan huruf yang dapat disesuaikan. Pemilik akan memeriksa model satu per satu sebelum katalog ditambah. CNC router dan 3D printing direncanakan untuk tahap berikutnya. Ukuran, harga, stok, foto, dan detail produksi masih menunggu.
 
 - [ ] Tetapkan daftar produk yang benar dan hapus produk demo dari katalog yang akan diterbitkan.
 - [ ] Isi nama, deskripsi singkat, dan kategori setiap produk.
