@@ -135,6 +135,8 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 ### C.1 Katalog produk — Belum (0/7)
 
+Ruang lingkup rilis awal: nomor rumah hasil potong laser CO₂ dengan angka dan huruf yang dapat disesuaikan. CNC router dan 3D printing direncanakan untuk tahap berikutnya. Daftar model, spesifikasi, harga, stok, foto, dan detail produksi masih menunggu.
+
 - [ ] Tetapkan daftar produk yang benar dan hapus produk demo dari katalog yang akan diterbitkan.
 - [ ] Isi nama, deskripsi singkat, dan kategori setiap produk.
 - [ ] Tetapkan harga, mata uang, dan status stok/ketersediaan.
