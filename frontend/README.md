@@ -110,8 +110,8 @@ Gunakan HTML semantik (HTML Living Standard/HTML5) agar struktur dokumen menggam
 - Gunakan `<figure>` dan `<figcaption>` bila gambar memiliki keterangan; setiap `<img>` informatif memiliki `alt` yang sesuai. Gambar dekoratif memakai `alt=""`.
 - Gunakan `<ul>`/`<ol>` untuk daftar, `<table>` hanya untuk data tabular, dan `<div>`/`<span>` untuk pengelompokan atau styling saat tidak ada elemen semantik yang lebih tepat.
 - Gunakan atribut HTML sesuai tujuan; jangan memakai elemen usang seperti `<font>`, `<center>`, atau atribut presentasi lama.
-- Untuk prototipe, Unsplash boleh dipakai sebagai gambar suasana/lifestyle sementara. Jangan menyajikannya sebagai foto asli produk; ganti dengan foto barang yang benar sebelum katalog diluncurkan.
-- Font Awesome boleh dipakai untuk ikon antarmuka yang membantu pemahaman. Ikon dekoratif disembunyikan dari pembaca layar dan tidak menggantikan label teks pada tombol.
+- Untuk prototipe noindex, gunakan foto suasana dari Unsplash hanya sebagai ilustrasi; beri teks alt yang jujur dan ganti dengan foto barang milik toko sebelum katalog diluncurkan. Foto demo saat ini: [nomor rumah 53](https://unsplash.com/photos/a-black-sign-with-yellow-number-53-on-a-wall-f1n81DZUWYU), [nomor rumah 36](https://unsplash.com/photos/a-door-with-a-house-number-and-sign-JNi4XMBz5MM), dan [rumah nomor 1500](https://unsplash.com/photos/a-brick-house-with-pumpkins-on-the-steps-a564oUrRNeo). Gambar merupakan ilustrasi, bukan barang yang dijual.
+- Ikon antarmuka menggunakan Font Awesome Free 6.7.2 dari CDNJS dengan versi dipatok dan SRI. Ikon dekoratif disembunyikan dari pembaca layar dan tidak menggantikan label teks tombol. [Dokumentasi Font Awesome](https://docs.fontawesome.com/web/setup/host-yourself/webfonts).
 
 Contoh kerangka halaman:
 

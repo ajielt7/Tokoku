@@ -121,7 +121,7 @@ function productCard(product, prefix) {
   const productForMedia = { ...product, link };
   return `<article class="product-card">
     ${productMedia(productForMedia)}
-    <div class="product-info"><div><h3><a href="${link}">${escapeHtml(product.name)}</a></h3><p>${escapeHtml(product.customization || "Produk custom")} · ${formatPrice(product.price_amount)}</p></div><a class="round-link" href="${link}" aria-label="Lihat ${escapeHtml(product.name)}">↗</a></div>
+    <div class="product-info"><div><h3><a href="${link}">${escapeHtml(product.name)}</a></h3><p>${escapeHtml(product.customization || "Produk custom")} · ${formatPrice(product.price_amount)}</p></div><a class="round-link" href="${link}" aria-label="Lihat ${escapeHtml(product.name)}"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></div>
   </article>`;
 }
 
@@ -224,8 +224,8 @@ const cartTemplate = await readFile(path.join(templateDirectory, "cart.html"), "
 const checkoutTemplate = await readFile(path.join(templateDirectory, "checkout.html"), "utf8");
 const trackingTemplate = await readFile(path.join(templateDirectory, "lacak-pesanan.html"), "utf8");
 const previewMode = !site.contentReady;
-const previewBanner = previewMode ? '<p class="preview-banner">DEMO · Produk dan harga contoh</p>' : "";
-const demoNote = previewMode ? '<p class="demo-note">Harga contoh. Toko belum menerima pesanan.</p>' : "";
+const previewBanner = previewMode ? '<p class="preview-banner">DEMO · Produk, harga, dan foto contoh</p>' : "";
+const demoNote = previewMode ? '<p class="demo-note">Harga dan foto ilustrasi. Toko belum menerima pesanan.</p>' : "";
 const footerCopy = `© ${new Date().getUTCFullYear()} ${escapeHtml(site.name)}`;
 const homePrefix = "./";
 const homeCategoryLinks = catalog.categories.map((category) =>
@@ -234,7 +234,7 @@ const homeCategoryLinks = catalog.categories.map((category) =>
 const homeCards = catalog.products.map((product) => productCard(product, homePrefix)).join("\n")
   || '<p class="empty-catalog">Produk akan segera tersedia.</p>';
 const categoryTiles = catalog.categories.map((category, index) =>
-  `<a href="./kategori/${escapeHtml(category.slug)}/"><span class="related-icon ${["", "related-icon-two", "related-icon-three"][index % 3]}" aria-hidden="true">${escapeHtml(category.name.slice(0, 1).toUpperCase())}</span><span><strong>${escapeHtml(category.name)}</strong><small>Lihat kategori</small></span><span class="related-arrow" aria-hidden="true">↗</span></a>`
+  `<a href="./kategori/${escapeHtml(category.slug)}/"><span class="related-icon ${["", "related-icon-two", "related-icon-three"][index % 3]}" aria-hidden="true"><i class="fa-solid ${category.slug === "nomor-rumah" ? "fa-house" : "fa-sign-hanging"}"></i></span><span><strong>${escapeHtml(category.name)}</strong><small>Lihat kategori</small></span><span class="related-arrow" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span></a>`
 ).join("");
 const homeHtml = replaceTokens(homeTemplate, {
   PREVIEW_BANNER: previewBanner,
@@ -307,14 +307,14 @@ for (const product of catalog.products) {
     PRODUCT_PRICE_AMOUNT: String(product.price_amount),
     PRODUCT_DESCRIPTION: escapeHtml(product.description),
     PRODUCT_MEDIA: media,
-    PRODUCT_MEDIA_CAPTION: image ? "" : "<figcaption>Foto produk belum tersedia.</figcaption>",
+    PRODUCT_MEDIA_CAPTION: image ? '<figcaption>Foto ilustrasi Unsplash; bukan foto produk Toqoku.</figcaption>' : "<figcaption>Foto produk belum tersedia.</figcaption>",
     PRODUCT_SIZE: escapeHtml(product.fixed_size || "Belum ditentukan"),
     PRODUCT_CUSTOMIZATION: escapeHtml(product.customization || "Belum ditentukan"),
     CUSTOM_FIELDS: customizationFields(product.customization_fields),
     PRODUCT_PRICE: formatPrice(product.price_amount),
     RELATED_PRODUCTS: related.map((item) => productCard(item, prefix)).join("\n") || '<p class="empty-catalog">Belum ada produk terkait.</p>',
     PREVIEW_BANNER: previewBanner,
-    DEMO_NOTE: previewMode ? '<p class="demo-note detail-notice">Informasi ini hanya contoh pratinjau lokal.</p>' : "",
+    DEMO_NOTE: previewMode ? '<p class="demo-note detail-notice">Informasi dan foto ini hanya contoh pratinjau.</p>' : "",
     FOOTER_COPY: footerCopy,
     API_BASE_URL: escapeHtml(apiBaseUrl),
     CUSTOM_PREVIEW_SCRIPT: `<script src="${prefix}assets/js/custom-preview.js" defer></script>`,
