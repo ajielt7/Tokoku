@@ -245,6 +245,9 @@ async function run() {
     const scheduled = await fetch(`${apiBaseUrl}/__scheduled?cron=${encodeURIComponent("*/15 * * * *")}`, { signal: AbortSignal.timeout(10_000) });
     assert.ok(scheduled.ok, `Scheduled cleanup gagal: HTTP ${scheduled.status}`);
     assert.equal(await scheduled.text(), "Ran scheduled event", "Wrangler harus benar-benar menjalankan handler scheduled.");
+    const cleanup = await requestJson("/__test/expire-unpaid", { method: "POST", body: {} });
+    assert.equal(cleanup.response.status, 200, JSON.stringify(cleanup.payload));
+    assert.ok([0, 1].includes(cleanup.payload.data.deleted_orders), "Pembersihan hanya boleh menangani order uji yang kedaluwarsa.");
     let expiredStatus;
     for (let attempt = 0; attempt < 20; attempt += 1) {
       expiredStatus = await trackOrder(expired);
@@ -259,6 +262,9 @@ async function run() {
     await setOrderExpired(retained);
     const scheduledAgain = await fetch(`${apiBaseUrl}/__scheduled?cron=${encodeURIComponent("*/15 * * * *")}`, { signal: AbortSignal.timeout(10_000) });
     assert.ok(scheduledAgain.ok);
+    const retainedCleanup = await requestJson("/__test/expire-unpaid", { method: "POST", body: {} });
+    assert.equal(retainedCleanup.response.status, 200);
+    assert.equal(retainedCleanup.payload.data.deleted_orders, 0, "Order dengan bukti harus dikecualikan dari cleanup.");
     const retainedTracking = await trackOrder(retained);
     assert.equal(retainedTracking.response.status, 200, "Order dengan bukti harus dipertahankan.");
     assert.equal(retainedTracking.payload.data.has_payment_proof, true);

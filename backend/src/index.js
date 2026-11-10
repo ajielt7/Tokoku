@@ -1719,6 +1719,16 @@ export default {
     const url = new URL(request.url);
     const pathname = url.pathname.replace(/\/+$/, "") || "/";
 
+    if (env.APP_ENV === "test" && pathname === "/__test/expire-unpaid" && request.method === "POST") {
+      try {
+        const deletedOrders = await expireUnpaidOrders(env);
+        return jsonResponse({ data: { deleted_orders: deletedOrders } }, 200, { "cache-control": "no-store" });
+      } catch (error) {
+        logDatabaseError("test_expire_unpaid_orders", error);
+        return jsonResponse({ error: "cleanup_failed" }, 500, { "cache-control": "no-store" });
+      }
+    }
+
     if (pathname === "/api/orders" && request.method === "OPTIONS") {
       const origin = getAllowedOrigin(request, env);
       if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
