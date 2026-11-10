@@ -124,7 +124,7 @@ async function trackOrder(order) {
   });
 }
 
-async function setOrderExpired(order) {
+async function setOrderExpired(order, hasProof = false) {
   runWrangler([
     "d1", "execute", "ruma-store-test-local", "--local", "--persist-to", stateDirectory,
     "--config", "wrangler.jsonc", "--env", "test", "--env-file", testEnvFile,
@@ -132,7 +132,8 @@ async function setOrderExpired(order) {
   ]);
   const expiredStatus = await trackOrder(order);
   assert.equal(expiredStatus.response.status, 200);
-  assert.equal(expiredStatus.payload.data.payment_expired, true, "Fixture harus kedaluwarsa di database yang dipakai Worker.");
+  assert.equal(expiredStatus.payload.data.has_payment_proof, hasProof);
+  assert.equal(expiredStatus.payload.data.payment_expired, !hasProof, "Status kedaluwarsa harus mengikuti batas 24 jam dan keberadaan bukti.");
 }
 
 async function run() {
@@ -262,7 +263,7 @@ async function run() {
     const retained = await createOrder();
     const retainedProof = await uploadProof(retained);
     assert.equal(retainedProof.response.status, 201, JSON.stringify(retainedProof.payload));
-    await setOrderExpired(retained);
+    await setOrderExpired(retained, true);
     const scheduledAgain = await fetch(`${apiBaseUrl}/__scheduled?cron=${encodeURIComponent("*/15 * * * *")}`, { signal: AbortSignal.timeout(10_000) });
     assert.ok(scheduledAgain.ok);
     const retainedCleanup = await requestJson("/__test/expire-unpaid", { method: "POST", body: {} });
