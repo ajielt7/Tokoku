@@ -149,6 +149,8 @@ Ruang lingkup rilis awal: satu model katalog bernama **Nomor Rumah Akrilik**, di
 
 ### C.2 Ongkir dan pembayaran — Berjalan (2/8)
 
+Metode pembayaran rilis awal yang dipilih: transfer bank. Bank, nomor rekening, nama pemilik, dan batas waktu pembayaran belum ditetapkan.
+
 - [x] `RAJAONGKIR_API_KEY` dari berkas lokal yang diabaikan Git terpasang pada Worker; pencarian tujuan merespons HTTP 200.
 - [x] Pemilik mengonfirmasi titik asal RajaOngkir `5052` sesuai lokasi operasional toko; verifikasi tarif kurir nyata masih perlu dilakukan.
 - [ ] Pemilik memilih Gojek, JNE, J&T, SPX, SiCepat, Wahana, dan Anteraja; verifikasi bahwa kurir serta tarifnya tersedia dan sesuai pada akun RajaOngkir.
