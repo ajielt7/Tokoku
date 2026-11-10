@@ -14,7 +14,7 @@ Gunakan bobot tetap per bagian agar laporan progres konsisten. Nilai tiap bagian
 | D. SEO dan mutu halaman | 20% |
 | E. Backup, pemulihan, dan peluncuran | 15% |
 
-**Progres berbobot per 9 November 2026: 47,8%** (A 6/9, B 12/15, C 2/27, D 13/22, E 5/18). Angka ini mengukur butir checklist yang selesai; bukan persentase kesiapan menerima pesanan. Karena tugas gabungan dipecah menjadi langkah yang lebih kecil, angka ini tidak sebanding langsung dengan laporan sebelumnya. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
+**Progres berbobot per 10 November 2026: 53,7%** (A 6/9, B 12/15, C 9/29, D 13/22, E 5/18). Keputusan berat, kurir, identitas, pembayaran, dan refund yang sudah disepakati kini dicatat sebagai selesai; publikasi katalog dan implementasi alurnya tetap menunggu. Angka ini mengukur butir checklist yang selesai, bukan persentase kesiapan menerima pesanan. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
 
 ### Rincian Tahap 12
 
@@ -29,9 +29,9 @@ Tahap 12 dibagi menjadi 5 bagian utama dan 18 subbagian. Setiap baris merangkum 
 | B.2 | Konfigurasi dan deploy Worker | Binding, variabel, limiter, deploy, dan endpoint katalog aktif | — | 5/5 | Selesai |
 | B.3 | Secret dan akses admin | Secret dipasang di Worker; endpoint admin terverifikasi tanpa membuka nilainya | — | 2/2 | Selesai |
 | B.4 | Layanan eksternal dan log | Ringkasan log/issue Worker diperiksa; tidak ada 5xx pada sampel | Pemilik cek paket dan status key ImageKit di dashboard; validasi API setelah 403 dibereskan | 3/6 | Berjalan |
-| C.1 | Katalog produk | Belum ada data produk final | Isi nama, deskripsi, harga, stok, bobot, foto, dan alt text setiap produk | 0/7 | Belum mulai |
-| C.2 | Ongkir dan pembayaran | Transaksi dasar terdokumentasi; hitung subtotal/ongkir lokal dan idempotency order teruji | Konfirmasi asal/kurir, verifikasi tarif RajaOngkir nyata, lalu finalkan rekening dan uji pembayaran/ImageKit | 2/8 | Berjalan |
-| C.3 | Identitas toko dan kebijakan | Belum ada data final | Tetapkan nama/kontak toko, privasi, retur, pembatalan, dan syarat transaksi | 0/6 | Belum mulai |
+| C.1 | Katalog produk | Nama, deskripsi, harga, ukuran, personalisasi, dan berat 650 g sudah disepakati | Masukkan katalog final; foto asli disiapkan menjelang rilis dan berat paket dicek saat packing final | 1/7 | Berjalan |
+| C.2 | Ongkir dan pembayaran | Transaksi dasar terdokumentasi; hitung subtotal/ongkir lokal dan idempotency order teruji; asal serta pilihan kurir sudah ditetapkan | Cocokkan tarif live dengan akun RajaOngkir dan jalankan simulasi lokal setelah alur bukti/refund siap | 4/10 | Berjalan |
+| C.3 | Identitas toko dan kebijakan | Nama/kontak, rekening, batas pembayaran, dan kebijakan refund sudah ditentukan | Terapkan saat rilis; tulis privasi/syarat dan periksa halaman publik | 4/6 | Berjalan |
 | C.4 | Pengiriman dan produksi | Belum disiapkan untuk operasional pelanggan | Tetapkan asal/kurir, proses packing, stok, SLA, dan penanganan pesanan bermasalah | 0/6 | Belum mulai |
 | D.1 | Indeks dan metadata | SITE_URL HTTPS benar; preview lulus pemeriksaan; 9 rute live punya title, description, dan H1; halaman privat noindex; robots.txt membolehkan crawler; Product/Offer schema tersedia di kode | Setelah konten final, cek canonical dan konten halaman publik, pastikan URL privat tak masuk sitemap rilis, lalu validasi Rich Results | 6/9 | Berjalan |
 | D.2 | Konten dan aksesibilitas | Audit tampilan ponsel, urutan Tab, kontras, label, dan live region lulus pada preview | Masukkan konten/foto final dan uji pembelian keyboard-only | 3/6 | Berjalan |
@@ -133,9 +133,9 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 
 ## C. Produk, transaksi, dan kebijakan toko
 
-### C.1 Katalog produk — Belum (0/7)
+### C.1 Katalog produk — Berjalan (1/7)
 
-Ruang lingkup rilis awal: satu model katalog bernama **Nomor Rumah Akrilik**, dibuat dari akrilik 3 mm hasil potong laser CO₂, ukuran 20 × 12 cm posisi landscape, alas hitam dengan angka dan huruf putih dari stiker; tanpa ornamen. Nomor wajib diisi, maksimal 3 karakter, hanya huruf/angka, dan huruf dinormalisasi kapital (contoh A01). Nama area opsional, maksimal 14 karakter termasuk spasi, dengan kapitalisasi mengikuti input konsumen; nama area boleh memakai tanda baca `-`, `/`, dan `.`. Batas nama area adalah keputusan awal dan tata letaknya perlu diperiksa pada desain fisik 20 × 12 cm. Papan sementara direncanakan dipasang dengan double tape dan dibuat setelah pesanan masuk. Waktu produksi: bisa kurang dari satu jam saat antrean sepi dan maksimal dua hari kerja saat ramai, dihitung setelah detail custom dan pembayaran dikonfirmasi. Harga jual sementara ditetapkan Rp50.000 (IDR), berat paket 650 g (cocokkan dengan kemasan final). Deskripsi disetujui: “Nomor rumah akrilik hitam 3 mm, ukuran 20 × 12 cm. Kustom nomor hingga 3 karakter dan nama area hingga 14 karakter. Tulisan putih memakai stiker; pemasangan menggunakan double tape.” Pemilik akan memeriksa model satu per satu sebelum katalog ditambah. CNC router dan 3D printing direncanakan untuk tahap berikutnya. Foto produk asli dan detail produksi masih menunggu.
+Ruang lingkup rilis awal: satu model katalog bernama **Nomor Rumah Akrilik**, dibuat dari akrilik 3 mm hasil potong laser CO₂, ukuran 20 × 12 cm posisi landscape, alas hitam dengan angka dan huruf putih dari stiker; tanpa ornamen. Nomor wajib diisi, maksimal 3 karakter, hanya huruf/angka, dan huruf dinormalisasi kapital (contoh A01). Nama area opsional, maksimal 14 karakter termasuk spasi, dengan kapitalisasi mengikuti input konsumen; nama area boleh memakai tanda baca `-`, `/`, dan `.`. Batas nama area adalah keputusan awal dan tata letaknya perlu diperiksa pada desain fisik 20 × 12 cm. Papan sementara direncanakan dipasang dengan double tape dan dibuat setelah pesanan masuk. Waktu produksi: bisa kurang dari satu jam saat antrean sepi dan maksimal dua hari kerja saat ramai, dihitung setelah detail custom dan pembayaran dikonfirmasi. Harga jual sementara ditetapkan Rp50.000 (IDR), berat paket disepakati 650 g. Deskripsi disetujui: “Nomor rumah akrilik hitam 3 mm, ukuran 20 × 12 cm. Kustom nomor hingga 3 karakter dan nama area hingga 14 karakter. Tulisan putih memakai stiker; pemasangan menggunakan double tape.” Pemilik akan memeriksa model satu per satu sebelum katalog ditambah. CNC router dan 3D printing direncanakan untuk tahap berikutnya. Foto produk asli disiapkan menjelang rilis; berat paket tetap ditimbang saat contoh kemasan final siap.
 
 - Pemilik menyetujui konsep visual digital awal di [konsep-nomor-rumah-akrilik.svg](produk/konsep-nomor-rumah-akrilik.svg) sebagai acuan desain. Mockup memakai teks contoh `A01` dan `KAMPUNG A`; ini bukan foto produk asli atau berkas produksi laser.
 
@@ -143,11 +143,11 @@ Ruang lingkup rilis awal: satu model katalog bernama **Nomor Rumah Akrilik**, di
 - [ ] Isi nama, deskripsi singkat, dan kategori setiap produk.
 - [ ] Tetapkan harga, mata uang, dan status stok/ketersediaan.
 - [ ] Isi ukuran produk dan batas personalisasi yang benar.
-- [ ] Isi berat paket untuk perhitungan ongkir.
+- [x] Berat paket ditetapkan 650 g untuk perhitungan ongkir; timbang kembali paket contoh sebelum menerima pesanan agar angka sesuai kemasan final.
 - [ ] Siapkan foto milik toko yang dapat diterbitkan dengan URL HTTPS.
 - [ ] Tulis alt text yang menjelaskan foto untuk setiap produk.
 
-### C.2 Ongkir dan pembayaran — Berjalan (2/8)
+### C.2 Ongkir dan pembayaran — Berjalan (4/10)
 
 Metode pembayaran rilis awal yang dipilih: transfer bank SeaBank, batas pembayaran 24 jam sejak pesanan dibuat, lalu tampilkan pesan “Pembayaran telah kedaluwarsa”. Pemilik memilih penghapusan penuh pesanan tanpa bukti setelah batas 24 jam, termasuk order, item, customization, payment, shipment, riwayat, dan berkas terkait. Jika bukti transfer diunggah sebelum batas, pesanan dan bukti tidak dihapus otomatis; keduanya dipertahankan sampai admin memproses pesanan. Kebijakan ini belum diimplementasikan. Nama pemilik dan nomor rekening sudah diberikan untuk instruksi transfer, tetapi nilainya tidak disimpan di dokumen repo publik; masukkan ke tampilan pembayaran pada rilis terkontrol.
 
@@ -159,19 +159,21 @@ Refund hanya dikirim kembali ke rekening asal yang mengirim pembayaran ke SeaBan
 
 - [x] `RAJAONGKIR_API_KEY` dari berkas lokal yang diabaikan Git terpasang pada Worker; pencarian tujuan merespons HTTP 200.
 - [x] Pemilik mengonfirmasi titik asal RajaOngkir `5052` sesuai lokasi operasional toko; verifikasi tarif kurir nyata masih perlu dilakukan.
-- [ ] Pemilik memilih Gojek, JNE, J&T, SPX, SiCepat, Wahana, dan Anteraja; verifikasi bahwa kurir serta tarifnya tersedia dan sesuai pada akun RajaOngkir.
+- [x] Pemilik memilih Gojek, JNE, J&T, SPX, SiCepat, Wahana, dan Anteraja. Acuan ongkir mengikuti proyek Pemesanan: Gojek Same Day memakai rumus jarak yang didokumentasikan di sana; kurir ekspedisi meminta tarif RajaOngkir secara langsung.
+- [ ] Cocokkan ketersediaan layanan dan tarif aktual pilihan kurir pada akun RajaOngkir untuk rute uji sebelum rilis; tarif dapat berbeda menurut akun, tujuan, dan layanan.
 - [x] Uji API lokal dengan seed demo: backend menghitung subtotal Rp150.000 dan ongkir fixture lokal Rp10.000 dari server menjadi total Rp160.000; pengiriman ulang memakai idempotency key yang sama memberi kode yang sama, hanya satu order/item/payment tersimpan, dan endpoint tracking tidak mengembalikan nomor telepon. Rute ongkir memakai fixture 1 km; ini bukan verifikasi tarif RajaOngkir nyata atau order production.
-- [ ] Setelah rekening final tersedia, lakukan uji transfer nominal kecil dan cocokkan mutasi secara manual. Jangan menyatakan pembayaran otomatis terverifikasi.
+- [ ] Jalankan simulasi checkout, unggah bukti contoh, persetujuan/penolakan admin, dan refund memakai Worker serta D1 lokal; jangan melakukan transfer atau refund sungguhan saat simulasi.
+- [ ] Sebelum rilis, bila pemilik menyetujui transaksi uji berbiaya, lakukan satu transfer nominal kecil dan cocokkan mutasi secara manual. Jangan menyatakan pembayaran otomatis terverifikasi.
 - [ ] Verifikasi unggah bukti hanya ke ImageKit privat setelah validasi ImageKit lolos.
 - [ ] Verifikasi URL bukti untuk admin bertanda tangan dan berumur singkat.
-- [ ] Verifikasi penolakan bukti membersihkan file aktif dan tetapkan masa retensi bukti.
+- [ ] Pastikan bukti yang ditolak tidak dapat diunggah ulang, file aktif dibersihkan, dan pelanggan diarahkan ke chat; uji alur setelah kode disesuaikan dengan kebijakan.
 
-### C.3 Informasi toko dan kebijakan — Belum (0/6)
+### C.3 Informasi toko dan kebijakan — Berjalan (4/6)
 
-- [ ] Tetapkan nama resmi toko dan kanal kontak yang akan ditampilkan.
-- [ ] Isi bank, nomor rekening, dan nama pemilik rekening untuk pembayaran.
-- [ ] Jelaskan batas waktu konfirmasi pembayaran dan apa yang terjadi jika melewati batas.
-- [ ] Jelaskan pembatalan dan pengembalian dana.
+- [x] Nama kerja toko **Toqoku by Ajielt7** dan WhatsApp `wa.me` sudah dipilih; pemeriksaan merek/domain tetap sebelum rilis.
+- [x] Detail SeaBank dan pemilik rekening diterima secara privat; nilainya tidak disimpan di repo publik dan perlu dimasukkan ke tampilan pembayaran pada rilis terkontrol.
+- [x] Batas pembayaran ditetapkan 24 jam; pesanan tanpa bukti dihapus setelah kedaluwarsa.
+- [x] Refund sebelum produksi, rekening asal saja, dan target maksimal 72 jam setelah persetujuan admin sudah ditetapkan.
 - [ ] Tulis kebijakan privasi dan syarat pembelian, lalu minta pemilik meninjaunya.
 - [ ] Periksa halaman publik agar tidak menampilkan alamat atau data pribadi pelanggan.
 

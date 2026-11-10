@@ -20,6 +20,7 @@ Membangun toko online mandiri yang ringan dan mudah dikembangkan. Toko perlu men
 - Menyediakan keranjang dan alur checkout.
 - Checkout awal memakai pesanan tamu tanpa akun; harga dihitung ulang di backend.
 - Pelanggan mengunggah bukti transfer JPG/PNG/WebP maksimal 5 MB; Worker memvalidasi pesanan dan menyimpan gambar sebagai private file ImageKit.
+- Bukti transfer yang ditolak tidak dapat diunggah ulang; pelanggan diarahkan melanjutkan lewat chat.
 - Menyediakan halaman cek status pesanan menggunakan kode dan nomor telepon checkout; hanya status aman dan tautan tracking yang ditampilkan, tanpa data pribadi. Halaman ini tidak diindeks.
 
 ### Produk custom
@@ -37,6 +38,7 @@ Membangun toko online mandiri yang ringan dan mudah dikembangkan. Toko perlu men
 - Mencatat pesanan dan rincian item.
 - Memisahkan status pesanan, pembayaran, produksi, dan pengiriman.
 - Admin memeriksa bukti transfer maksimal 1 × 24 jam sejak bukti diunggah dan mengubah status pembayaran melalui endpoint yang dilindungi autentikasi. Jika bukti ditolak, pembeli tidak dapat mengunggah ulang dan diarahkan untuk melanjutkan lewat chat.
+- Refund manual hanya ke rekening asal pengirim. Pelanggan dapat meminta pembatalan sebelum produksi dimulai; admin mengirim refund lebih dahulu lalu mengonfirmasi proses di aplikasi. Target penyelesaian maksimal 3 × 24 jam setelah persetujuan admin. Setelah produksi dimulai, pembeli diarahkan ke chat dan tidak memenuhi syarat refund.
 - Menyediakan aplikasi Android untuk admin meninjau pesanan, mengelola proses, dan melihat riwayat.
 - Mengirim notifikasi pesanan baru ke admin melalui FCM; aplikasi mengambil status terkini dari backend.
 - Menyimpan informasi kurir, URL pelacakan, status, dan waktu pengiriman jika tersedia.
@@ -72,12 +74,11 @@ Membangun toko online mandiri yang ringan dan mudah dikembangkan. Toko perlu men
 
 ## 7. Belum diputuskan
 
-- Nama toko, domain, identitas visual, daftar produk awal, harga, dan foto asli.
-- Nomor rekening dan nama pemilik rekening; pembayaran awal mengikuti transfer manual.
-- Berat aktual tiap produk dan aturan kurir lokal.
+- Pemeriksaan nama/merek dan domain final; nama kerja, kanal WhatsApp, produk awal, harga, dan rekening transfer sudah dipilih.
+- Ketersediaan dan tarif aktual layanan kurir pada akun RajaOngkir untuk rute pelanggan; pilihan kurir dan berat paket 650 g sudah ditetapkan.
+- Foto produk asli dan alt text katalog; foto disiapkan menjelang rilis.
 - Login/role admin individual. MVP lokal menggunakan `ADMIN_TOKEN` Worker bersama; pengelolaan akun dan hak akses per admin belum ditetapkan.
-- Refund diperbolehkan sebelum produksi dimulai; setelah produksi berjalan tidak ada pengembalian dana. Pelanggan mengajukan pembatalan dari halaman lacak; permintaan muncul di tab refund Android. Admin mengirim refund terlebih dahulu, lalu menekan “Proses” agar status tampil di web. Setelah produksi dimulai, pelanggan diarahkan ke chat. Retensi kedaluwarsa pembayaran: pesanan tanpa bukti dihapus setelah 24 jam; pesanan dengan bukti menunggu admin.
-- Refund hanya dikirim ke rekening asal pengirim pembayaran, bukan rekening alternatif. Target penyelesaian maksimal 3 × 24 jam (72 jam) setelah admin menyetujui permintaan.
+- Implementasi dan simulasi lokal alur refund, pembatalan, penolakan bukti tanpa unggah ulang, serta penghapusan order kedaluwarsa setelah 24 jam.
 - Spesifikasi mesin/CAM, bahan, toleransi, kompensasi alat, font/konversi teks menjadi kurva, dan uji kompatibilitas DXF untuk produksi nyata.
 - Detail biaya layanan serta kebutuhan kapasitas saat peluncuran.
 
