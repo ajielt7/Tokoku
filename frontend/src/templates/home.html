@@ -16,7 +16,6 @@
   </head>
   <body>
     <a class="skip-link" href="#konten-utama">Lewati ke konten utama</a>
-    {{PREVIEW_BANNER}}
 
     <header class="site-header">
       <div class="container header-inner">
@@ -31,32 +30,37 @@
     </header>
 
     <main id="konten-utama">
-      <section class="top-offers" aria-labelledby="featured-title">
+      <section class="top-offers" aria-label="Inspirasi produk custom">
         <div class="container">
-          <div class="top-offers-heading">
-            <div><p class="eyebrow">Pilihan</p><h2 id="featured-title">Produk pilihan</h2></div>
-            <a class="text-link" href="#produk">Semua produk <span aria-hidden="true">→</span></a>
-          </div>
-          <div class="offer-grid">{{FEATURED_PRODUCTS}}</div>
+          <div class="offer-grid{{FEATURED_LAYOUT}}">{{FEATURED_PRODUCTS}}</div>
+        </div>
+      </section>
+
+      <section class="store-search" aria-label="Cari produk">
+        <div class="container store-search-inner">
+          <div class="store-search-heading"><span class="search-mark"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span><h2>Cari produk</h2></div>
+          <form class="product-search" role="search" data-product-search>
+            <label class="visually-hidden" for="product-search-input">Cari produk</label>
+            <i class="fa-solid fa-magnifying-glass search-field-icon" aria-hidden="true"></i>
+            <input id="product-search-input" type="search" name="q" placeholder="Nomor rumah, plakat, gantungan kunci..." autocomplete="off" data-product-search-input>
+            <button class="search-clear" type="button" data-product-search-clear hidden aria-label="Hapus pencarian"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+            <button class="search-submit" type="submit">Cari <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+          </form>
+          <div class="search-quick-links" aria-label="Pencarian cepat"><span>Cari:</span><button type="button" data-search-term="Nomor rumah">Nomor rumah</button><button type="button" data-search-term="Plakat">Plakat</button><button type="button" data-search-term="Gantungan kunci">Gantungan kunci</button><button type="button" data-search-term="Stand QRIS">Stand QRIS</button></div>
+          <p class="search-status" data-product-search-status aria-live="polite"></p>
         </div>
       </section>
 
       <section class="hero" id="beranda" aria-labelledby="hero-title">
         <div class="container hero-grid">
           <div class="hero-copy">
-            <p class="eyebrow"><span class="eyebrow-dot"></span> Produk custom</p>
             <h1 id="hero-title">Tandai rumahmu.</h1>
             <p class="hero-description">Angka. Nama. Gayamu.</p>
-            <div class="hero-actions"><a class="button button-primary" href="#produk">Lihat produk <span aria-hidden="true">→</span></a><a class="text-link" href="#cara-pesan">Cara pesan</a></div>
-            <p class="hero-note">Detail jelas. Pesan mudah.</p>
+            <div class="hero-actions"><a class="button button-primary" href="#produk">Lihat produk <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></div>
           </div>
-          <div class="hero-art" role="img" aria-label="Ilustrasi penanda nomor rumah">
-            <div class="sun-shape" aria-hidden="true"></div>
-            <div class="hero-plant plant-one" aria-hidden="true"><span></span><span></span><span></span></div>
-            <div class="hero-plant plant-two" aria-hidden="true"><span></span><span></span><span></span></div>
-            <div class="hero-sign"><span class="sign-label">RUMAH</span><span class="sign-number">27</span><span class="sign-line"></span><span class="sign-caption">tempat pulang</span></div>
-            <span class="art-caption">Ilustrasi</span>
-          </div>
+          <figure class="hero-art">
+            <img class="hero-photo" src="https://images.unsplash.com/photo-1747862934428-899f5beb821e?auto=format&amp;fit=crop&amp;w=1200&amp;q=85" alt="Inspirasi nomor rumah pada fasad. Foto Unsplash, bukan foto produk Toqoku." width="1200" height="800" loading="lazy">
+          </figure>
         </div>
       </section>
 
@@ -66,10 +70,8 @@
 
       <section class="products section-space" id="produk" aria-labelledby="products-title">
         <div class="container">
-          <div class="section-heading"><div><p class="eyebrow">Katalog</p><h2 id="products-title">Semua produk</h2></div><p>Pilih desain favorit.</p></div>
-          <nav class="category-shortcuts" aria-label="Kategori produk">{{CATEGORY_LINKS}}</nav>
+          <div class="section-heading"><h2 id="products-title">Semua produk</h2></div>
           <div class="product-grid">{{PRODUCT_CARDS}}</div>
-          {{DEMO_NOTE}}
         </div>
       </section>
 
@@ -78,13 +80,14 @@
           <div class="how-intro"><p class="eyebrow">Cara pesan</p><h2 id="how-title">Tiga langkah.</h2><p>Singkat. Jelas. Mudah.</p></div>
           <ol class="steps-list"><li><span class="step-number">01</span><div><h3>Pilih desain</h3><p>Lihat ukuran dan harga.</p></div></li><li><span class="step-number">02</span><div><h3>Isi detail custom</h3><p>Angka atau nama.</p></div></li><li><span class="step-number">03</span><div><h3>Lanjutkan pesanan</h3><p>Periksa detailnya.</p></div></li></ol>
         </div>
-        <div class="container related-products"><div class="related-heading"><h3>Jelajahi kategori</h3><a class="text-link" href="#produk">Lihat produk <span aria-hidden="true">→</span></a></div><div class="related-links">{{CATEGORY_TILES}}</div></div>
+        <div class="container related-products"><div class="related-heading"><h3>Jelajahi kategori</h3><a class="text-link" href="#produk">Lihat produk <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></div><div class="related-links">{{CATEGORY_TILES}}</div></div>
       </section>
 
-      <section class="closing" id="tentang" aria-labelledby="closing-title"><div class="container closing-inner"><div><p class="eyebrow">Dibuat untuk ruangmu</p><h2 id="closing-title">Buat lebih personal.</h2></div><a class="button button-light" href="#produk">Lihat produk <span aria-hidden="true">→</span></a></div></section>
+      <section class="closing" id="tentang" aria-labelledby="closing-title"><div class="container closing-inner"><div><p class="eyebrow">Dibuat untuk ruangmu</p><h2 id="closing-title">Buat lebih personal.</h2></div><a class="button button-light" href="#produk">Lihat produk <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></div></section>
     </main>
 
     <footer class="site-footer" id="kontak"><div class="container footer-inner"><a class="brand footer-brand" href="#beranda"><span class="brand-mark" aria-hidden="true">T</span><span>Toqoku<span class="brand-period">.</span></span></a><p>Produk dan karya dari ekosistem Ajielt7.</p><a class="footer-contact" href="{{WHATSAPP_LINK}}"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Chat WhatsApp</a>{{SOCIAL_LINKS}}<small>{{FOOTER_COPY}}</small></div></footer>
+    <script src="./assets/js/home-search.js" defer></script>
     <script src="./assets/js/cart.js" data-api-base="{{API_BASE_URL}}" defer></script>
   </body>
 </html>
