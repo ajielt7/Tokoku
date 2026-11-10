@@ -151,7 +151,7 @@ Ruang lingkup rilis awal: satu model katalog bernama **Nomor Rumah Akrilik**, di
 
 - [x] `RAJAONGKIR_API_KEY` dari berkas lokal yang diabaikan Git terpasang pada Worker; pencarian tujuan merespons HTTP 200.
 - [ ] Pastikan titik asal `5052` sesuai lokasi operasional toko.
-- [ ] Pastikan kurir dan tarif yang dikembalikan sesuai layanan yang akan dipakai.
+- [ ] Pemilik memilih Gojek, JNE, J&T, SPX, SiCepat, Wahana, dan Anteraja; verifikasi bahwa kurir serta tarifnya tersedia dan sesuai pada akun RajaOngkir.
 - [x] Uji API lokal dengan seed demo: backend menghitung subtotal Rp150.000 dan ongkir fixture lokal Rp10.000 dari server menjadi total Rp160.000; pengiriman ulang memakai idempotency key yang sama memberi kode yang sama, hanya satu order/item/payment tersimpan, dan endpoint tracking tidak mengembalikan nomor telepon. Rute ongkir memakai fixture 1 km; ini bukan verifikasi tarif RajaOngkir nyata atau order production.
 - [ ] Setelah rekening final tersedia, lakukan uji transfer nominal kecil dan cocokkan mutasi secara manual. Jangan menyatakan pembayaran otomatis terverifikasi.
 - [ ] Verifikasi unggah bukti hanya ke ImageKit privat setelah validasi ImageKit lolos.
