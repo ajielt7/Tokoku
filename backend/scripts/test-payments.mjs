@@ -126,8 +126,8 @@ async function trackOrder(order) {
 
 async function setOrderExpired(order) {
   runWrangler([
-    "--config", "wrangler.jsonc", "--env", "test", "--env-file", testEnvFile,
     "d1", "execute", "ruma-store-test-local", "--local", "--persist-to", stateDirectory,
+    "--config", "wrangler.jsonc", "--env", "test", "--env-file", testEnvFile,
     "--command", `UPDATE orders SET payment_expires_at = '2000-01-01T00:00:00.000Z' WHERE public_code = '${order.code}'`,
   ]);
 }
@@ -144,18 +144,19 @@ async function run() {
     ].join("\n"), { mode: 0o600 });
 
     runWrangler([
-      "--config", "wrangler.jsonc", "--env", "test", "--env-file", testEnvFile,
       "d1", "migrations", "apply", "ruma-store-test-local", "--local", "--persist-to", stateDirectory,
+      "--config", "wrangler.jsonc", "--env", "test", "--env-file", testEnvFile,
     ]);
     runWrangler([
-      "--config", "wrangler.jsonc", "--env", "test", "--env-file", testEnvFile,
       "d1", "execute", "ruma-store-test-local", "--local", "--persist-to", stateDirectory,
       "--file", "seeds/payment-test.sql",
+      "--config", "wrangler.jsonc", "--env", "test", "--env-file", testEnvFile,
     ]);
 
     worker = spawn(process.execPath, [
-      wranglerCli, "dev", "--config", "wrangler.jsonc", "--env", "test", "--env-file", testEnvFile,
+      wranglerCli, "dev",
       "--local", "--ip", "127.0.0.1", "--port", "8791", "--persist-to", stateDirectory, "--test-scheduled",
+      "--config", "wrangler.jsonc", "--env", "test", "--env-file", testEnvFile,
     ], { cwd: backendDirectory, env: childEnvironment, stdio: "ignore", windowsHide: true });
 
     await waitForWorker(worker);
