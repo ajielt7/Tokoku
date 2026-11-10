@@ -2,6 +2,7 @@ const form = document.querySelector("[data-tracking-form]");
 const messageNode = document.querySelector("[data-tracking-message]");
 const resultsNode = document.querySelector("[data-tracking-results]");
 const apiBaseUrl = document.currentScript?.dataset.apiBase || "";
+const chatHref = document.querySelector(".footer-contact")?.href || "";
 
 const labels = {
   order: { new: "Pesanan diterima", accepted: "Pesanan diproses", completed: "Pesanan selesai", cancelled: "Pesanan dibatalkan" },
@@ -27,7 +28,45 @@ function statusLabel(type, status) {
   return labels[type]?.[status] || "Belum tersedia";
 }
 
-function renderStatus(order) {
+function addChatLink(parent, message) {
+  if (!chatHref) return;
+  const link = document.createElement("a");
+  const target = new URL(chatHref);
+  target.searchParams.set("text", message);
+  link.href = target.href;
+  link.className = "button button-secondary";
+  link.textContent = "Chat WhatsApp";
+  parent.append(link);
+}
+
+async function submitRefundRequest(order, credentials, button, statusNode) {
+  button.disabled = true;
+  statusNode.textContent = "Mengirim permintaan ke admin…";
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/orders/cancellation`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      cache: "no-store",
+      referrerPolicy: "no-referrer",
+      body: JSON.stringify({ order_code: order.public_code, phone: credentials.phone }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || "Permintaan belum berhasil dikirim.");
+    order.refund_status = result.data?.status || "requested";
+    order.refund_requested_at = new Date().toISOString();
+    order.can_request_refund = false;
+    renderStatus(order, credentials);
+    showMessage(result.message || "Permintaan refund dikirim ke admin.");
+  } catch (error) {
+    statusNode.textContent = error instanceof Error ? error.message : "Koneksi bermasalah. Coba lagi.";
+    if (statusNode.textContent.toLocaleLowerCase("id-ID").includes("chat")) {
+      addChatLink(statusNode.parentElement, `Halo, saya ingin koordinasi pembatalan/refund pesanan ${order.public_code}.`);
+    }
+    button.disabled = false;
+  }
+}
+
+function renderStatus(order, credentials = {}) {
   resultsNode.replaceChildren();
   resultsNode.hidden = false;
   const summary = document.createElement("article");
@@ -48,6 +87,31 @@ function renderStatus(order) {
     statusGrid.append(group);
   }
   summary.append(statusGrid);
+  if (order.payment_expired) {
+    addText(summary, "p", "form-message is-error", "Pembayaran telah kedaluwarsa. Pesanan tanpa bukti pembayaran akan dihapus.");
+  }
+  if (order.refund_status === "requested") {
+    addText(summary, "p", "form-hint", "Permintaan pembatalan/refund sudah dikirim. Admin akan meninjaunya.");
+  } else if (order.refund_status === "approved") {
+    const due = order.refund_due_at ? new Date(order.refund_due_at).toLocaleString("id-ID") : "maksimal 3 × 24 jam";
+    addText(summary, "p", "form-hint", `Refund disetujui. Admin menargetkan pengiriman ke rekening asal sebelum ${due}.`);
+  } else if (order.refund_status === "processed") {
+    addText(summary, "p", "form-hint", "Refund telah diproses ke rekening asal. Hubungi admin melalui chat jika perlu koordinasi.");
+    addChatLink(summary, `Halo, saya ingin koordinasi refund pesanan ${order.public_code}.`);
+  } else if (order.can_request_refund) {
+    const statusNode = addText(summary, "p", "form-hint", "Pesanan belum mulai diproduksi. Refund dapat diajukan ke rekening asal pembayaran.");
+    const requestButton = document.createElement("button");
+    requestButton.type = "button";
+    requestButton.className = "button button-secondary";
+    requestButton.textContent = "Ajukan pembatalan dan refund";
+    requestButton.addEventListener("click", () => submitRefundRequest(order, credentials, requestButton, statusNode));
+    summary.append(requestButton);
+  } else if (order.payment_status === "failed" || (order.payment_status === "paid" && order.production_status !== "pending")) {
+    addText(summary, "p", "form-hint", order.payment_status === "failed"
+      ? "Bukti transfer ditolak. Hubungi admin melalui chat; bukti tidak dapat diunggah ulang."
+      : "Produksi sudah dimulai. Refund tidak tersedia; hubungi admin melalui chat untuk koordinasi.");
+    addChatLink(summary, `Halo, saya ingin koordinasi pesanan ${order.public_code}.`);
+  }
   if (order.tracking_number) {
     const shipment = document.createElement("p");
     shipment.className = "tracking-shipment";
@@ -104,7 +168,7 @@ form?.addEventListener("submit", async (event) => {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || "Status pesanan belum dapat dimuat.");
-    renderStatus(result.data);
+    renderStatus(result.data, payload);
     showMessage("Status pesanan ditemukan.");
   } catch (error) {
     showMessage(error instanceof Error ? error.message : "Koneksi bermasalah. Coba lagi.", true);

@@ -1,6 +1,6 @@
 # Ongkir dan Pembayaran
 
-**Status:** Implementasi lokal mendukung RajaOngkir, Gojek Same Day, transfer manual, bukti privat ImageKit, dan pemeriksaan pembayaran admin. D1 production masih kosong. Pencarian tujuan RajaOngkir berhasil; validasi API ImageKit read-only mengembalikan HTTP 403 pada 9 November 2026, sehingga upload bukti belum tervalidasi. Berat paket disepakati 650 gram. Pilihan kurir dan rumus Gojek mengacu pada proyek `C:\Users\Ajiee\OneDrive\Dokumen\Pemesanan`; tarif RajaOngkir tetap harus diverifikasi pada rute dan akun Ruma. Pengujian transfer/refund direncanakan lokal tanpa uang sungguhan.
+**Status:** Implementasi mencakup RajaOngkir, Gojek Same Day, transfer manual, bukti privat ImageKit, review admin, expiry pembayaran 24 jam, dan alur refund manual. Simulasi otomatis memakai Wrangler/D1 lokal, data produk contoh, dan bukti tiruan; jalankan `npm run test:payments` dengan Node.js 22+ sebelum menandainya terverifikasi. D1 production tetap kosong. Validasi API ImageKit read-only mengembalikan HTTP 403 pada 9 November 2026, sehingga upload bukti production belum tervalidasi. Berat paket disepakati 650 gram. Pilihan kurir dan rumus Gojek mengacu pada proyek `C:\Users\Ajiee\OneDrive\Dokumen\Pemesanan`; tarif RajaOngkir live tetap harus diverifikasi pada rute dan akun Ruma. Tidak ada transfer uang dalam simulasi lokal.
 
 ## Alur yang dipakai
 

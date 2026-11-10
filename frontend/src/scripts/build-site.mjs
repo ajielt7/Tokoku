@@ -155,7 +155,10 @@ function customizationFields(fields) {
     const required = field.required ? " required" : "";
     const numeric = field.type === "number";
     const inputMode = numeric ? ' inputmode="numeric" pattern="[0-9]*"' : "";
-    return `<label class="form-field">${label}<input type="text" name="custom-${key}" data-custom-key="${key}" data-custom-label="${label}"${inputMode}${length}${required}></label>`;
+    const rules = field.rules && typeof field.rules === "object" ? field.rules : {};
+    const pattern = typeof rules.pattern === "string" ? ` pattern="${escapeHtml(rules.pattern)}"` : "";
+    const uppercase = rules.uppercase ? ' data-uppercase="true"' : "";
+    return `<label class="form-field">${label}<input type="text" name="custom-${key}" data-custom-key="${key}" data-custom-label="${label}"${inputMode}${length}${pattern}${uppercase}${required}></label>`;
   }).join("\n");
 }
 

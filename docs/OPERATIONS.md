@@ -68,19 +68,21 @@ Gunakan checklist bagian C dan E.4 sebagai catatan hasil. Pengujian ini belum di
 
 ### Simulasi pembayaran dan refund tanpa uang sungguhan
 
-Simulasi pertama akan berjalan hanya pada Wrangler lokal dan D1 lokal dengan data contoh. Jangan memakai `--remote`, D1 production, rekening toko untuk transfer uji, atau mengunggah file ke ImageKit production. Hapus data contoh setelah simulasi. Pengujian manual berbasis uang sungguhan adalah langkah terpisah yang baru dipertimbangkan menjelang rilis.
+Simulasi berjalan hanya pada Wrangler lokal dan D1 lokal dengan data contoh. Jangan memakai `--remote`, D1 production, rekening toko untuk transfer uji, atau mengunggah file ke ImageKit production. Skrip menghapus database dan file lingkungan sementaranya setelah selesai. Pengujian manual berbasis uang sungguhan adalah langkah terpisah yang baru dipertimbangkan menjelang rilis.
 
-Urutan skenario yang harus lulus:
+Jalankan skenario yang sudah diotomasi dari folder `backend/` dengan `npm run test:payments` (membutuhkan Node.js 22+ dan dependensi hasil `npm ci`). Skrip mengunci Worker ke environment `test`, D1 lokal sementara, katalog contoh, dan penyimpanan bukti tiruan. Jangan menambahkan `--remote`, memakai rekening sungguhan, atau mengirim bukti ke ImageKit production.
+
+Urutan skenario:
 
 1. **Checkout transfer:** order lokal tercatat `pending`, nominal dan kode pembayaran dihitung server, pembayaran kedaluwarsa setelah 24 jam, dan order tanpa bukti masuk antrean hapus. Uji waktu kedaluwarsa dengan jam/data simulasi, bukan menunggu atau mengubah jam komputer.
 2. **Bukti valid:** file contoh lolos validasi format dan ukuran, tercatat sebagai bukti privat, dan order tampil di antrean admin. Sampai ImageKit lolos validasi, skenario ini harus memakai penyimpanan tiruan yang hanya tersedia di test lokal.
 3. **Pembayaran disetujui:** hanya admin terautentikasi yang dapat menyetujui bukti; status menjadi lunas, status terlihat di tracking, dan pesanan baru dapat masuk proses.
-4. **Bukti ditolak:** bukti aktif dihapus, status penolakan tersimpan, percobaan unggah kedua ditolak, dan pelanggan mendapat arahan untuk chat. Kode saat ini masih mengosongkan referensi bukti sehingga membuka unggah ulang; perbaiki sebelum skenario ini bisa dinyatakan lulus.
+4. **Bukti ditolak:** bukti tiruan dihapus, status penolakan tersimpan, percobaan unggah kedua ditolak, dan pelanggan mendapat arahan untuk chat.
 5. **Refund sebelum produksi:** pelanggan meminta pembatalan pada order lunas yang belum diproduksi; permintaan muncul di antrean admin. Setelah admin mencatat pengembalian manual ke rekening asal, admin menekan “Proses”; status web berubah menjadi dibatalkan/refund.
 6. **Batas refund:** permintaan setelah produksi dimulai ditolak dan halaman mengarahkan ke chat. Admin tidak dapat menandai refund selesai sebelum ada konfirmasi transfer manual.
 7. **Batas waktu dan privasi:** periksa target refund 72 jam sejak persetujuan, pemeriksaan bukti maksimal 24 jam, autentikasi semua tindakan admin, serta tidak ada rekening, bukti, alamat, nomor telepon, atau token dalam log.
 
-**Kesiapan saat ini:** simulasi pembayaran/refund belum dapat dijalankan sampai tersedia mode penyimpanan bukti tiruan lokal yang tidak memanggil ImageKit, status penolakan yang memblokir unggah ulang, dan implementasi permintaan/pemrosesan refund pada backend serta Android. ImageKit masih pernah membalas HTTP 403. Sampai prasyarat ini selesai, pengujian hanya berupa tinjauan kode dan daftar skenario; jangan menandai verifikasi transaksi sebagai lulus.
+**Batas verifikasi:** simulasi lokal memvalidasi alur backend dan D1 dengan bukti tiruan. Simulasi tidak memvalidasi ImageKit, transfer bank, ongkir live RajaOngkir, atau notifikasi FCM. ImageKit pernah membalas HTTP 403; unggah production tetap ditunda sampai konfigurasi akun diperiksa dan validasi layanan dilakukan menjelang rilis.
 
 ### Cloudflare Worker
 

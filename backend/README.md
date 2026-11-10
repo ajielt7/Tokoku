@@ -24,7 +24,15 @@ backend/
 └── wrangler.jsonc
 ```
 
-Skema mencakup kategori/produk, template dan bidang custom, pesanan beserta snapshot item, pembayaran, pengiriman, file, perangkat admin FCM, dan riwayat status. Migrasi `0006_local_shipping_distance.sql` menyimpan jarak rute ongkir lokal tanpa koordinat alamat pelanggan. Migrasi `0007_admin_devices.sql` menyimpan token FCM perangkat admin. Migrasi `0008_custom_production_files.sql` menyimpan snapshot definisi bidang custom dan gambar DXF teks berukuran kecil yang terkait dengan item pesanan. Tidak ada data contoh di dalam migrasi. `seeds/demo.sql` berisi data dan harga ilustrasi yang hanya boleh dipakai di database lokal.
+Skema mencakup kategori/produk, template dan bidang custom, pesanan beserta snapshot item, pembayaran, pengiriman, file, perangkat admin FCM, dan riwayat status. Migrasi `0006_local_shipping_distance.sql` menyimpan jarak rute ongkir lokal tanpa koordinat alamat pelanggan. Migrasi `0007_admin_devices.sql` menyimpan token FCM perangkat admin. Migrasi `0008_custom_production_files.sql` menyimpan snapshot definisi bidang custom dan gambar DXF teks berukuran kecil yang terkait dengan item pesanan. Migrasi `0009_payment_expiry_and_refunds.sql` menyimpan batas pembayaran 24 jam dan antrean refund manual. Tidak ada data contoh di dalam migrasi. `seeds/demo.sql` berisi data ilustrasi yang hanya boleh dipakai di database lokal.
+
+## Simulasi pembayaran dan refund lokal
+
+Gunakan Node.js 22 atau lebih baru. Dari folder `backend/`, jalankan `npm run test:payments`. Skrip membuat D1 sementara yang unik, memakai katalog dan penyimpanan bukti tiruan, lalu menghapus data serta file uji yang dibuatnya. Skrip menghapus kredensial layanan dari environment proses Wrangler dan tidak memakai `--remote`; jangan mengubahnya menjadi target production.
+
+Skenario memeriksa checkout dan batas 24 jam, penyimpanan bukti tiruan, penolakan tanpa unggah ulang, persetujuan admin, permintaan refund, batas produksi, konfirmasi transfer sebelum refund dianggap selesai, dan retensi pesanan yang sudah memiliki bukti. Ini simulasi status sistem saja; tidak ada transfer uang dan tidak menguji ImageKit sungguhan.
+
+Endpoint refund: pelanggan mengirim `POST /api/orders/cancellation` dengan kode pesanan dan nomor telepon checkout. Admin melihat antrean melalui `GET /api/admin/refunds?status=requested`, menyetujui dengan `POST /api/admin/refunds/:id/approve`, lalu setelah mengirim transfer manual ke rekening asal mengirim `POST /api/admin/refunds/:id/process` dengan `transfer_confirmed: true`. Target refund adalah 72 jam setelah persetujuan. Setelah produksi dimulai, pelanggan diarahkan untuk menghubungi admin melalui WhatsApp.
 
 ## Menyiapkan D1 lokal
 

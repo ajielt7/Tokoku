@@ -71,6 +71,7 @@ public final class MainActivity extends Activity {
     private String currentOrderCode;
     private String orderFilter = "";
     private String paymentFilter = "";
+    private String refundFilter = "";
     private String searchQuery = "";
     private boolean paymentProofViewed;
     private LinearLayout page;
@@ -168,14 +169,15 @@ public final class MainActivity extends Activity {
 
         LinearLayout filters = horizontal();
         Spinner statusSpinner = new Spinner(this);
-        String[] filterLabels = {"Semua pesanan", "Pesanan baru", "Diterima", "Selesai", "Dibatalkan", "Menunggu pembayaran", "Pembayaran lunas", "Pembayaran gagal", "Pembayaran dikembalikan"};
-        String[] filterCodes = {"", "order:new", "order:accepted", "order:completed", "order:cancelled", "payment:pending", "payment:paid", "payment:failed", "payment:refunded"};
+        String[] filterLabels = {"Semua pesanan", "Pesanan baru", "Diterima", "Selesai", "Dibatalkan", "Menunggu pembayaran", "Pembayaran lunas", "Pembayaran gagal", "Pembayaran dikembalikan", "Refund diminta", "Refund disetujui"};
+        String[] filterCodes = {"", "order:new", "order:accepted", "order:completed", "order:cancelled", "payment:pending", "payment:paid", "payment:failed", "payment:refunded", "refund:requested", "refund:approved"};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, filterLabels);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         statusSpinner.setAdapter(adapter);
-        String currentFilter = paymentFilter.isEmpty()
-                ? (orderFilter.isEmpty() ? "" : "order:" + orderFilter)
-                : "payment:" + paymentFilter;
+        String currentFilter = !refundFilter.isEmpty() ? "refund:" + refundFilter
+                : (paymentFilter.isEmpty()
+                    ? (orderFilter.isEmpty() ? "" : "order:" + orderFilter)
+                    : "payment:" + paymentFilter);
         for (int index = 0; index < filterCodes.length; index++) if (filterCodes[index].equals(currentFilter)) statusSpinner.setSelection(index);
         filters.addView(statusSpinner, new LinearLayout.LayoutParams(0, dp(50), 1));
         Button refresh = smallButton("Muat ulang", false);
@@ -214,12 +216,15 @@ public final class MainActivity extends Activity {
             @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
                 String selected = filterCodes[position];
                 if (!initialized) { initialized = true; return; }
-                if (selected.startsWith("payment:")) {
+                if (selected.startsWith("refund:")) {
+                    String nextRefundFilter = selected.substring("refund:".length());
+                    if (!nextRefundFilter.equals(refundFilter)) { refundFilter = nextRefundFilter; orderFilter = ""; paymentFilter = ""; loadOrders(); }
+                } else if (selected.startsWith("payment:")) {
                     String nextPaymentFilter = selected.substring("payment:".length());
-                    if (!nextPaymentFilter.equals(paymentFilter)) { paymentFilter = nextPaymentFilter; orderFilter = ""; loadOrders(); }
+                    if (!nextPaymentFilter.equals(paymentFilter) || !refundFilter.isEmpty()) { paymentFilter = nextPaymentFilter; orderFilter = ""; refundFilter = ""; loadOrders(); }
                 } else {
                     String nextOrderFilter = selected.startsWith("order:") ? selected.substring("order:".length()) : "";
-                    if (!nextOrderFilter.equals(orderFilter) || !paymentFilter.isEmpty()) { orderFilter = nextOrderFilter; paymentFilter = ""; loadOrders(); }
+                    if (!nextOrderFilter.equals(orderFilter) || !paymentFilter.isEmpty() || !refundFilter.isEmpty()) { orderFilter = nextOrderFilter; paymentFilter = ""; refundFilter = ""; loadOrders(); }
                 }
             }
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
@@ -240,6 +245,7 @@ public final class MainActivity extends Activity {
 
     private void loadOrders() {
         if (api == null) { showLogin(""); return; }
+        if (!refundFilter.isEmpty()) { loadRefunds(); return; }
         if (searchInput != null) searchQuery = searchInput.getText().toString().trim();
         setBusy(true, "Memuat pesanan…");
         StringBuilder path = new StringBuilder("/api/admin/orders?limit=100");
@@ -257,6 +263,85 @@ public final class MainActivity extends Activity {
             setBusy(false, error.getMessage());
             if (content != null && content.getChildCount() == 0) addEmptyState("Pesanan belum dapat dimuat.", "Coba muat ulang setelah koneksi tersedia.");
         });
+    }
+
+    private void loadRefunds() {
+        if (api == null) { showLogin(""); return; }
+        setBusy(true, "Memuat permintaan refund…");
+        String status = refundFilter;
+        runIo(() -> {
+            JSONObject response = api.get("/api/admin/refunds?status=" + status);
+            JSONArray refunds = response.optJSONArray("data");
+            runOnUiThread(() -> renderRefunds(refunds == null ? new JSONArray() : refunds));
+        }, error -> {
+            setBusy(false, error.getMessage());
+            if (content != null && content.getChildCount() == 0) addEmptyState("Permintaan refund belum dapat dimuat.", "Coba muat ulang setelah koneksi tersedia.");
+        });
+    }
+
+    private void renderRefunds(JSONArray refunds) {
+        setBusy(false, refunds.length() == 0 ? "Belum ada permintaan pada tab ini." : refunds.length() + " permintaan refund");
+        content.removeAllViews();
+        if (refunds.length() == 0) {
+            addEmptyState("Belum ada permintaan refund", "Permintaan pembatalan dari pelanggan akan muncul di sini.");
+            return;
+        }
+        for (int index = 0; index < refunds.length(); index++) {
+            JSONObject refund = refunds.optJSONObject(index);
+            if (refund == null) continue;
+            LinearLayout card = card(content);
+            addText(card, stringValue(refund, "order_code", "Pesanan"), 16, GREEN, true, 0, 0, 0, 4);
+            addText(card, stringValue(refund, "customer_name", "Pelanggan"), 16, INK, true, 0, 0, 0, 4);
+            addText(card, "WhatsApp: " + stringValue(refund, "customer_phone", ""), 14, MUTED, false, 0, 0, 0, 4);
+            addText(card, "Refund " + money(refund.optLong("amount")) + " · diminta " + dateText(refund.optString("requested_at")), 14, MUTED, false, 0, 0, 0, 4);
+            if ("approved".equals(refund.optString("refund_status"))) {
+                addText(card, "Target: " + dateText(refund.optString("refund_due_at")) + ". Transfer hanya ke rekening asal pembayaran.", 14, ORANGE, true, 0, 0, 0, 8);
+            } else if (!refund.optString("customer_note").isEmpty()) {
+                addText(card, "Catatan pembeli: " + refund.optString("customer_note"), 14, MUTED, false, 0, 0, 0, 8);
+            }
+            Button openOrder = smallButton("Lihat pesanan dan bukti", false);
+            card.addView(openOrder, matchWrap());
+            String orderCode = refund.optString("order_code", "");
+            openOrder.setOnClickListener(view -> showOrderDetail(orderCode));
+            String status = refund.optString("refund_status", "requested");
+            if ("requested".equals(status)) {
+                Button approve = smallButton("Setujui refund", true);
+                card.addView(approve, matchWrapTop(6));
+                approve.setOnClickListener(view -> confirmRefundAction(refund, "approve"));
+            } else if ("approved".equals(status)) {
+                Button process = smallButton("Konfirmasi refund sudah ditransfer", true);
+                card.addView(process, matchWrapTop(6));
+                process.setOnClickListener(view -> confirmRefundAction(refund, "process"));
+            }
+        }
+    }
+
+    private void confirmRefundAction(JSONObject refund, String action) {
+        boolean processing = "process".equals(action);
+        String title = processing ? "Konfirmasi transfer refund?" : "Setujui permintaan refund?";
+        String message = processing
+                ? "Pastikan dana sudah ditransfer ke rekening asal yang mengirim pembayaran. Setelah dikonfirmasi, status pesanan berubah menjadi dibatalkan/refund."
+                : "Refund hanya untuk pesanan yang belum mulai diproduksi. Setelah disetujui, target pengiriman dana maksimal 3 × 24 jam.";
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setNegativeButton("Kembali", null)
+                .setPositiveButton(processing ? "Ya, sudah transfer" : "Setujui", (dialog, which) -> runRefundAction(refund, action))
+                .show();
+    }
+
+    private void runRefundAction(JSONObject refund, String action) {
+        String refundId = refund.optString("refund_id", "");
+        setBusy(true, "Menyimpan status refund…");
+        runIo(() -> {
+            JSONObject response = api.post("/api/admin/refunds/" + refundId + "/" + action,
+                    json("note", action.equals("process") ? "Admin mengonfirmasi transfer ke rekening asal" : "",
+                            "transfer_confirmed", action.equals("process")));
+            runOnUiThread(() -> {
+                feedback.setText(response.optString("message", "Status refund diperbarui."));
+                loadRefunds();
+            });
+        }, error -> setBusy(false, error.getMessage()));
     }
 
     private void renderOrders(JSONArray orders) {
@@ -277,6 +362,15 @@ public final class MainActivity extends Activity {
                     + "   •   Produksi: " + statusLabel("production", stringValue(order, "production_status", "pending")), 14, INK, false, 0, 0, 0, 4);
             addText(card, "Pembayaran: " + statusLabel("payment", stringValue(order, "payment_status", "pending"))
                     + (order.optBoolean("has_payment_proof") ? "  ·  Bukti ada" : ""), 14, MUTED, false, 0, 0, 0, 10);
+            String proofUploadedAt = order.optString("proof_uploaded_at", "");
+            if (!proofUploadedAt.isEmpty() && "pending".equals(order.optString("payment_status"))) {
+                try {
+                    java.time.Instant uploaded = java.time.Instant.parse(proofUploadedAt);
+                    String reviewDeadline = java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm", Locale.forLanguageTag("id-ID"))
+                            .withZone(java.time.ZoneId.systemDefault()).format(uploaded.plusSeconds(24 * 60 * 60));
+                    addText(card, "Target periksa bukti sebelum " + reviewDeadline, 14, ORANGE, true, 0, 0, 0, 8);
+                } catch (Exception ignored) { }
+            }
             Button open = smallButton("Lihat pesanan", false);
             card.addView(open, matchWrap());
             String code = order.optString("order_code", "");

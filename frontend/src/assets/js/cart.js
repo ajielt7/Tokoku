@@ -346,6 +346,14 @@ function showMessage(node, message, isError = false) {
 }
 
 document.querySelectorAll("[data-product-form]").forEach((form) => {
+  form.querySelectorAll('[data-uppercase="true"]').forEach((input) => {
+    input.addEventListener("input", () => {
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      input.value = input.value.toLocaleUpperCase("id-ID");
+      if (start !== null && end !== null) input.setSelectionRange(start, end);
+    });
+  });
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     if (!form.reportValidity()) return;
@@ -387,6 +395,9 @@ document.querySelectorAll("[data-product-form]").forEach((form) => {
 });
 
 let idempotencyKey = null;
+let paymentExpiresAt = null;
+let paymentExpiryTimer = null;
+let paymentProofSubmitted = false;
 const checkoutForm = document.querySelector("[data-checkout-form]");
 if (checkoutForm) {
   const submitButton = checkoutForm.querySelector('button[type="submit"]');
@@ -450,7 +461,26 @@ if (checkoutForm) {
       document.querySelector("[data-order-code]").textContent = paymentReference;
       document.querySelector("[data-order-total]").textContent = money(result.data.total_amount);
       document.querySelector("[data-order-message]").textContent = result.message;
+      paymentExpiresAt = result.data.payment_expires_at || null;
+      paymentProofSubmitted = false;
+      const deadlineNode = document.querySelector("[data-payment-deadline]");
       const proofForm = document.querySelector("[data-proof-form]");
+      const renderDeadline = () => {
+        if (!deadlineNode || !paymentExpiresAt) return;
+        const deadline = new Date(paymentExpiresAt);
+        const remaining = deadline.getTime() - Date.now();
+        if (remaining <= 0) {
+          deadlineNode.textContent = "Pembayaran telah kedaluwarsa. Pesanan tanpa bukti akan dihapus.";
+          deadlineNode.classList.add("is-error");
+          if (!paymentProofSubmitted && proofForm) proofForm.hidden = true;
+          if (paymentExpiryTimer) clearInterval(paymentExpiryTimer);
+          return;
+        }
+        deadlineNode.textContent = `Batas pembayaran: ${deadline.toLocaleString("id-ID")}.`;
+      };
+      renderDeadline();
+      if (paymentExpiryTimer) clearInterval(paymentExpiryTimer);
+      paymentExpiryTimer = window.setInterval(renderDeadline, 30_000);
       proofForm.elements.payment_reference.value = paymentReference;
       proofForm.elements.phone.value = payload.customer.phone;
       idempotencyKey = null;
@@ -489,9 +519,11 @@ if (proofForm) {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Bukti belum berhasil dikirim.");
-      showMessage(proofMessage, `${result.message || "Bukti transfer tersimpan. Admin akan memeriksanya."} Jika ditolak, unggah bukti pengganti dengan kode pembayaran yang sama.`);
-      submitProofButton.textContent = "Kirim bukti pembayaran";
-      submitProofButton.disabled = false;
+      paymentProofSubmitted = true;
+      showMessage(proofMessage, `${result.message || "Bukti transfer tersimpan."} Admin menargetkan pemeriksaan maksimal 1 × 24 jam. Jika bukti ditolak, hubungi admin melalui WhatsApp.`);
+      submitProofButton.textContent = "Bukti terkirim";
+      submitProofButton.disabled = true;
+      proofForm.elements.proof.disabled = true;
     } catch (error) {
       showMessage(proofMessage, error instanceof TypeError ? "API tidak dapat dijangkau. Coba lagi nanti." : error.message, true);
       submitProofButton.disabled = false;

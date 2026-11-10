@@ -149,11 +149,11 @@ Ruang lingkup rilis awal: satu model katalog bernama **Nomor Rumah Akrilik**, di
 
 ### C.2 Ongkir dan pembayaran — Berjalan (4/10)
 
-Metode pembayaran rilis awal yang dipilih: transfer bank SeaBank, batas pembayaran 24 jam sejak pesanan dibuat, lalu tampilkan pesan “Pembayaran telah kedaluwarsa”. Pemilik memilih penghapusan penuh pesanan tanpa bukti setelah batas 24 jam, termasuk order, item, customization, payment, shipment, riwayat, dan berkas terkait. Jika bukti transfer diunggah sebelum batas, pesanan dan bukti tidak dihapus otomatis; keduanya dipertahankan sampai admin memproses pesanan. Kebijakan ini belum diimplementasikan. Nama pemilik dan nomor rekening sudah diberikan untuk instruksi transfer, tetapi nilainya tidak disimpan di dokumen repo publik; masukkan ke tampilan pembayaran pada rilis terkontrol.
+Metode pembayaran rilis awal yang dipilih: transfer bank SeaBank, batas pembayaran 24 jam sejak pesanan dibuat, lalu tampilkan pesan “Pembayaran telah kedaluwarsa”. Pemilik memilih penghapusan penuh pesanan tanpa bukti setelah batas 24 jam, termasuk order, item, customization, payment, shipment, riwayat, dan berkas terkait. Jika bukti transfer diunggah sebelum batas, pesanan dan bukti tidak dihapus otomatis; keduanya dipertahankan sampai admin memproses pesanan. Kebijakan sudah diterapkan pada migrasi 0009 dan cleanup terjadwal; simulasi otomatis lokal perlu lulus sebelum checklist implementasi ditutup. Nama pemilik dan nomor rekening sudah diberikan untuk instruksi transfer, tetapi nilainya tidak disimpan di dokumen repo publik; masukkan ke tampilan pembayaran pada rilis terkontrol.
 
 Bukti transfer ditargetkan diperiksa admin maksimal 1 × 24 jam sejak diunggah. Status pembayaran diperbarui setelah admin memeriksa bukti secara manual. Jika bukti ditolak, pembeli tidak mengunggah ulang dan diarahkan untuk melanjutkan lewat chat.
 
-Kebijakan pembatalan/refund yang dipilih: refund boleh jika produksi belum dimulai; setelah produksi berjalan, dana tidak dikembalikan. Pelanggan dapat mengajukan pembatalan dari halaman lacak; permintaan masuk ke tab pembatalan/refund pada aplikasi admin Android. Admin mengirim refund lebih dahulu, lalu menekan “Proses”; statusnya diperbarui pada web. Setelah produksi dimulai, pelanggan diarahkan ke chat untuk koordinasi. Alur ini belum diimplementasikan.
+Kebijakan pembatalan/refund yang dipilih: refund boleh jika produksi belum dimulai; setelah produksi berjalan, dana tidak dikembalikan. Pelanggan dapat mengajukan pembatalan dari halaman lacak; permintaan masuk ke tab pembatalan/refund pada aplikasi admin Android. Admin mengirim refund lebih dahulu, lalu menekan “Proses”; statusnya diperbarui pada web. Setelah produksi dimulai, pelanggan diarahkan ke chat untuk koordinasi. Alur sudah diterapkan pada backend, halaman lacak, dan Android; simulasi otomatis lokal perlu lulus sebelum checklist implementasi ditutup.
 
 Refund hanya dikirim kembali ke rekening asal yang mengirim pembayaran ke SeaBank toko; pembeli tidak dapat memilih rekening tujuan lain. Refund ditargetkan selesai maksimal 3 × 24 jam (72 jam) setelah admin menyetujui permintaan.
 
@@ -162,11 +162,11 @@ Refund hanya dikirim kembali ke rekening asal yang mengirim pembayaran ke SeaBan
 - [x] Pemilik memilih Gojek, JNE, J&T, SPX, SiCepat, Wahana, dan Anteraja. Acuan ongkir mengikuti proyek Pemesanan: Gojek Same Day memakai rumus jarak yang didokumentasikan di sana; kurir ekspedisi meminta tarif RajaOngkir secara langsung.
 - [ ] Cocokkan ketersediaan layanan dan tarif aktual pilihan kurir pada akun RajaOngkir untuk rute uji sebelum rilis; tarif dapat berbeda menurut akun, tujuan, dan layanan.
 - [x] Uji API lokal dengan seed demo: backend menghitung subtotal Rp150.000 dan ongkir fixture lokal Rp10.000 dari server menjadi total Rp160.000; pengiriman ulang memakai idempotency key yang sama memberi kode yang sama, hanya satu order/item/payment tersimpan, dan endpoint tracking tidak mengembalikan nomor telepon. Rute ongkir memakai fixture 1 km; ini bukan verifikasi tarif RajaOngkir nyata atau order production.
-- [ ] Jalankan simulasi checkout, unggah bukti contoh, persetujuan/penolakan admin, dan refund memakai Worker serta D1 lokal; jangan melakukan transfer atau refund sungguhan saat simulasi.
+- [ ] Jalankan `npm run test:payments` pada Node.js 22+ untuk simulasi checkout, bukti tiruan, persetujuan/penolakan admin, refund, dan expiry memakai Worker serta D1 lokal; jangan melakukan transfer atau refund sungguhan saat simulasi. Workflow CI sudah disiapkan; uji lokal saat ini terhalang Node.js 20.13.1.
 - [ ] Sebelum rilis, bila pemilik menyetujui transaksi uji berbiaya, lakukan satu transfer nominal kecil dan cocokkan mutasi secara manual. Jangan menyatakan pembayaran otomatis terverifikasi.
 - [ ] Verifikasi unggah bukti hanya ke ImageKit privat setelah validasi ImageKit lolos.
 - [ ] Verifikasi URL bukti untuk admin bertanda tangan dan berumur singkat.
-- [ ] Pastikan bukti yang ditolak tidak dapat diunggah ulang, file aktif dibersihkan, dan pelanggan diarahkan ke chat; uji alur setelah kode disesuaikan dengan kebijakan.
+- [ ] Verifikasi bukti yang ditolak tidak dapat diunggah ulang, file aktif dibersihkan, dan pelanggan diarahkan ke chat melalui simulasi otomatis.
 
 ### C.3 Informasi toko dan kebijakan — Berjalan (4/6)
 

@@ -154,6 +154,9 @@ async function getShippingWeight(env, cart) {
 }
 
 async function calculateShippingRates(env, destinationId, cart) {
+  if (env.APP_ENV === "test") {
+    return { weight: await getShippingWeight(env, cart), rates: [{ code: "jne", name: "JNE", service: "REG", description: "Layanan simulasi lokal", cost: 10000, etd: "1-2 hari" }] };
+  }
   if (!env.RAJAONGKIR_API_KEY) {
     const error = new Error("API ongkir belum dikonfigurasi.");
     error.status = 503;
@@ -177,6 +180,11 @@ async function calculateShippingRates(env, destinationId, cart) {
 }
 
 async function searchShippingDestinations(request, env, headers) {
+  if (env.APP_ENV === "test") {
+    const search = new URL(request.url).searchParams.get("search")?.trim() ?? "";
+    if (search.length < 3 || search.length > 80) return jsonResponse({ error: "invalid_search", message: "Ketik minimal 3 karakter nama kecamatan atau kelurahan." }, 400, headers);
+    return jsonResponse({ data: [{ id: "101", label: "Kelurahan Uji, Kecamatan Uji, Kota Bandung" }] }, 200, headers);
+  }
   if (!env.RAJAONGKIR_API_KEY) return jsonResponse({ error: "shipping_not_configured", message: "Pencarian tujuan belum dikonfigurasi." }, 503, headers);
   const search = new URL(request.url).searchParams.get("search")?.trim() ?? "";
   if (search.length < 3 || search.length > 80) return jsonResponse({ error: "invalid_search", message: "Ketik minimal 3 karakter nama kecamatan atau kelurahan." }, 400, headers);
@@ -212,7 +220,7 @@ async function searchShippingDestinations(request, env, headers) {
 }
 
 async function quoteShipping(request, env, headers) {
-  if (!env.RAJAONGKIR_API_KEY) return jsonResponse({ error: "shipping_not_configured", message: "Ongkir belum dikonfigurasi." }, 503, headers);
+  if (!env.RAJAONGKIR_API_KEY && env.APP_ENV !== "test") return jsonResponse({ error: "shipping_not_configured", message: "Ongkir belum dikonfigurasi." }, 503, headers);
   try {
     const body = await readBoundedJson(request);
     const destinationId = String(body?.destination_id ?? "");
@@ -252,7 +260,12 @@ function hasSupportedImageSignature(bytes, contentType) {
 }
 
 async function uploadPrivatePaymentProof(file, paymentId, env) {
-  if (!env.IMAGEKIT_PRIVATE_KEY) {
+  if (env.APP_ENV === "test" && env.TEST_PAYMENT_PROOF_STORAGE === "memory") {
+    const fileId = `test-${crypto.randomUUID()}`;
+    const extension = file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
+    return { fileId, filePath: `/test/payment-proofs/${fileId}.${extension}` };
+  }
+  if (!env.IMAGEKIT_PRIVATE_KEY && !(env.APP_ENV === "test" && env.TEST_PAYMENT_PROOF_STORAGE === "memory")) {
     const error = new Error("Penyimpanan bukti pembayaran belum dikonfigurasi.");
     error.status = 503;
     throw error;
@@ -293,7 +306,7 @@ async function submitPaymentProof(request, env, headers) {
   if (Number.isFinite(contentLength) && contentLength > maxPaymentProofBytes + 16 * 1024) {
     return jsonResponse({ error: "file_too_large", message: "Ukuran bukti maksimal 5 MB." }, 413, headers);
   }
-  if (!env.IMAGEKIT_PRIVATE_KEY) {
+  if (!env.IMAGEKIT_PRIVATE_KEY && !(env.APP_ENV === "test" && env.TEST_PAYMENT_PROOF_STORAGE === "memory")) {
     return jsonResponse({ error: "proof_storage_not_configured", message: "Penyimpanan bukti belum dikonfigurasi." }, 503, headers);
   }
 
@@ -310,7 +323,7 @@ async function submitPaymentProof(request, env, headers) {
 
     const payment = await env.DB.prepare(
       `SELECT p.id AS payment_id, p.payment_status, p.proof_file_id,
-              o.id AS order_id, o.customer_phone
+              o.id AS order_id, o.customer_phone, o.payment_expires_at
        FROM payments AS p JOIN orders AS o ON o.id = p.order_id
        WHERE p.payment_reference = ?1 LIMIT 1`,
     ).bind(paymentReference).first();
@@ -321,6 +334,9 @@ async function submitPaymentProof(request, env, headers) {
     }
     if (payment.payment_status !== "pending") {
       return jsonResponse({ error: "payment_not_pending", message: "Pesanan ini tidak sedang menunggu pembayaran." }, 409, headers);
+    }
+    if (!payment.payment_expires_at || Date.parse(payment.payment_expires_at) <= Date.now()) {
+      return jsonResponse({ error: "payment_expired", message: "Pembayaran telah kedaluwarsa. Silakan buat pesanan baru." }, 410, headers);
     }
     if (payment.proof_file_id) {
       return jsonResponse({ error: "proof_already_uploaded", message: "Bukti untuk pesanan ini sudah diterima." }, 409, headers);
@@ -336,8 +352,9 @@ async function submitPaymentProof(request, env, headers) {
       env.DB.prepare(
       `UPDATE payments SET proof_file_id = ?1, proof_file_path = ?2,
          proof_uploaded_at = ?3, updated_at = ?3
-       WHERE id = ?4 AND proof_file_id IS NULL AND payment_status = 'pending'`,
-      ).bind(storedFile.fileId, storedFile.filePath, uploadedAt, payment.payment_id),
+       WHERE id = ?4 AND proof_file_id IS NULL AND payment_status = 'pending'
+         AND EXISTS (SELECT 1 FROM orders WHERE id = ?5 AND payment_expires_at > ?3)`,
+      ).bind(storedFile.fileId, storedFile.filePath, uploadedAt, payment.payment_id, payment.order_id),
       env.DB.prepare(
         `INSERT INTO order_status_history (
            id, order_id, status_type, previous_status, new_status, actor_type, note
@@ -381,7 +398,7 @@ function adminAuthError(request, env, headers) {
 function rateLimitPolicy(pathname, method) {
   if (pathname.startsWith("/api/admin/")) return "ADMIN_RATE_LIMITER";
   if ((pathname === "/api/orders" || pathname === "/api/orders/proof") && method === "POST") return "ORDER_RATE_LIMITER";
-  if (pathname === "/api/orders/status" && method === "POST") return "STATUS_RATE_LIMITER";
+  if ((pathname === "/api/orders/status" || pathname === "/api/orders/cancellation") && method === "POST") return "STATUS_RATE_LIMITER";
   if ((pathname === "/api/shipping/destinations" && method === "GET")
       || (pathname === "/api/shipping/quotes" && method === "POST")) return "SHIPPING_RATE_LIMITER";
   return null;
@@ -429,10 +446,12 @@ async function listAdminPayments(request, env, headers) {
               p.amount, p.currency, p.proof_uploaded_at, o.customer_name,
               o.customer_phone, o.subtotal_amount, o.shipping_amount,
               o.shipping_courier_name, o.shipping_service, o.shipping_distance_km,
+              o.payment_expires_at,
               o.created_at
        FROM payments AS p JOIN orders AS o ON o.id = p.order_id
        WHERE p.payment_status = ?1
-       ORDER BY p.created_at DESC LIMIT 100`,
+       ORDER BY CASE WHEN p.proof_file_id IS NOT NULL THEN 0 ELSE 1 END,
+                p.proof_uploaded_at ASC, p.created_at ASC LIMIT 100`,
     ).bind(status).all();
     return jsonResponse({ data: results.map((row) => ({
       ...row,
@@ -440,6 +459,187 @@ async function listAdminPayments(request, env, headers) {
     })) }, 200, { ...headers, "cache-control": "no-store" });
   } catch (error) {
     logDatabaseError("list_admin_payments", error);
+    return jsonResponse({ error: "internal_server_error" }, 500, headers);
+  }
+}
+
+async function requestOrderRefund(request, env, headers) {
+  if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
+    return jsonResponse({ error: "content_type_required", message: "Kirim data sebagai JSON." }, 415, headers);
+  }
+  try {
+    const body = await readBoundedJson(request);
+    const orderCode = boundedText(body?.order_code, "Kode pesanan", 21, 21).toUpperCase();
+    const phone = boundedText(body?.phone, "Nomor telepon", 8, 24).replace(/\D/g, "");
+    const note = boundedText(body?.note ?? "", "Catatan", 0, 300, false);
+    if (!validOrderCode(orderCode) || phone.length < 8) throw inputError("Kode pesanan atau nomor telepon tidak valid.");
+    const order = await env.DB.prepare(
+      `SELECT o.id, o.customer_phone, o.order_status, o.production_status,
+              p.payment_status,
+              r.id AS refund_id, r.status AS refund_status
+       FROM orders AS o
+       LEFT JOIN payments AS p ON p.id = (
+         SELECT p2.id FROM payments AS p2 WHERE p2.order_id = o.id ORDER BY p2.created_at DESC LIMIT 1
+       )
+       LEFT JOIN refund_requests AS r ON r.order_id = o.id
+       WHERE o.public_code = ?1 LIMIT 1`,
+    ).bind(orderCode).first();
+    if (!order || !constantTimeEquals(phone, String(order.customer_phone ?? "").replace(/\D/g, ""))) {
+      return jsonResponse({ error: "order_not_found", message: "Pesanan tidak ditemukan. Periksa kode dan nomor telepon." }, 404, headers);
+    }
+    if (order.production_status !== "pending") {
+      return jsonResponse({ error: "refund_unavailable", message: "Produksi sudah dimulai. Hubungi admin melalui chat untuk koordinasi." }, 409, headers);
+    }
+    if (order.payment_status !== "paid" || !["new", "accepted"].includes(order.order_status)) {
+      return jsonResponse({ error: "refund_unavailable", message: "Permintaan refund hanya tersedia untuk pesanan lunas yang belum mulai diproduksi." }, 409, headers);
+    }
+    if (order.refund_id) {
+      return jsonResponse({ data: { status: order.refund_status }, message: "Permintaan pembatalan/refund sudah tercatat." }, 200, { ...headers, "cache-control": "no-store" });
+    }
+    const now = new Date().toISOString();
+    const refundId = crypto.randomUUID();
+    const result = await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO refund_requests (id, order_id, status, customer_note, requested_at, created_at, updated_at)
+         SELECT ?1, ?2, 'requested', ?3, ?4, ?4, ?4
+         WHERE EXISTS (
+           SELECT 1 FROM orders o JOIN payments p ON p.order_id = o.id
+           WHERE o.id = ?2 AND o.order_status IN ('new', 'accepted')
+             AND o.production_status = 'pending' AND p.payment_status = 'paid'
+         )`,
+      ).bind(refundId, order.id, note, now),
+      env.DB.prepare(
+        `INSERT INTO order_status_history (id, order_id, status_type, previous_status, new_status, actor_type, note)
+         SELECT ?1, ?2, 'payment', 'paid', 'refund_requested', 'customer', 'Pelanggan meminta pembatalan dan refund'
+         WHERE EXISTS (SELECT 1 FROM refund_requests WHERE id = ?3 AND status = 'requested')`,
+      ).bind(crypto.randomUUID(), order.id, refundId),
+    ]);
+    if (result[0]?.meta?.changes !== 1 || result[1]?.meta?.changes !== 1) {
+      return jsonResponse({ error: "refund_request_conflict", message: "Status pesanan berubah. Muat ulang status pesanan." }, 409, headers);
+    }
+    return jsonResponse({ data: { status: "requested" }, message: "Permintaan refund diterima dan dikirim ke admin." }, 201, { ...headers, "cache-control": "no-store" });
+  } catch (error) {
+    if (error.status === 400) return jsonResponse({ error: "validation_error", message: error.message }, 400, headers);
+    logDatabaseError("request_order_refund", error);
+    return jsonResponse({ error: "internal_server_error", message: "Permintaan belum berhasil. Coba lagi." }, 500, headers);
+  }
+}
+
+async function listAdminRefunds(request, env, headers) {
+  const authError = adminAuthError(request, env, headers);
+  if (authError) return authError;
+  const status = new URL(request.url).searchParams.get("status") ?? "requested";
+  if (!["requested", "approved", "processed"].includes(status)) {
+    return jsonResponse({ error: "invalid_status", message: "Status refund tidak valid." }, 400, headers);
+  }
+  try {
+    const { results } = await env.DB.prepare(
+      `SELECT r.id AS refund_id, r.status AS refund_status, r.customer_note,
+              r.admin_note, r.requested_at, r.approved_at, r.refund_due_at, r.processed_at,
+              o.public_code AS order_code, o.customer_name, o.customer_phone,
+              o.order_status, o.production_status, p.amount, p.currency, p.payment_status
+       FROM refund_requests r
+       JOIN orders o ON o.id = r.order_id
+       JOIN payments p ON p.order_id = o.id
+       WHERE r.status = ?1 ORDER BY r.requested_at ASC LIMIT 100`,
+    ).bind(status).all();
+    return jsonResponse({ data: results }, 200, { ...headers, "cache-control": "no-store" });
+  } catch (error) {
+    logDatabaseError("list_admin_refunds", error);
+    return jsonResponse({ error: "internal_server_error" }, 500, headers);
+  }
+}
+
+async function updateAdminRefund(request, env, headers, refundId, action) {
+  const authError = adminAuthError(request, env, headers);
+  if (authError) return authError;
+  if (!/^[0-9a-f-]{36}$/i.test(refundId)) return jsonResponse({ error: "not_found" }, 404, headers);
+  if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
+    return jsonResponse({ error: "content_type_required", message: "Kirim data sebagai JSON." }, 415, headers);
+  }
+  try {
+    const body = await readBoundedJson(request);
+    const note = boundedText(body?.note ?? "", "Catatan admin", 0, 300, false);
+    if (action === "process" && body?.transfer_confirmed !== true) {
+      return jsonResponse({ error: "refund_transfer_not_confirmed", message: "Konfirmasikan bahwa transfer ke rekening asal sudah dilakukan sebelum menandai refund selesai." }, 400, headers);
+    }
+    const current = await env.DB.prepare(
+      `SELECT r.id, r.order_id, r.status, o.public_code, o.order_status, o.production_status,
+              p.id AS payment_id, p.payment_status
+       FROM refund_requests r JOIN orders o ON o.id = r.order_id
+       JOIN payments p ON p.order_id = o.id
+       WHERE r.id = ?1 LIMIT 1`,
+    ).bind(refundId).first();
+    if (!current) return jsonResponse({ error: "not_found" }, 404, headers);
+    if (current.production_status !== "pending") {
+      return jsonResponse({ error: "production_started", message: "Produksi sudah dimulai; koordinasikan melalui chat." }, 409, headers);
+    }
+    const now = new Date().toISOString();
+    if (action === "approve") {
+      if (current.status !== "requested" || current.payment_status !== "paid") {
+        return jsonResponse({ error: "refund_not_approvable", message: "Permintaan refund tidak lagi menunggu persetujuan." }, 409, headers);
+      }
+      const dueAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+      const result = await env.DB.batch([
+        env.DB.prepare(
+          `UPDATE refund_requests SET status = 'approved', admin_note = ?1,
+             approved_at = ?2, refund_due_at = ?3, updated_at = ?2
+           WHERE id = ?4 AND status = 'requested'
+             AND EXISTS (SELECT 1 FROM orders WHERE id = ?5 AND production_status = 'pending')`,
+        ).bind(note, now, dueAt, refundId, current.order_id),
+        env.DB.prepare(
+          `INSERT INTO order_status_history (id, order_id, status_type, previous_status, new_status, actor_type, note)
+           SELECT ?1, ?2, 'payment', 'refund_requested', 'refund_approved', 'admin', ?3
+           WHERE EXISTS (SELECT 1 FROM refund_requests WHERE id = ?4 AND status = 'approved' AND approved_at = ?5)`,
+        ).bind(crypto.randomUUID(), current.order_id, note || "Refund disetujui; target penyelesaian 72 jam", refundId, now),
+      ]);
+      if (result[0]?.meta?.changes !== 1 || result[1]?.meta?.changes !== 1) {
+        return jsonResponse({ error: "refund_changed", message: "Permintaan refund berubah. Muat ulang daftar." }, 409, headers);
+      }
+      return jsonResponse({ data: { refund_id: refundId, status: "approved", refund_due_at: dueAt }, message: "Refund disetujui. Kirim dana ke rekening asal paling lambat dalam 72 jam, lalu tandai selesai." }, 200, { ...headers, "cache-control": "no-store" });
+    }
+    if (action !== "process" || current.status !== "approved" || current.payment_status !== "paid") {
+      return jsonResponse({ error: "refund_not_processable", message: "Refund harus disetujui sebelum ditandai selesai." }, 409, headers);
+    }
+    const result = await env.DB.batch([
+      env.DB.prepare(
+        `UPDATE refund_requests SET status = 'processed', admin_note = ?1,
+           processed_at = ?2, updated_at = ?2
+         WHERE id = ?3 AND status = 'approved'
+           AND EXISTS (
+             SELECT 1 FROM orders o JOIN payments p ON p.order_id = o.id
+             WHERE o.id = ?4 AND o.production_status = 'pending'
+               AND o.order_status IN ('new', 'accepted') AND p.payment_status = 'paid'
+           )`,
+      ).bind(note || "Admin mengonfirmasi transfer refund ke rekening asal", now, refundId, current.order_id),
+      env.DB.prepare(
+        `UPDATE payments SET payment_status = 'refunded', updated_at = ?1
+         WHERE id = ?2 AND payment_status = 'paid'
+           AND EXISTS (SELECT 1 FROM refund_requests WHERE id = ?3 AND status = 'processed' AND processed_at = ?1)`,
+      ).bind(now, current.payment_id, refundId),
+      env.DB.prepare(
+        `UPDATE orders SET order_status = 'cancelled', updated_at = ?1
+         WHERE id = ?2 AND order_status IN ('new', 'accepted') AND production_status = 'pending'
+           AND EXISTS (SELECT 1 FROM refund_requests WHERE id = ?3 AND status = 'processed' AND processed_at = ?1)`,
+      ).bind(now, current.order_id, refundId),
+      env.DB.prepare(
+        `INSERT INTO order_status_history (id, order_id, status_type, previous_status, new_status, actor_type, note)
+         SELECT ?1, ?2, 'payment', 'paid', 'refunded', 'admin', ?3
+         WHERE EXISTS (SELECT 1 FROM payments WHERE id = ?4 AND payment_status = 'refunded' AND updated_at = ?5)`,
+      ).bind(crypto.randomUUID(), current.order_id, note || "Refund dikirim ke rekening asal", current.payment_id, now),
+      env.DB.prepare(
+        `INSERT INTO order_status_history (id, order_id, status_type, previous_status, new_status, actor_type, note)
+         SELECT ?1, ?2, 'order', ?3, 'cancelled', 'admin', 'Pembatalan selesai setelah refund dikirim'
+         WHERE EXISTS (SELECT 1 FROM orders WHERE id = ?2 AND order_status = 'cancelled' AND updated_at = ?4)`,
+      ).bind(crypto.randomUUID(), current.order_id, current.order_status, now),
+    ]);
+    if (result.some((entry) => entry?.meta?.changes !== 1)) {
+      return jsonResponse({ error: "refund_changed", message: "Status berubah saat refund diproses. Periksa ulang pesanan dan mutasi bank." }, 409, headers);
+    }
+    return jsonResponse({ data: { refund_id: refundId, status: "processed", order_status: "cancelled", payment_status: "refunded" }, message: "Refund dicatat selesai dan status pesanan diperbarui." }, 200, { ...headers, "cache-control": "no-store" });
+  } catch (error) {
+    if (error.status === 400) return jsonResponse({ error: "validation_error", message: error.message }, 400, headers);
+    logDatabaseError("update_admin_refund", error);
     return jsonResponse({ error: "internal_server_error" }, 500, headers);
   }
 }
@@ -474,15 +674,17 @@ async function listAdminOrders(request, env, headers) {
   try {
     const { results } = await env.DB.prepare(
       `SELECT o.public_code AS order_code, o.customer_name, o.total_amount, o.currency,
-              o.order_status, o.production_status, o.created_at,
-              p.payment_reference, p.payment_status,
+              o.order_status, o.production_status, o.created_at, o.payment_expires_at,
+              p.payment_reference, p.payment_status, p.proof_uploaded_at,
               CASE WHEN p.proof_file_id IS NULL THEN 0 ELSE 1 END AS has_payment_proof
        FROM orders AS o
        LEFT JOIN payments AS p ON p.id = (
          SELECT p2.id FROM payments AS p2 WHERE p2.order_id = o.id ORDER BY p2.created_at DESC LIMIT 1
        )
        ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
-       ORDER BY o.created_at DESC LIMIT ?${bindings.length}`,
+       ORDER BY CASE WHEN p.payment_status = 'pending' AND p.proof_file_id IS NOT NULL THEN 0 ELSE 1 END,
+                CASE WHEN p.payment_status = 'pending' AND p.proof_file_id IS NOT NULL THEN p.proof_uploaded_at END ASC,
+                o.created_at DESC LIMIT ?${bindings.length}`,
     ).bind(...bindings).all();
     return jsonResponse({ data: results.map((row) => ({ ...row, has_payment_proof: Boolean(row.has_payment_proof) })) }, 200, { ...headers, "cache-control": "no-store" });
   } catch (error) {
@@ -502,6 +704,7 @@ async function getAdminOrder(request, env, headers, orderCode) {
               o.subtotal_amount, o.shipping_amount, o.total_amount, o.currency,
               o.order_status, o.production_status, o.shipping_destination_label,
               o.shipping_courier_name, o.shipping_service, o.shipping_distance_km, o.created_at,
+              o.payment_expires_at,
               p.payment_reference, p.payment_status, p.amount AS payment_amount,
               p.proof_uploaded_at,
               CASE WHEN p.proof_file_id IS NULL THEN 0 ELSE 1 END AS has_payment_proof,
@@ -737,13 +940,17 @@ async function getPublicOrderStatus(request, env, headers) {
     if (!validOrderCode(orderCode) || phone.length < 8) throw inputError("Kode pesanan atau nomor telepon tidak valid.");
     const order = await env.DB.prepare(
       `SELECT o.id, o.public_code, o.customer_phone, o.order_status, o.production_status,
-              p.payment_status,
+              o.payment_expires_at, p.payment_status, p.proof_uploaded_at,
+              r.status AS refund_status, r.requested_at AS refund_requested_at,
+              r.approved_at AS refund_approved_at, r.refund_due_at,
+              r.processed_at AS refund_processed_at,
               s.carrier, s.tracking_number, s.tracking_url, s.shipment_status,
               s.shipped_at, s.delivered_at
        FROM orders AS o
        LEFT JOIN payments AS p ON p.id = (
          SELECT p2.id FROM payments AS p2 WHERE p2.order_id = o.id ORDER BY p2.created_at DESC LIMIT 1
        )
+       LEFT JOIN refund_requests AS r ON r.order_id = o.id
        LEFT JOIN shipments AS s ON s.id = (
          SELECT s2.id FROM shipments AS s2 WHERE s2.order_id = o.id ORDER BY s2.created_at DESC LIMIT 1
        )
@@ -759,7 +966,21 @@ async function getPublicOrderStatus(request, env, headers) {
        ORDER BY created_at ASC LIMIT 50`,
     ).bind(order.id).all();
     const { id, customer_phone, ...safeOrder } = order;
-    return jsonResponse({ data: { ...safeOrder, history: history.results } }, 200, { ...headers, "cache-control": "no-store", "referrer-policy": "no-referrer" });
+    const paymentExpired = order.payment_status === "pending"
+      && !order.proof_uploaded_at
+      && (!order.payment_expires_at || Date.parse(order.payment_expires_at) <= Date.now());
+    const canRequestRefund = order.payment_status === "paid"
+      && order.production_status === "pending"
+      && ["new", "accepted"].includes(order.order_status)
+      && !order.refund_status;
+    return jsonResponse({ data: {
+      ...safeOrder,
+      has_payment_proof: Boolean(order.proof_uploaded_at),
+      payment_expired: paymentExpired,
+      refund_status: order.refund_status ?? null,
+      can_request_refund: canRequestRefund,
+      history: history.results,
+    } }, 200, { ...headers, "cache-control": "no-store", "referrer-policy": "no-referrer" });
   } catch (error) {
     if (error.status === 400) return jsonResponse({ error: "validation_error", message: error.message }, 400, headers);
     logDatabaseError("get_public_order_status", error);
@@ -872,12 +1093,13 @@ async function updateAdminOrderStatus(request, env, headers, orderCode) {
     if (!["order", "production"].includes(statusType)) throw inputError("Pilih jenis status pesanan atau produksi.");
     const current = await env.DB.prepare(
       `SELECT o.id, o.order_status, o.production_status, p.payment_status,
-              s.shipment_status
+              s.shipment_status, r.status AS refund_status
        FROM orders AS o LEFT JOIN payments AS p ON p.id = (
          SELECT p2.id FROM payments AS p2 WHERE p2.order_id = o.id ORDER BY p2.created_at DESC LIMIT 1
        ) LEFT JOIN shipments AS s ON s.id = (
          SELECT s2.id FROM shipments AS s2 WHERE s2.order_id = o.id ORDER BY s2.created_at DESC LIMIT 1
-       ) WHERE o.public_code = ?1 LIMIT 1`,
+       ) LEFT JOIN refund_requests AS r ON r.order_id = o.id
+       WHERE o.public_code = ?1 LIMIT 1`,
     ).bind(orderCode).first();
     if (!current) return jsonResponse({ error: "not_found" }, 404, headers);
 
@@ -902,6 +1124,12 @@ async function updateAdminOrderStatus(request, env, headers, orderCode) {
     }
     if (statusType === "production" && nextStatus === "in_progress" && (current.order_status !== "accepted" || current.payment_status !== "paid")) {
       return jsonResponse({ error: "order_not_ready", message: "Produksi dapat dimulai setelah pesanan diterima dan pembayaran lunas." }, 409, headers);
+    }
+    if (statusType === "production" && nextStatus === "in_progress" && ["requested", "approved"].includes(current.refund_status)) {
+      return jsonResponse({ error: "refund_in_progress", message: "Permintaan refund sedang ditangani. Selesaikan atau koordinasikan sebelum memulai produksi." }, 409, headers);
+    }
+    if (statusType === "production" && nextStatus === "cancelled" && current.payment_status === "paid") {
+      return jsonResponse({ error: "refund_policy_required", message: "Pesanan lunas tidak dapat dibatalkan langsung. Gunakan alur refund jika produksi belum dimulai." }, 409, headers);
     }
     if (statusType === "production" && nextStatus === "completed" && (current.order_status !== "accepted" || current.payment_status !== "paid")) {
       return jsonResponse({ error: "order_not_ready", message: "Produksi hanya dapat dituntaskan untuk pesanan diterima dan lunas." }, 409, headers);
@@ -974,6 +1202,7 @@ async function getAdminPaymentProof(request, env, headers, paymentReference) {
 }
 
 async function deleteImageKitFile(fileId, env) {
+  if (env.APP_ENV === "test" && env.TEST_PAYMENT_PROOF_STORAGE === "memory") return;
   if (!env.IMAGEKIT_PRIVATE_KEY || !fileId) return;
   try {
     const response = await fetch(`https://api.imagekit.io/v1/files/${encodeURIComponent(fileId)}`, {
@@ -984,6 +1213,33 @@ async function deleteImageKitFile(fileId, env) {
   } catch (error) {
     logOperationalError("imagekit_cleanup", error);
   }
+}
+
+async function expireUnpaidOrders(env, now = new Date()) {
+  const expiredAt = now.toISOString();
+  const predicate = `SELECT o.id FROM orders AS o
+    WHERE o.payment_expires_at IS NOT NULL AND o.payment_expires_at <= ?1
+      AND EXISTS (
+        SELECT 1 FROM payments AS p WHERE p.order_id = o.id
+          AND p.payment_status = 'pending' AND p.proof_file_id IS NULL
+      )`;
+  const expired = await env.DB.prepare(`SELECT COUNT(*) AS total FROM (${predicate}) AS expired`).bind(expiredAt).first();
+  const count = Number(expired?.total ?? 0);
+  if (!count) return 0;
+
+  const orderIds = `(${predicate})`;
+  const statements = [
+    env.DB.prepare(`DELETE FROM order_customizations WHERE order_item_id IN (SELECT id FROM order_items WHERE order_id IN ${orderIds})`).bind(expiredAt),
+    env.DB.prepare(`DELETE FROM order_production_files WHERE order_id IN ${orderIds}`).bind(expiredAt),
+    env.DB.prepare(`DELETE FROM order_files WHERE order_id IN ${orderIds}`).bind(expiredAt),
+    env.DB.prepare(`DELETE FROM order_items WHERE order_id IN ${orderIds}`).bind(expiredAt),
+    env.DB.prepare(`DELETE FROM payments WHERE order_id IN ${orderIds} AND payment_status = 'pending' AND proof_file_id IS NULL`).bind(expiredAt),
+    env.DB.prepare(`DELETE FROM shipments WHERE order_id IN ${orderIds}`).bind(expiredAt),
+    env.DB.prepare(`DELETE FROM order_status_history WHERE order_id IN ${orderIds}`).bind(expiredAt),
+    env.DB.prepare(`DELETE FROM orders WHERE id IN ${orderIds}`).bind(expiredAt),
+  ];
+  await env.DB.batch(statements);
+  return count;
 }
 
 async function reviewAdminPayment(request, env, headers, paymentReference) {
@@ -1010,14 +1266,14 @@ async function reviewAdminPayment(request, env, headers, paymentReference) {
     const reviewedAt = new Date().toISOString();
     const actionNote = decision === "approve"
       ? `Transfer dicocokkan admin${note ? `: ${note}` : ""}`
-      : `Bukti ditolak; pelanggan dapat mengunggah ulang${note ? `: ${note}` : ""}`;
+      : `Bukti ditolak; silakan hubungi admin melalui chat${note ? `: ${note}` : ""}`;
     const updateStatement = decision === "approve"
       ? env.DB.prepare(
         `UPDATE payments SET payment_status = 'paid', verified_at = ?1, updated_at = ?1
          WHERE id = ?2 AND payment_status = 'pending' AND proof_file_id IS NOT NULL`,
       ).bind(reviewedAt, payment.id)
       : env.DB.prepare(
-        `UPDATE payments SET proof_file_id = NULL, proof_file_path = NULL,
+        `UPDATE payments SET payment_status = 'failed', proof_file_id = NULL, proof_file_path = NULL,
            proof_uploaded_at = NULL, updated_at = ?1
          WHERE id = ?2 AND payment_status = 'pending' AND proof_file_id = ?3`,
       ).bind(reviewedAt, payment.id, payment.proof_file_id);
@@ -1028,13 +1284,13 @@ async function reviewAdminPayment(request, env, headers, paymentReference) {
          id, order_id, status_type, previous_status, new_status, actor_type, note
        ) SELECT ?1, ?2, 'payment', 'pending', ?3, 'admin', ?4
          WHERE EXISTS (SELECT 1 FROM payments WHERE id = ?5 AND updated_at = ?6)`,
-      ).bind(crypto.randomUUID(), payment.order_id, decision === "approve" ? "paid" : "pending", actionNote, payment.id, reviewedAt),
+      ).bind(crypto.randomUUID(), payment.order_id, decision === "approve" ? "paid" : "failed", actionNote, payment.id, reviewedAt),
     ]);
     if (update[0]?.meta?.changes !== 1 || update[1]?.meta?.changes !== 1) return jsonResponse({ error: "payment_changed", message: "Status pembayaran berubah. Muat ulang antrean." }, 409, headers);
     if (decision === "reject") await deleteImageKitFile(payment.proof_file_id, env);
     return jsonResponse({
-      data: { payment_reference: paymentReference, payment_status: decision === "approve" ? "paid" : "pending", proof_received: decision !== "reject" },
-      message: decision === "approve" ? "Pembayaran disetujui." : "Bukti ditolak; pelanggan dapat mengunggah ulang.",
+      data: { payment_reference: paymentReference, payment_status: decision === "approve" ? "paid" : "failed", proof_received: decision !== "reject" },
+      message: decision === "approve" ? "Pembayaran disetujui." : "Bukti ditolak. Silakan hubungi admin melalui chat.",
     }, 200, { ...headers, "cache-control": "no-store" });
   } catch (error) {
     if (error.status === 400) return jsonResponse({ error: "validation_error", message: error.message }, 400, headers);
@@ -1164,14 +1420,17 @@ function validateCustomization(fields, values) {
     if (field.max_length && value.length > field.max_length) {
       throw inputError(`${field.label} maksimal ${field.max_length} karakter.`);
     }
+    const rules = JSON.parse(field.validation_rules_json || "{}");
     if (field.input_type === "number") {
       if (!/^\d+$/.test(value)) throw inputError(`${field.label} hanya boleh berisi angka.`);
-      const rules = JSON.parse(field.validation_rules_json || "{}");
       const numericValue = Number(value);
       if (Number.isFinite(rules.min) && numericValue < rules.min) throw inputError(`${field.label} terlalu kecil.`);
       if (Number.isFinite(rules.max) && numericValue > rules.max) throw inputError(`${field.label} terlalu besar.`);
     }
-    normalized[field.field_key] = value;
+    if (rules.pattern && !new RegExp(rules.pattern, rules.unicode ? "u" : "").test(value)) {
+      throw inputError(`${field.label} tidak sesuai format.`);
+    }
+    normalized[field.field_key] = rules.uppercase ? value.toLocaleUpperCase("id-ID") : value;
   }
   return normalized;
 }
@@ -1194,6 +1453,7 @@ function orderResult(order, status = 201, headers = {}) {
       shipping_courier: order.shipping_courier_name ?? null,
       shipping_service: order.shipping_service ?? null,
       shipping_distance_km: order.shipping_distance_km ?? null,
+      payment_expires_at: order.payment_expires_at ?? null,
       payment_method: "transfer_bank_manual",
       payment_reference: order.payment_reference ?? order.public_code,
       payment_status: order.payment_status ?? "pending",
@@ -1207,7 +1467,7 @@ async function findOrderByIdempotencyKey(env, key) {
   return env.DB.prepare(
     `SELECT o.public_code, o.order_status, o.subtotal_amount, o.shipping_amount,
             o.total_amount, o.shipping_destination_label, o.shipping_courier_name,
-            o.shipping_distance_km,
+            o.shipping_distance_km, o.payment_expires_at,
             o.shipping_service, o.currency, p.payment_reference, p.payment_status
      FROM orders AS o LEFT JOIN payments AS p ON p.order_id = o.id
      WHERE o.idempotency_key = ?1 LIMIT 1`,
@@ -1312,6 +1572,7 @@ async function createOrder(request, env, origin, executionContext) {
     if (!Number.isSafeInteger(total)) throw inputError("Total pesanan terlalu besar.");
     const orderId = crypto.randomUUID();
     const orderCode = generateOrderCode();
+    const paymentExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const statements = [
       env.DB.prepare(
         `INSERT INTO orders (
@@ -1319,8 +1580,8 @@ async function createOrder(request, env, origin, executionContext) {
            customer_email, shipping_address, shipping_destination_id,
            shipping_destination_label, shipping_courier_code, shipping_courier_name,
            shipping_service, shipping_distance_km, subtotal_amount, shipping_amount, total_amount,
-           currency, customer_note
-         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, 'IDR', ?17)`,
+           currency, customer_note, payment_expires_at
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, 'IDR', ?17, ?18)`,
       ).bind(
         orderId,
         orderCode,
@@ -1339,6 +1600,7 @@ async function createOrder(request, env, origin, executionContext) {
         selectedRate.cost,
         total,
         customer.customerNote,
+        paymentExpiresAt,
       ),
     ];
 
@@ -1417,6 +1679,7 @@ async function createOrder(request, env, origin, executionContext) {
       shipping_distance_km: route?.distanceKm ?? null,
       payment_reference: orderCode,
       payment_status: "pending",
+      payment_expires_at: paymentExpiresAt,
       currency: "IDR",
     }, 201, headers);
   } catch (error) {
@@ -1444,6 +1707,15 @@ async function createOrder(request, env, origin, executionContext) {
 }
 
 export default {
+  async scheduled(controller, env, executionContext) {
+    const cleanup = expireUnpaidOrders(env)
+      .then((count) => {
+        if (count > 0) console.info(JSON.stringify({ operation: "expire_unpaid_orders", deleted_orders: count }));
+      })
+      .catch((error) => logDatabaseError("expire_unpaid_orders", error));
+    if (executionContext?.waitUntil) executionContext.waitUntil(cleanup);
+    else await cleanup;
+  },
   async fetch(request, env, executionContext) {
     const url = new URL(request.url);
     const pathname = url.pathname.replace(/\/+$/, "") || "/";
@@ -1453,7 +1725,7 @@ export default {
       if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
-    if (["/api/shipping/destinations", "/api/shipping/quotes", "/api/orders/proof", "/api/orders/status"].includes(pathname) && request.method === "OPTIONS") {
+    if (["/api/shipping/destinations", "/api/shipping/quotes", "/api/orders/proof", "/api/orders/status", "/api/orders/cancellation"].includes(pathname) && request.method === "OPTIONS") {
       const origin = getAllowedOrigin(request, env);
       if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
@@ -1467,6 +1739,7 @@ export default {
     if (rateLimitResponse) return rateLimitResponse;
     const adminProofMatch = pathname.match(/^\/api\/admin\/payments\/([^/]+)\/proof$/);
     const adminReviewMatch = pathname.match(/^\/api\/admin\/payments\/([^/]+)\/review$/);
+    const adminRefundActionMatch = pathname.match(/^\/api\/admin\/refunds\/([0-9a-f-]{36})\/(approve|process)$/i);
     const adminShipmentMatch = pathname.match(/^\/api\/admin\/orders\/([^/]+)\/shipment$/);
     const adminGenerateProductionFileMatch = pathname.match(/^\/api\/admin\/orders\/([^/]+)\/items\/([^/]+)\/production-files\/dxf$/);
     const adminProductionFileMatch = pathname.match(/^\/api\/admin\/orders\/([^/]+)\/production-files\/([^/]+)$/);
@@ -1512,6 +1785,16 @@ export default {
       if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
       return listAdminPayments(request, env, corsHeaders(origin));
     }
+    if (pathname === "/api/admin/refunds" && request.method === "GET") {
+      const origin = getAllowedOrigin(request, env);
+      if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
+      return listAdminRefunds(request, env, corsHeaders(origin));
+    }
+    if (adminRefundActionMatch && request.method === "POST") {
+      const origin = getAllowedOrigin(request, env);
+      if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
+      return updateAdminRefund(request, env, corsHeaders(origin), adminRefundActionMatch[1], adminRefundActionMatch[2].toLowerCase());
+    }
     if (adminProofMatch && request.method === "GET") {
       const origin = getAllowedOrigin(request, env);
       if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
@@ -1542,6 +1825,11 @@ export default {
       const origin = getAllowedOrigin(request, env);
       if (!origin || origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
       return getPublicOrderStatus(request, env, corsHeaders(origin));
+    }
+    if (pathname === "/api/orders/cancellation" && request.method === "POST") {
+      const origin = getAllowedOrigin(request, env);
+      if (!origin || origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
+      return requestOrderRefund(request, env, corsHeaders(origin));
     }
     if (pathname === "/api/orders/proof" && request.method === "POST") {
       const origin = getAllowedOrigin(request, env);
