@@ -149,7 +149,7 @@ Ruang lingkup rilis awal: satu model katalog bernama **Nomor Rumah Akrilik**, di
 
 ### C.2 Ongkir dan pembayaran — Berjalan (2/8)
 
-Metode pembayaran rilis awal yang dipilih: transfer bank SeaBank, batas pembayaran 24 jam sejak pesanan dibuat, lalu tampilkan pesan “Pembayaran telah kedaluwarsa”. Pemilik memilih penghapusan penuh pesanan tanpa bukti setelah batas 24 jam, termasuk order, item, customization, payment, shipment, riwayat, dan berkas terkait. Jika bukti transfer diunggah sebelum batas, pesanan dan bukti tidak dihapus otomatis; keduanya dipertahankan sampai admin memproses pesanan. Kebijakan ini belum diimplementasikan. Nomor rekening dan nama pemilik belum ditetapkan.
+Metode pembayaran rilis awal yang dipilih: transfer bank SeaBank, batas pembayaran 24 jam sejak pesanan dibuat, lalu tampilkan pesan “Pembayaran telah kedaluwarsa”. Pemilik memilih penghapusan penuh pesanan tanpa bukti setelah batas 24 jam, termasuk order, item, customization, payment, shipment, riwayat, dan berkas terkait. Jika bukti transfer diunggah sebelum batas, pesanan dan bukti tidak dihapus otomatis; keduanya dipertahankan sampai admin memproses pesanan. Kebijakan ini belum diimplementasikan. Nama pemilik dan nomor rekening sudah diberikan untuk instruksi transfer, tetapi nilainya tidak disimpan di dokumen repo publik; masukkan ke tampilan pembayaran pada rilis terkontrol.
 
 - [x] `RAJAONGKIR_API_KEY` dari berkas lokal yang diabaikan Git terpasang pada Worker; pencarian tujuan merespons HTTP 200.
 - [x] Pemilik mengonfirmasi titik asal RajaOngkir `5052` sesuai lokasi operasional toko; verifikasi tarif kurir nyata masih perlu dilakukan.
