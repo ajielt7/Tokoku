@@ -248,6 +248,9 @@ async function run() {
     const cleanup = await requestJson("/__test/expire-unpaid", { method: "POST", body: {} });
     assert.equal(cleanup.response.status, 200, JSON.stringify(cleanup.payload));
     assert.ok([0, 1].includes(cleanup.payload.data.deleted_orders), "Pembersihan hanya boleh menangani order uji yang kedaluwarsa.");
+    const cleanupAgain = await requestJson("/__test/expire-unpaid", { method: "POST", body: {} });
+    assert.equal(cleanupAgain.response.status, 200);
+    assert.equal(cleanupAgain.payload.data.deleted_orders, 0, `Order kedaluwarsa harus terhapus setelah satu sweep. Respons pertama: ${JSON.stringify(cleanup.payload)}`);
     let expiredStatus;
     for (let attempt = 0; attempt < 20; attempt += 1) {
       expiredStatus = await trackOrder(expired);
