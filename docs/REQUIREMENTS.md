@@ -36,7 +36,7 @@ Membangun toko online mandiri yang ringan dan mudah dikembangkan. Toko perlu men
 
 - Mencatat pesanan dan rincian item.
 - Memisahkan status pesanan, pembayaran, produksi, dan pengiriman.
-- Admin memeriksa bukti transfer maksimal 1 × 24 jam sejak bukti diunggah dan mengubah status pembayaran melalui endpoint yang dilindungi autentikasi.
+- Admin memeriksa bukti transfer maksimal 1 × 24 jam sejak bukti diunggah dan mengubah status pembayaran melalui endpoint yang dilindungi autentikasi. Jika bukti ditolak, pembeli tidak dapat mengunggah ulang dan diarahkan untuk melanjutkan lewat chat.
 - Menyediakan aplikasi Android untuk admin meninjau pesanan, mengelola proses, dan melihat riwayat.
 - Mengirim notifikasi pesanan baru ke admin melalui FCM; aplikasi mengambil status terkini dari backend.
 - Menyimpan informasi kurir, URL pelacakan, status, dan waktu pengiriman jika tersedia.
