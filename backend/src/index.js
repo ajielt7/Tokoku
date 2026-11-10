@@ -1219,9 +1219,9 @@ async function expireUnpaidOrders(env, now = new Date()) {
   const expiredAt = now.toISOString();
   const predicate = `SELECT o.id FROM orders AS o
     WHERE o.payment_expires_at IS NOT NULL AND o.payment_expires_at <= ?1
-      AND EXISTS (
+      AND NOT EXISTS (
         SELECT 1 FROM payments AS p WHERE p.order_id = o.id
-          AND p.payment_status = 'pending' AND p.proof_file_id IS NULL
+          AND (p.payment_status <> 'pending' OR p.proof_file_id IS NOT NULL)
       )`;
   const expired = await env.DB.prepare(`SELECT COUNT(*) AS total FROM (${predicate}) AS expired`).bind(expiredAt).first();
   const count = Number(expired?.total ?? 0);
