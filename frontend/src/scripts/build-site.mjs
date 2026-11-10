@@ -22,6 +22,10 @@ const site = {
   indexable: environmentBoolean("SEO_INDEXABLE", siteConfig.indexable),
   contentReady: environmentBoolean("CONTENT_READY", siteConfig.contentReady),
 };
+if (!/^\d{8,15}$/.test(site.whatsappNumber || "")) {
+  throw new Error("whatsappNumber harus memakai format internasional berupa angka saja.");
+}
+const whatsappLink = `https://wa.me/${site.whatsappNumber}?${new URLSearchParams({ text: "Halo Toqoku, saya ingin bertanya tentang produk." })}`;
 const catalogApiUrl = process.env.CATALOG_API_URL || "http://127.0.0.1:8787/api/catalog";
 const apiBaseUrl = (site.apiBaseUrl || "http://127.0.0.1:8787").replace(/\/$/, "");
 const parsedApiBaseUrl = new URL(apiBaseUrl);
@@ -244,6 +248,7 @@ const homeHtml = replaceTokens(homeTemplate, {
   CATEGORY_TILES: categoryTiles || '<p class="empty-catalog">Kategori akan segera tersedia.</p>',
   DEMO_NOTE: demoNote,
   FOOTER_COPY: footerCopy,
+  WHATSAPP_LINK: escapeHtml(whatsappLink),
   API_BASE_URL: escapeHtml(apiBaseUrl),
 });
 
@@ -273,6 +278,7 @@ for (const category of catalog.categories) {
     PREVIEW_BANNER: previewBanner,
     DEMO_NOTE: demoNote,
     FOOTER_COPY: footerCopy,
+    WHATSAPP_LINK: escapeHtml(whatsappLink),
     API_BASE_URL: escapeHtml(apiBaseUrl),
   });
   const seoHtml = addSeo(html, {
@@ -316,6 +322,7 @@ for (const product of catalog.products) {
     PREVIEW_BANNER: previewBanner,
     DEMO_NOTE: previewMode ? '<p class="demo-note detail-notice">Informasi dan foto ini hanya contoh pratinjau.</p>' : "",
     FOOTER_COPY: footerCopy,
+    WHATSAPP_LINK: escapeHtml(whatsappLink),
     API_BASE_URL: escapeHtml(apiBaseUrl),
     CUSTOM_PREVIEW_SCRIPT: `<script src="${prefix}assets/js/custom-preview.js" defer></script>`,
   });
@@ -354,6 +361,7 @@ for (const [slug, template] of [["keranjang", cartTemplate], ["checkout", checko
     PREVIEW_BANNER: previewBanner,
     PREVIEW_CHECKOUT_NOTICE: previewMode ? '<p class="demo-note">Checkout belum aktif. Ini hanya pratinjau katalog.</p>' : "",
     FOOTER_COPY: footerCopy,
+    WHATSAPP_LINK: escapeHtml(whatsappLink),
     API_BASE_URL: escapeHtml(apiBaseUrl),
   }).replace(previewMode ? 'data-checkout-layout>' : "\u0000", previewMode ? 'data-checkout-layout hidden>' : "\u0000");
   const destination = path.join(outputDirectory, slug);
