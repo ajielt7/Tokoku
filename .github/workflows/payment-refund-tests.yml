@@ -1,4 +1,4 @@
-name: Payment and refund tests
+name: Payment, refund and Android verification
 
 on:
   push:
@@ -19,4 +19,16 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci --prefix backend
-      - run: node backend/scripts/test-payments.mjs
+      - run: npm --prefix backend run test:payments
+
+  android-admin-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - run: ./gradlew --no-daemon :app:compileDebugJavaWithJavac
+        working-directory: android

@@ -84,6 +84,8 @@ Urutan skenario:
 
 **Batas verifikasi:** simulasi lokal memvalidasi alur backend dan D1 dengan bukti tiruan. Simulasi tidak memvalidasi ImageKit, transfer bank, ongkir live RajaOngkir, atau notifikasi FCM. ImageKit pernah membalas HTTP 403; unggah production tetap ditunda sampai konfigurasi akun diperiksa dan validasi layanan dilakukan menjelang rilis.
 
+**Hasil simulasi terakhir:** lulus pada GitHub Actions, Node.js 22, commit `2131abb`. Berhasil mencakup checkout, upload bukti tiruan, review admin, refund manual simulasi, larangan refund setelah produksi, dan cleanup/retensi order. Mesin pengembangan lokal Node.js 20.13.1 belum dapat menjalankan Wrangler yang mensyaratkan Node.js 22+.
+
 ### Cloudflare Worker
 
 Versi Worker production yang aktif per 9 November 2026 adalah `df440313-c47f-4594-a0df-6d3a175b3c50`. Versi tepat sebelumnya adalah `d23b36d7-2e60-4f25-9523-78551eb01c68`; verifikasi daftar versi lagi sebelum menggunakannya. Jalankan dari folder `backend/` dengan Wrangler lokal:

@@ -14,7 +14,7 @@ Gunakan bobot tetap per bagian agar laporan progres konsisten. Nilai tiap bagian
 | D. SEO dan mutu halaman | 20% |
 | E. Backup, pemulihan, dan peluncuran | 15% |
 
-**Progres berbobot per 10 November 2026: 53,7%** (A 6/9, B 12/15, C 9/29, D 13/22, E 5/18). Keputusan berat, kurir, identitas, pembayaran, dan refund yang sudah disepakati kini dicatat sebagai selesai; publikasi katalog dan implementasi alurnya tetap menunggu. Angka ini mengukur butir checklist yang selesai, bukan persentase kesiapan menerima pesanan. Syarat lulus pada bagian akhir tetap menjadi gerbang rilis.
+**Progres berbobot per 10 November 2026: 55,5%** (A 6/9, B 12/15, C 11/29, D 13/22, E 5/18). Simulasi lokal pembayaran/refund dan penghapusan order kedaluwarsa lulus di GitHub Actions pada Node.js 22. Angka ini mengukur butir checklist yang selesai, bukan persentase kesiapan menerima pesanan. Katalog/foto asli, validasi ImageKit dan tarif live, serta syarat toko tetap menjadi gerbang rilis.
 
 ### Rincian Tahap 12
 
@@ -30,7 +30,7 @@ Tahap 12 dibagi menjadi 5 bagian utama dan 18 subbagian. Setiap baris merangkum 
 | B.3 | Secret dan akses admin | Secret dipasang di Worker; endpoint admin terverifikasi tanpa membuka nilainya | — | 2/2 | Selesai |
 | B.4 | Layanan eksternal dan log | Ringkasan log/issue Worker diperiksa; tidak ada 5xx pada sampel | Pemilik cek paket dan status key ImageKit di dashboard; validasi API setelah 403 dibereskan | 3/6 | Berjalan |
 | C.1 | Katalog produk | Nama, deskripsi, harga, ukuran, personalisasi, dan berat 650 g sudah disepakati | Masukkan katalog final; foto asli disiapkan menjelang rilis dan berat paket dicek saat packing final | 1/7 | Berjalan |
-| C.2 | Ongkir dan pembayaran | Transaksi dasar terdokumentasi; hitung subtotal/ongkir lokal dan idempotency order teruji; asal serta pilihan kurir sudah ditetapkan | Cocokkan tarif live dengan akun RajaOngkir dan jalankan simulasi lokal setelah alur bukti/refund siap | 4/10 | Berjalan |
+| C.2 | Ongkir dan pembayaran | Transaksi dasar terdokumentasi; hitung subtotal/ongkir lokal dan idempotency order teruji; asal serta pilihan kurir ditetapkan; simulasi bayar/refund dan expiry lokal lulus | Cocokkan tarif live dengan akun RajaOngkir dan validasi upload/bukti privat setelah ImageKit siap | 6/10 | Berjalan |
 | C.3 | Identitas toko dan kebijakan | Nama/kontak, rekening, batas pembayaran, dan kebijakan refund sudah ditentukan | Terapkan saat rilis; tulis privasi/syarat dan periksa halaman publik | 4/6 | Berjalan |
 | C.4 | Pengiriman dan produksi | Belum disiapkan untuk operasional pelanggan | Tetapkan asal/kurir, proses packing, stok, SLA, dan penanganan pesanan bermasalah | 0/6 | Belum mulai |
 | D.1 | Indeks dan metadata | SITE_URL HTTPS benar; preview lulus pemeriksaan; 9 rute live punya title, description, dan H1; halaman privat noindex; robots.txt membolehkan crawler; Product/Offer schema tersedia di kode | Setelah konten final, cek canonical dan konten halaman publik, pastikan URL privat tak masuk sitemap rilis, lalu validasi Rich Results | 6/9 | Berjalan |
@@ -162,11 +162,11 @@ Refund hanya dikirim kembali ke rekening asal yang mengirim pembayaran ke SeaBan
 - [x] Pemilik memilih Gojek, JNE, J&T, SPX, SiCepat, Wahana, dan Anteraja. Acuan ongkir mengikuti proyek Pemesanan: Gojek Same Day memakai rumus jarak yang didokumentasikan di sana; kurir ekspedisi meminta tarif RajaOngkir secara langsung.
 - [ ] Cocokkan ketersediaan layanan dan tarif aktual pilihan kurir pada akun RajaOngkir untuk rute uji sebelum rilis; tarif dapat berbeda menurut akun, tujuan, dan layanan.
 - [x] Uji API lokal dengan seed demo: backend menghitung subtotal Rp150.000 dan ongkir fixture lokal Rp10.000 dari server menjadi total Rp160.000; pengiriman ulang memakai idempotency key yang sama memberi kode yang sama, hanya satu order/item/payment tersimpan, dan endpoint tracking tidak mengembalikan nomor telepon. Rute ongkir memakai fixture 1 km; ini bukan verifikasi tarif RajaOngkir nyata atau order production.
-- [ ] Jalankan `npm run test:payments` pada Node.js 22+ untuk simulasi checkout, bukti tiruan, persetujuan/penolakan admin, refund, dan expiry memakai Worker serta D1 lokal; jangan melakukan transfer atau refund sungguhan saat simulasi. Workflow CI sudah disiapkan; uji lokal saat ini terhalang Node.js 20.13.1.
+- [x] Simulasi checkout, bukti tiruan, persetujuan/penolakan admin, refund, batas produksi, retensi order berbukti, dan expiry lulus dengan Worker serta D1 lokal pada GitHub Actions Node.js 22; tidak ada transfer sungguhan. Jalankan `npm run test:payments` lokal dengan Node.js 22+.
 - [ ] Sebelum rilis, bila pemilik menyetujui transaksi uji berbiaya, lakukan satu transfer nominal kecil dan cocokkan mutasi secara manual. Jangan menyatakan pembayaran otomatis terverifikasi.
 - [ ] Verifikasi unggah bukti hanya ke ImageKit privat setelah validasi ImageKit lolos.
 - [ ] Verifikasi URL bukti untuk admin bertanda tangan dan berumur singkat.
-- [ ] Verifikasi bukti yang ditolak tidak dapat diunggah ulang, file aktif dibersihkan, dan pelanggan diarahkan ke chat melalui simulasi otomatis.
+- [x] Simulasi otomatis memastikan bukti yang ditolak tidak dapat diunggah ulang, file tiruan dibersihkan, dan pelanggan diarahkan ke chat.
 
 ### C.3 Informasi toko dan kebijakan — Berjalan (4/6)
 
