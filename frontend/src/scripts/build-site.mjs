@@ -26,6 +26,23 @@ if (!/^\d{8,15}$/.test(site.whatsappNumber || "")) {
   throw new Error("whatsappNumber harus memakai format internasional berupa angka saja.");
 }
 const whatsappLink = `https://wa.me/${site.whatsappNumber}?${new URLSearchParams({ text: "Halo Toqoku, saya ingin bertanya tentang produk." })}`;
+const socialPlatforms = {
+  facebook: { label: "Facebook", domain: "facebook.com", icon: "fa-facebook-f" },
+  instagram: { label: "Instagram", domain: "instagram.com", icon: "fa-instagram" },
+  tiktok: { label: "TikTok", domain: "tiktok.com", icon: "fa-tiktok" },
+  youtube: { label: "YouTube", domain: "youtube.com", icon: "fa-youtube" },
+};
+const socialLinks = Object.entries(socialPlatforms).flatMap(([key, platform]) => {
+  const value = site.socialLinks?.[key];
+  if (!value) return [];
+  let url;
+  try { url = new URL(value); } catch { throw new Error(`URL ${platform.label} harus URL HTTPS yang valid.`); }
+  if (url.protocol !== "https:" || !(url.hostname === platform.domain || url.hostname.endsWith(`.${platform.domain}`))) {
+    throw new Error(`URL ${platform.label} harus berasal dari ${platform.domain}.`);
+  }
+  return [`<a href="${escapeHtml(url.href)}" aria-label="${platform.label} Toqoku" target="_blank" rel="noopener noreferrer"><i class="fa-brands ${platform.icon}" aria-hidden="true"></i></a>`];
+}).join("");
+const socialLinksMarkup = socialLinks ? `<nav class="footer-social" aria-label="Media sosial Toqoku">${socialLinks}</nav>` : "";
 const catalogApiUrl = process.env.CATALOG_API_URL || "http://127.0.0.1:8787/api/catalog";
 const apiBaseUrl = (site.apiBaseUrl || "http://127.0.0.1:8787").replace(/\/$/, "");
 const parsedApiBaseUrl = new URL(apiBaseUrl);
@@ -249,6 +266,7 @@ const homeHtml = replaceTokens(homeTemplate, {
   DEMO_NOTE: demoNote,
   FOOTER_COPY: footerCopy,
   WHATSAPP_LINK: escapeHtml(whatsappLink),
+  SOCIAL_LINKS: socialLinksMarkup,
   API_BASE_URL: escapeHtml(apiBaseUrl),
 });
 
@@ -279,6 +297,7 @@ for (const category of catalog.categories) {
     DEMO_NOTE: demoNote,
     FOOTER_COPY: footerCopy,
     WHATSAPP_LINK: escapeHtml(whatsappLink),
+    SOCIAL_LINKS: socialLinksMarkup,
     API_BASE_URL: escapeHtml(apiBaseUrl),
   });
   const seoHtml = addSeo(html, {
@@ -323,6 +342,7 @@ for (const product of catalog.products) {
     DEMO_NOTE: previewMode ? '<p class="demo-note detail-notice">Informasi dan foto ini hanya contoh pratinjau.</p>' : "",
     FOOTER_COPY: footerCopy,
     WHATSAPP_LINK: escapeHtml(whatsappLink),
+    SOCIAL_LINKS: socialLinksMarkup,
     API_BASE_URL: escapeHtml(apiBaseUrl),
     CUSTOM_PREVIEW_SCRIPT: `<script src="${prefix}assets/js/custom-preview.js" defer></script>`,
   });
@@ -362,6 +382,7 @@ for (const [slug, template] of [["keranjang", cartTemplate], ["checkout", checko
     PREVIEW_CHECKOUT_NOTICE: previewMode ? '<p class="demo-note">Checkout belum aktif. Ini hanya pratinjau katalog.</p>' : "",
     FOOTER_COPY: footerCopy,
     WHATSAPP_LINK: escapeHtml(whatsappLink),
+    SOCIAL_LINKS: socialLinksMarkup,
     API_BASE_URL: escapeHtml(apiBaseUrl),
   }).replace(previewMode ? 'data-checkout-layout>' : "\u0000", previewMode ? 'data-checkout-layout hidden>' : "\u0000");
   const destination = path.join(outputDirectory, slug);

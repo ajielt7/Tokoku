@@ -112,6 +112,7 @@ Gunakan HTML semantik (HTML Living Standard/HTML5) agar struktur dokumen menggam
 - Gunakan atribut HTML sesuai tujuan; jangan memakai elemen usang seperti `<font>`, `<center>`, atau atribut presentasi lama.
 - Untuk prototipe noindex, gunakan foto suasana dari Unsplash hanya sebagai ilustrasi; beri teks alt yang jujur dan ganti dengan foto barang milik toko sebelum katalog diluncurkan. Foto demo saat ini: [nomor rumah 53](https://unsplash.com/photos/a-black-sign-with-yellow-number-53-on-a-wall-f1n81DZUWYU), [nomor rumah 36](https://unsplash.com/photos/a-door-with-a-house-number-and-sign-JNi4XMBz5MM), dan [rumah nomor 1500](https://unsplash.com/photos/a-brick-house-with-pumpkins-on-the-steps-a564oUrRNeo). Gambar merupakan ilustrasi, bukan barang yang dijual.
 - Ikon antarmuka menggunakan Font Awesome Free 6.7.2 dari CDNJS dengan versi dipatok dan SRI. Ikon dekoratif disembunyikan dari pembaca layar dan tidak menggantikan label teks tombol. [Dokumentasi Font Awesome](https://docs.fontawesome.com/web/setup/host-yourself/webfonts).
+- Tautan sosial (Facebook, Instagram, TikTok, YouTube) diatur pada `src/data/site.json` bagian `socialLinks`. Biarkan `null` sampai URL akun resmi tersedia; ikon hanya dirender ketika URL HTTPS valid untuk domain platform terkait.
 
 Contoh kerangka halaman:
 

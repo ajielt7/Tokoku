@@ -1,6 +1,12 @@
 {
   "name": "Toqoku by Ajielt7",
   "whatsappNumber": "6283172527880",
+  "socialLinks": {
+    "facebook": null,
+    "instagram": null,
+    "tiktok": null,
+    "youtube": null
+  },
   "siteUrl": "https://ajielt7.github.io/Tokoku",
   "apiBaseUrl": "http://127.0.0.1:8787",
   "indexable": false,

@@ -187,6 +187,9 @@ h2 { margin-bottom: 0; font-size: clamp(34px, 3.7vw, 46px); font-weight: 700; le
 .footer-inner p, .footer-inner small { margin: 0; color: var(--color-muted); font-size: 14px; }
 .footer-contact { color: var(--color-brand); font-size: 14px; font-weight: 700; text-decoration: none; }
 .footer-contact:hover { text-decoration: underline; }
+.footer-social { display: flex; align-items: center; gap: 14px; }
+.footer-social a { display: grid; width: 36px; height: 36px; place-items: center; color: var(--color-brand); border: 1px solid var(--color-outline); border-radius: 4px; text-decoration: none; }
+.footer-social a:hover { color: #ffffff; background: var(--color-brand); }
 
 @media (max-width: 800px) {
   .container { width: min(100% - 36px, var(--content-width)); }
