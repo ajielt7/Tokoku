@@ -151,6 +151,8 @@ Ruang lingkup rilis awal: satu model katalog bernama **Nomor Rumah Akrilik**, di
 
 Metode pembayaran rilis awal yang dipilih: transfer bank SeaBank, batas pembayaran 24 jam sejak pesanan dibuat, lalu tampilkan pesan “Pembayaran telah kedaluwarsa”. Pemilik memilih penghapusan penuh pesanan tanpa bukti setelah batas 24 jam, termasuk order, item, customization, payment, shipment, riwayat, dan berkas terkait. Jika bukti transfer diunggah sebelum batas, pesanan dan bukti tidak dihapus otomatis; keduanya dipertahankan sampai admin memproses pesanan. Kebijakan ini belum diimplementasikan. Nama pemilik dan nomor rekening sudah diberikan untuk instruksi transfer, tetapi nilainya tidak disimpan di dokumen repo publik; masukkan ke tampilan pembayaran pada rilis terkontrol.
 
+Bukti transfer ditargetkan diperiksa admin maksimal 1 × 24 jam sejak diunggah. Status pembayaran diperbarui setelah admin memeriksa bukti secara manual.
+
 Kebijakan pembatalan/refund yang dipilih: refund boleh jika produksi belum dimulai; setelah produksi berjalan, dana tidak dikembalikan. Pelanggan dapat mengajukan pembatalan dari halaman lacak; permintaan masuk ke tab pembatalan/refund pada aplikasi admin Android. Admin mengirim refund lebih dahulu, lalu menekan “Proses”; statusnya diperbarui pada web. Setelah produksi dimulai, pelanggan diarahkan ke chat untuk koordinasi. Alur ini belum diimplementasikan.
 
 Refund hanya dikirim kembali ke rekening asal yang mengirim pembayaran ke SeaBank toko; pembeli tidak dapat memilih rekening tujuan lain. Refund ditargetkan selesai maksimal 3 × 24 jam (72 jam) setelah admin menyetujui permintaan.
