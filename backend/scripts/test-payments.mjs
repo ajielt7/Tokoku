@@ -130,6 +130,9 @@ async function setOrderExpired(order) {
     "--config", "wrangler.jsonc", "--env", "test", "--env-file", testEnvFile,
     "--command", `UPDATE orders SET payment_expires_at = '2000-01-01T00:00:00.000Z' WHERE public_code = '${order.code}'`,
   ]);
+  const expiredStatus = await trackOrder(order);
+  assert.equal(expiredStatus.response.status, 200);
+  assert.equal(expiredStatus.payload.data.payment_expired, true, "Fixture harus kedaluwarsa di database yang dipakai Worker.");
 }
 
 async function run() {
@@ -157,7 +160,7 @@ async function run() {
       wranglerCli, "dev",
       "--local", "--ip", "127.0.0.1", "--port", "8791", "--persist-to", stateDirectory, "--test-scheduled",
       "--config", "wrangler.jsonc", "--env", "test", "--env-file", testEnvFile,
-    ], { cwd: backendDirectory, env: childEnvironment, stdio: "ignore", windowsHide: true });
+  ], { cwd: backendDirectory, env: childEnvironment, stdio: "ignore", windowsHide: true });
 
     await waitForWorker(worker);
 
@@ -238,6 +241,7 @@ async function run() {
     await setOrderExpired(expired);
     const scheduled = await fetch(`${apiBaseUrl}/__scheduled?cron=${encodeURIComponent("*/15 * * * *")}`, { signal: AbortSignal.timeout(10_000) });
     assert.ok(scheduled.ok, `Scheduled cleanup gagal: HTTP ${scheduled.status}`);
+    assert.equal(await scheduled.text(), "Ran scheduled event", "Wrangler harus benar-benar menjalankan handler scheduled.");
     let expiredStatus;
     for (let attempt = 0; attempt < 20; attempt += 1) {
       expiredStatus = await trackOrder(expired);
