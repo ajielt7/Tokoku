@@ -2,6 +2,7 @@ const form = document.querySelector("[data-tracking-form]");
 const messageNode = document.querySelector("[data-tracking-message]");
 const resultsNode = document.querySelector("[data-tracking-results]");
 const apiBaseUrl = document.currentScript?.dataset.apiBase || "";
+const previewMode = document.currentScript?.dataset.previewMode === "true";
 const chatHref = document.querySelector(".footer-contact")?.href || "";
 
 const labels = {
@@ -159,6 +160,21 @@ form?.addEventListener("submit", async (event) => {
   try {
     const payload = Object.fromEntries(new FormData(form));
     payload.order_code = String(payload.order_code).trim().toUpperCase();
+    if (previewMode) {
+      let demoOrders = [];
+      try {
+        const storedOrders = JSON.parse(sessionStorage.getItem("ruma-demo-orders-v1") || "[]");
+        if (Array.isArray(storedOrders)) demoOrders = storedOrders;
+      } catch {
+        // Treat unavailable or invalid local demo data as no matching order.
+      }
+      const phone = String(payload.phone).replace(/\D/g, "");
+      const order = demoOrders.find((item) => item.public_code === payload.order_code && item.phone === phone);
+      if (!order) throw new Error("Pesanan demo tidak ditemukan di browser ini. Buat pesanan demo baru lewat checkout.");
+      renderStatus(order, payload);
+      showMessage("Status pesanan demo ditemukan. Ini hanya simulasi.");
+      return;
+    }
     const response = await fetch(`${apiBaseUrl}/api/orders/status`, {
       method: "POST",
       headers: { "content-type": "application/json" },

@@ -478,12 +478,13 @@ for (const [slug, template] of [["keranjang", cartTemplate], ["checkout", checko
     ROOT_PREFIX: "../",
     PREVIEW_BANNER: previewBanner,
     PREVIEW_CHECKOUT_NOTICE: previewMode ? '<p class="demo-note" id="checkout-preview-notice">Mode demo: ongkir, pesanan, dan bukti pembayaran disimulasikan di browser.</p>' : "",
+    PREVIEW_TRACKING_NOTICE: previewMode ? '<p class="demo-note">Mode demo: riwayat contoh hanya tersimpan di sesi browser ini.</p>' : "",
     PREVIEW_MODE: String(previewMode),
     ORDER_SUCCESS_NOTE: previewMode
       ? '<p class="shipping-note">Mode demo: tidak ada transfer sungguhan. Anda bisa mencoba unggah bukti simulasi.</p>'
       : '<p class="shipping-note">Transfer manual sesuai detail rekening toko. Setelah transfer, unggah bukti di bawah. Admin menargetkan pemeriksaan maksimal 1 × 24 jam.</p>',
     ORDER_TRACKING_LINK: previewMode
-      ? '<p class="form-hint">Pelacakan hanya tersedia untuk pesanan sungguhan.</p>'
+      ? '<a class="text-link" href="../lacak-pesanan/">Lacak status pesanan demo</a>'
       : '<a class="text-link" href="../lacak-pesanan/">Lacak perkembangan pesanan</a>',
     FOOTER_COPY: footerCopy,
     WHATSAPP_LINK: escapeHtml(whatsappLink),

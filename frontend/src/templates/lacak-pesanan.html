@@ -22,7 +22,7 @@
     </div></header>
     <main id="konten-utama" class="checkout-page"><div class="container">
       <nav class="breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="{{ROOT_PREFIX}}index.html">Beranda</a></li><li aria-current="page">Lacak pesanan</li></ol></nav>
-      <header class="catalog-heading"><p class="eyebrow">Info pesanan</p><h1>Lacak pesanan</h1><p>Masukkan kode pesanan dan nomor telepon checkout. Nama dan alamat tidak ditampilkan.</p></header>
+      <header class="catalog-heading"><p class="eyebrow">Info pesanan</p><h1>Lacak pesanan</h1><p>Masukkan kode pesanan dan nomor telepon checkout. Nama dan alamat tidak ditampilkan.</p>{{PREVIEW_TRACKING_NOTICE}}</header>
       <section class="tracking-card" aria-labelledby="tracking-title">
         <h2 id="tracking-title">Cek status</h2>
         <form class="tracking-form" data-tracking-form>
@@ -36,6 +36,6 @@
     </div></main>
     <footer class="site-footer"><div class="container footer-inner"><a class="brand footer-brand" href="{{ROOT_PREFIX}}index.html"><span class="brand-mark" aria-hidden="true">T</span><span>Toqoku<span class="brand-period">.</span></span></a><p>Produk dan karya dari ekosistem Ajielt7.</p><a class="footer-contact" href="{{WHATSAPP_LINK}}"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Chat WhatsApp</a>{{SOCIAL_LINKS}}<small>{{FOOTER_COPY}}</small></div></footer>
     <script src="{{ROOT_PREFIX}}assets/js/header-scroll.js" defer></script>
-    <script src="{{ROOT_PREFIX}}assets/js/tracking.js" data-api-base="{{API_BASE_URL}}" defer></script>
+    <script src="{{ROOT_PREFIX}}assets/js/tracking.js" data-api-base="{{API_BASE_URL}}" data-preview-mode="{{PREVIEW_MODE}}" defer></script>
   </body>
 </html>

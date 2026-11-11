@@ -480,7 +480,7 @@ if (checkoutForm) {
     };
 
     if (previewMode) {
-      const paymentReference = `DEMO-${Date.now().toString(36).toUpperCase()}`;
+      const paymentReference = `DEMO-${crypto.randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase()}`;
       const success = document.querySelector("[data-order-success]");
       const layout = document.querySelector("[data-checkout-layout]");
       const proofForm = document.querySelector("[data-proof-form]");
@@ -494,6 +494,22 @@ if (checkoutForm) {
       if (proofForm) {
         proofForm.elements.payment_reference.value = paymentReference;
         proofForm.elements.phone.value = payload.customer.phone;
+      }
+      try {
+        const storedOrders = JSON.parse(sessionStorage.getItem("ruma-demo-orders-v1") || "[]");
+        const demoOrders = Array.isArray(storedOrders) ? storedOrders : [];
+        demoOrders.push({
+          public_code: paymentReference,
+          phone: payload.customer.phone.replace(/\D/g, ""),
+          order_status: "new",
+          payment_status: "pending",
+          production_status: "pending",
+          shipment_status: "pending",
+          history: [{ status_type: "order", new_status: "new", created_at: new Date().toISOString() }],
+        });
+        sessionStorage.setItem("ruma-demo-orders-v1", JSON.stringify(demoOrders.slice(-10)));
+      } catch {
+        // Demo tracking is optional if browser storage is disabled.
       }
       saveCart([]);
       return;
