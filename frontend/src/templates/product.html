@@ -48,19 +48,19 @@
             {{PRODUCT_MEDIA_CAPTION}}
           </figure>
 
+          <section class="related-products detail-related" aria-labelledby="related-title">
+            <div class="related-heading"><h2 id="related-title">Desain lainnya</h2><a class="text-link" href="{{ROOT_PREFIX}}index.html#produk">Semua produk <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></div>
+            <div class="product-grid">{{RELATED_PRODUCTS}}</div>
+          </section>
+
           <div class="detail-copy">
             <p class="eyebrow">Produk custom</p>
             <h1>{{PRODUCT_NAME}}</h1>
             <p class="detail-description">{{PRODUCT_DESCRIPTION}}</p>
             {{DEMO_NOTE}}
-            <dl class="product-specs">
-              <div><dt>Ukuran</dt><dd>{{PRODUCT_SIZE}}</dd></div>
-              <div><dt>Bagian custom</dt><dd>{{PRODUCT_CUSTOMIZATION}}</dd></div>
-              <div><dt>Harga</dt><dd>{{PRODUCT_PRICE}}</dd></div>
-            </dl>
+            <p class="detail-price"><span>Harga</span><strong>{{PRODUCT_PRICE}}</strong></p>
             <section class="custom-preview" aria-labelledby="custom-preview-title">
               <h2 id="custom-preview-title">Pratinjau desain</h2>
-              <p>Contoh posisi teks, belum termasuk detail bahan dan proses mesin.</p>
               <svg data-custom-preview viewBox="0 0 480 280" role="img" aria-label="Pratinjau personalisasi produk">
                 <rect x="18" y="18" width="444" height="244" rx="8" fill="#263b36" stroke="#d8c8a7" stroke-width="8"></rect>
                 <text x="240" y="151" text-anchor="middle" fill="#fffaf0" font-family="Arial, sans-serif" font-size="70" font-weight="700" data-preview-line="0">123</text>
@@ -71,20 +71,22 @@
             <form class="cart-add-form" data-product-form data-product-slug="{{PRODUCT_SLUG}}" data-product-name="{{PRODUCT_NAME}}" data-product-price="{{PRODUCT_PRICE_AMOUNT}}">
               <fieldset>
                 <legend>Personalisasi</legend>
-                {{CUSTOM_FIELDS}}
-                <label class="form-field">Jumlah<input name="quantity" type="number" value="1" min="1" max="10" required></label>
+                <div class="personalization-grid">
+                  {{CUSTOM_FIELDS}}
+                  <p class="detail-size"><span>Ukuran</span><strong>{{PRODUCT_SIZE}}</strong></p>
+                  <label class="form-field quantity-field">Jumlah<input name="quantity" type="number" value="1" min="1" max="10" required></label>
+                </div>
               </fieldset>
-              <button class="button button-primary" type="submit">Tambah ke keranjang</button>
+              <div class="detail-actions">
+                <a class="button button-secondary" href="{{WHATSAPP_LINK}}"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Pesan</a>
+                <button class="button button-primary" type="submit"><i class="fa-solid fa-bag-shopping" aria-hidden="true"></i> Keranjang</button>
+              </div>
               <p class="form-message" data-form-message aria-live="polite"></p>
             </form>
             <a class="text-link" href="{{ROOT_PREFIX}}kategori/{{CATEGORY_SLUG}}/">Lihat kategori</a>
           </div>
         </article>
 
-        <section class="related-products detail-related" aria-labelledby="related-title">
-          <div class="related-heading"><h2 id="related-title">Desain lainnya</h2><a class="text-link" href="{{ROOT_PREFIX}}index.html#produk">Semua produk <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></div>
-          <div class="product-grid">{{RELATED_PRODUCTS}}</div>
-        </section>
       </div>
     </main>
 
@@ -97,6 +99,7 @@
         <small>{{FOOTER_COPY}}</small>
       </div>
     </footer>
+    <script src="{{ROOT_PREFIX}}assets/js/header-scroll.js" defer></script>
     {{CUSTOM_PREVIEW_SCRIPT}}
     <script src="{{ROOT_PREFIX}}assets/js/cart.js" data-api-base="{{API_BASE_URL}}" defer></script>
   </body>

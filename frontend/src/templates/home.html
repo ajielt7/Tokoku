@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="./assets/css/site.css">
   </head>
-  <body>
+  <body class="home-page">
     <a class="skip-link" href="#konten-utama">Lewati ke konten utama</a>
 
     <header class="site-header">
@@ -30,6 +30,7 @@
     </header>
 
     <main id="konten-utama">
+      <div class="intro-background">
       <section class="top-offers" aria-label="Inspirasi produk custom">
         <div class="container">
           <div class="offer-grid{{FEATURED_LAYOUT}}">{{FEATURED_PRODUCTS}}</div>
@@ -63,6 +64,7 @@
           </figure>
         </div>
       </section>
+      </div>
 
       <section class="benefits" aria-label="Informasi layanan">
         <div class="container benefits-grid"><p><i class="fa-solid fa-ruler-combined benefit-icon" aria-hidden="true"></i> Ukuran jelas</p><p><i class="fa-solid fa-pen-to-square benefit-icon" aria-hidden="true"></i> Bisa custom</p><p><i class="fa-solid fa-circle-info benefit-icon" aria-hidden="true"></i> Detail produk</p></div>
@@ -87,6 +89,7 @@
     </main>
 
     <footer class="site-footer" id="kontak"><div class="container footer-inner"><a class="brand footer-brand" href="#beranda"><span class="brand-mark" aria-hidden="true">T</span><span>Toqoku<span class="brand-period">.</span></span></a><p>Produk dan karya dari ekosistem Ajielt7.</p><a class="footer-contact" href="{{WHATSAPP_LINK}}"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Chat WhatsApp</a>{{SOCIAL_LINKS}}<small>{{FOOTER_COPY}}</small></div></footer>
+    <script src="./assets/js/header-scroll.js" defer></script>
     <script src="./assets/js/home-search.js" defer></script>
     <script src="./assets/js/cart.js" data-api-base="{{API_BASE_URL}}" defer></script>
   </body>

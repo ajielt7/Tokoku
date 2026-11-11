@@ -181,7 +181,7 @@ function customizationFields(fields) {
   if (!fields?.length) return '<p class="form-hint">Tidak ada bagian custom untuk produk ini.</p>';
   return fields.map((field) => {
     const key = escapeHtml(field.key);
-    const label = escapeHtml(field.label);
+    const label = escapeHtml(field.key === "area_name" ? "Area / alamat" : field.label);
     const length = Number.isInteger(field.max_length) && field.max_length > 0 ? ` maxlength="${field.max_length}"` : "";
     const required = field.required ? " required" : "";
     const numeric = field.type === "number";
@@ -189,7 +189,7 @@ function customizationFields(fields) {
     const rules = field.rules && typeof field.rules === "object" ? field.rules : {};
     const pattern = typeof rules.pattern === "string" ? ` pattern="${escapeHtml(rules.pattern)}"` : "";
     const uppercase = rules.uppercase ? ' data-uppercase="true"' : "";
-    return `<label class="form-field">${label}<input type="text" name="custom-${key}" data-custom-key="${key}" data-custom-label="${label}"${inputMode}${length}${pattern}${uppercase}${required}></label>`;
+    return `<label class="form-field custom-field custom-field-${key}">${label}<input type="text" name="custom-${key}" data-custom-key="${key}" data-custom-label="${label}"${inputMode}${length}${pattern}${uppercase}${required}></label>`;
   }).join("\n");
 }
 
@@ -416,7 +416,10 @@ for (const product of catalog.products) {
     PRODUCT_CUSTOMIZATION: escapeHtml(product.customization || "Belum ditentukan"),
     CUSTOM_FIELDS: customizationFields(product.customization_fields),
     PRODUCT_PRICE: formatPrice(product.price_amount),
-    RELATED_PRODUCTS: related.map((item) => productCard(item, prefix)).join("\n") || '<p class="empty-catalog">Belum ada produk terkait.</p>',
+    RELATED_PRODUCTS: [
+      ...related.map((item) => productCard(item, prefix)),
+      ...(!site.contentReady ? previewProductIdeas.slice(0, Math.max(0, 4 - related.length)).map(previewIdeaCard) : []),
+    ].join("\n") || '<p class="empty-catalog">Belum ada produk terkait.</p>',
     PREVIEW_BANNER: previewBanner,
     DEMO_NOTE: previewMode ? '<p class="demo-note detail-notice">Informasi dan foto ini hanya contoh pratinjau.</p>' : "",
     FOOTER_COPY: footerCopy,
@@ -458,12 +461,13 @@ for (const [slug, template] of [["keranjang", cartTemplate], ["checkout", checko
   const html = replaceTokens(template, {
     ROOT_PREFIX: "../",
     PREVIEW_BANNER: previewBanner,
-    PREVIEW_CHECKOUT_NOTICE: previewMode ? '<p class="demo-note">Checkout belum aktif. Ini hanya pratinjau katalog.</p>' : "",
+    PREVIEW_CHECKOUT_NOTICE: previewMode ? '<p class="demo-note" id="checkout-preview-notice">Mode pratinjau: formulir bisa dilihat, pesanan belum dikirim.</p>' : "",
+    PREVIEW_SUBMIT_DISABLED: previewMode ? 'disabled aria-describedby="checkout-preview-notice"' : "",
     FOOTER_COPY: footerCopy,
     WHATSAPP_LINK: escapeHtml(whatsappLink),
     SOCIAL_LINKS: socialLinksMarkup,
     API_BASE_URL: escapeHtml(apiBaseUrl),
-  }).replace(previewMode ? 'data-checkout-layout>' : "\u0000", previewMode ? 'data-checkout-layout hidden>' : "\u0000");
+  });
   const destination = path.join(outputDirectory, slug);
   await mkdir(destination, { recursive: true });
   await writeFile(path.join(destination, "index.html"), addNoIndex(html), "utf8");
