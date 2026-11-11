@@ -30,11 +30,11 @@ jobs:
       pages: write
       id-token: write
     env:
-      SITE_URL: ${{ vars.SITE_URL }}
-      PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
-      CATALOG_API_URL: ${{ vars.PUBLIC_API_BASE_URL }}/api/catalog
-      SEO_INDEXABLE: ${{ vars.SEO_INDEXABLE }}
-      CONTENT_READY: ${{ vars.CONTENT_READY }}
+      SITE_URL: ${{ vars.SITE_URL || 'https://ajielt7.github.io/Tokoku' }}
+      PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL || 'https://ruma-api-production.ajielt7.workers.dev' }}
+      CATALOG_API_URL: ${{ vars.PUBLIC_API_BASE_URL || 'https://ruma-api-production.ajielt7.workers.dev' }}/api/catalog
+      SEO_INDEXABLE: "false"
+      CONTENT_READY: "true"
       DEMO_SITE_URL: https://ajielt7.github.io/Tokoku
     steps:
       - name: Check out source
@@ -47,7 +47,7 @@ jobs:
         id: release_settings
         shell: bash
         run: |
-          if [ -z "$SITE_URL" ] || [ -z "$PUBLIC_API_BASE_URL" ] || [ "$SEO_INDEXABLE" != "true" ] || [ "$CONTENT_READY" != "true" ]; then
+          if [ -z "$SITE_URL" ] || [ -z "$PUBLIC_API_BASE_URL" ] || [ "$CONTENT_READY" != "true" ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
             echo "::notice::Public release skipped. Set production repository variables after the API and final catalog are ready."
             exit 0
@@ -84,9 +84,12 @@ jobs:
       - name: Build static site from public catalog
         if: steps.release_settings.outputs.ready == 'true'
         run: node frontend/src/scripts/build-site.mjs
-      - name: Check production output
-        if: steps.release_settings.outputs.ready == 'true'
+      - name: Check indexable production output
+        if: steps.release_settings.outputs.ready == 'true' && env.SEO_INDEXABLE == 'true'
         run: node frontend/src/scripts/check-release.mjs
+      - name: Check noindex live catalog
+        if: steps.release_settings.outputs.ready == 'true' && env.SEO_INDEXABLE != 'true'
+        run: node frontend/src/scripts/check-release.mjs --preview
       - name: Configure GitHub Pages
         if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v5

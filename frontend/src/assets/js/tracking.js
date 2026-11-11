@@ -4,11 +4,6 @@ const resultsNode = document.querySelector("[data-tracking-results]");
 const apiBaseUrl = document.currentScript?.dataset.apiBase || "";
 const previewMode = document.currentScript?.dataset.previewMode === "true";
 const chatHref = document.querySelector(".footer-contact")?.href || "";
-const orderCodeInput = form?.elements.order_code;
-if (previewMode && orderCodeInput) {
-  orderCodeInput.minLength = 13;
-  orderCodeInput.placeholder = "DEMO-XXXXXXXX atau RUMA-XXXXXXXXXXXXXXXX";
-}
 
 const labels = {
   order: { new: "Pesanan diterima", accepted: "Pesanan diproses", completed: "Pesanan selesai", cancelled: "Pesanan dibatalkan" },
@@ -166,30 +161,7 @@ form?.addEventListener("submit", async (event) => {
     const payload = Object.fromEntries(new FormData(form));
     payload.order_code = String(payload.order_code).trim().toUpperCase();
     if (previewMode) {
-      let demoOrders = [];
-      try {
-        const storedOrders = JSON.parse(sessionStorage.getItem("ruma-demo-orders-v1") || "[]");
-        if (Array.isArray(storedOrders)) demoOrders = storedOrders;
-      } catch {
-        // Treat unavailable or invalid local demo data as no matching order.
-      }
-      const phone = String(payload.phone).replace(/\D/g, "");
-      const order = demoOrders.find((item) => item.public_code === payload.order_code && item.phone === phone);
-      if (!order && /^DEMO-[A-Z0-9]{8}$/.test(payload.order_code)) {
-        renderStatus({
-          public_code: payload.order_code,
-          order_status: "new",
-          payment_status: "pending",
-          production_status: "pending",
-          shipment_status: "pending",
-          history: [{ status_type: "order", new_status: "new", created_at: new Date().toISOString() }],
-        }, payload);
-        showMessage("Kode demo versi lama dikenali. Status ini simulasi, bukan pesanan yang tersimpan.");
-        return;
-      }
-      if (!order) throw new Error("Pesanan demo tidak ditemukan di browser ini. Buat pesanan demo baru lewat checkout.");
-      renderStatus(order, payload);
-      showMessage("Status pesanan demo ditemukan. Ini hanya simulasi.");
+      showMessage("Pelacakan hanya tersedia pada website online untuk pesanan yang tersimpan di API.", true);
       return;
     }
     const response = await fetch(`${apiBaseUrl}/api/orders/status`, {

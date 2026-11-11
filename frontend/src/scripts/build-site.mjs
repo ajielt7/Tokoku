@@ -477,14 +477,14 @@ for (const [slug, template] of [["keranjang", cartTemplate], ["checkout", checko
   const html = replaceTokens(template, {
     ROOT_PREFIX: "../",
     PREVIEW_BANNER: previewBanner,
-    PREVIEW_CHECKOUT_NOTICE: previewMode ? '<p class="demo-note" id="checkout-preview-notice">Mode demo: ongkir, pesanan, dan bukti pembayaran disimulasikan di browser.</p>' : "",
-    PREVIEW_TRACKING_NOTICE: previewMode ? '<p class="demo-note">Mode demo: riwayat contoh hanya tersimpan di sesi browser ini.</p>' : "",
+    PREVIEW_CHECKOUT_NOTICE: previewMode ? '<p class="demo-note" id="checkout-preview-notice">Build lokal belum tersambung ke katalog produksi. Pesanan tidak dikirim.</p>' : "",
+    PREVIEW_TRACKING_NOTICE: previewMode ? '<p class="demo-note">Build lokal tidak menampilkan pesanan. Pelacakan memakai data API produksi.</p>' : "",
     PREVIEW_MODE: String(previewMode),
     ORDER_SUCCESS_NOTE: previewMode
-      ? '<p class="shipping-note">Mode demo: tidak ada transfer sungguhan. Anda bisa mencoba unggah bukti simulasi.</p>'
-      : '<p class="shipping-note">Transfer manual sesuai detail rekening toko. Setelah transfer, unggah bukti di bawah. Admin menargetkan pemeriksaan maksimal 1 × 24 jam.</p>',
+      ? '<p class="shipping-note">Pesanan belum dibuat.</p>'
+      : `<section class="shipping-note"><h3>Transfer bank</h3><p>${escapeHtml(site.bankTransfer.bankName)}<br>a.n. ${escapeHtml(site.bankTransfer.accountName)}<br><strong>${escapeHtml(site.bankTransfer.accountNumber)}</strong></p><p>Transfer sesuai total pesanan dalam 24 jam, lalu unggah bukti. Pesanan diproses setelah pembayaran diverifikasi.</p></section>`,
     ORDER_TRACKING_LINK: previewMode
-      ? '<a class="text-link" href="../lacak-pesanan/">Lacak status pesanan demo</a>'
+      ? '<p class="form-hint">Tidak ada pesanan pada build lokal.</p>'
       : '<a class="text-link" href="../lacak-pesanan/">Lacak perkembangan pesanan</a>',
     FOOTER_COPY: footerCopy,
     WHATSAPP_LINK: escapeHtml(whatsappLink),

@@ -90,8 +90,13 @@ public final class MainActivity extends Activity {
         getWindow().setStatusBarColor(DARK_GREEN);
         getWindow().setNavigationBarColor(Color.WHITE);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-        apiBaseUrl = getSharedPreferences(PREFS, MODE_PRIVATE)
-                .getString(PREF_API_URL, "http://10.0.2.2:8787");
+        String productionApiUrl = "https://ruma-api-production.ajielt7.workers.dev";
+        android.content.SharedPreferences settings = getSharedPreferences(PREFS, MODE_PRIVATE);
+        apiBaseUrl = settings.getString(PREF_API_URL, productionApiUrl);
+        if ("http://10.0.2.2:8787".equals(apiBaseUrl)) {
+            apiBaseUrl = productionApiUrl;
+            settings.edit().putString(PREF_API_URL, productionApiUrl).apply();
+        }
         api = activeSession;
         notificationOrderCode = getIntent().getStringExtra("order_code");
         AdminFirebaseMessagingService.createChannel(this);

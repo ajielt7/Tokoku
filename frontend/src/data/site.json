@@ -8,8 +8,13 @@
     "youtube": null
   },
   "siteUrl": "https://ajielt7.github.io/Tokoku",
-  "apiBaseUrl": "http://127.0.0.1:8787",
+  "apiBaseUrl": "https://ruma-api-production.ajielt7.workers.dev",
   "indexable": false,
-  "contentReady": false,
+  "contentReady": true,
+  "bankTransfer": {
+    "bankName": "SEA BANK",
+    "accountName": "Azis Maolidin",
+    "accountNumber": "9010 0153 1496"
+  },
   "language": "id-ID"
 }
