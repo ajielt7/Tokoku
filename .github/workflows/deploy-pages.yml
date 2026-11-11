@@ -92,7 +92,7 @@ jobs:
         run: node frontend/src/scripts/check-release.mjs --preview
       - name: Configure GitHub Pages
         if: github.event_name != 'pull_request'
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Upload demo Pages artifact
         if: steps.release_settings.outputs.ready != 'true' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
