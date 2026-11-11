@@ -10,7 +10,8 @@ const jsonHeaders = {
 const maxOrderBodyBytes = 16 * 1024;
 const orderCodeAlphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 const rajaOngkirBaseUrl = "https://rajaongkir.komerce.id/api/v1";
-const rajaOngkirCouriers = "jne:sicepat:ide:sap:ninja:jnt:tiki:wahana:pos:sentral:lion:rex:spx";
+const rajaOngkirCouriers = "jne:jnt:spx:sicepat:wahana:anteraja";
+const allowedRajaOngkirCouriers = new Set(rajaOngkirCouriers.split(":"));
 const maxPaymentProofBytes = 5 * 1024 * 1024;
 const storeCoordinates = { latitude: -6.929830025113192, longitude: 107.74308140067622 };
 const osrmBaseUrl = "https://router.project-osrm.org/route/v1/driving";
@@ -68,14 +69,16 @@ async function requestRajaOngkir(path, init, apiKey) {
 
 function cleanRajaRates(payload) {
   const rates = Array.isArray(payload?.data) ? payload.data : [];
-  return rates.map((rate) => ({
+  const availableRates = rates.map((rate) => ({
     code: String(rate.code ?? "").toLowerCase(),
     name: String(rate.name ?? rate.code ?? ""),
     service: String(rate.service ?? ""),
     description: String(rate.description ?? ""),
     cost: Number(rate.cost),
     etd: String(rate.etd ?? ""),
-  })).filter((rate) => rate.code && rate.service && Number.isSafeInteger(rate.cost) && rate.cost >= 0);
+  })).filter((rate) => allowedRajaOngkirCouriers.has(rate.code)
+    && rate.service && Number.isSafeInteger(rate.cost) && rate.cost >= 0);
+  return availableRates;
 }
 
 function validCoordinates(latitude, longitude) {
@@ -127,7 +130,7 @@ function localCourierRate(route) {
     code: "gojek",
     name: "Gojek",
     service: "Same Day",
-    description: `${route.distanceKm} km · 4 km pertama Rp10.000, selanjutnya Rp2.500/km`,
+    description: `${route.distanceKm} km Â· 4 km pertama Rp10.000, selanjutnya Rp2.500/km`,
     cost: calculateLocalShipping(route.distanceMeters),
     etd: "Hari yang sama",
     route_distance_km: route.distanceKm,
@@ -915,7 +918,7 @@ async function updateAdminShipment(request, env, headers, orderCode) {
          WHERE EXISTS (SELECT 1 FROM shipments WHERE id = ?6 AND shipment_status = ?4 AND updated_at = ?7)`,
     ).bind(
       crypto.randomUUID(), order.id, previousStatus, nextStatus,
-      note || `${carrier} · resi ${trackingNumber}`, shipmentId, changedAt,
+      note || `${carrier} Â· resi ${trackingNumber}`, shipmentId, changedAt,
     );
     const result = await env.DB.batch([shipmentStatement, historyStatement]);
     if (result[0]?.meta?.changes !== 1 || result[1]?.meta?.changes !== 1) {
@@ -1061,7 +1064,7 @@ async function sendAdminNewOrderNotification(env, order) {
         headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
         body: JSON.stringify({ message: {
           token,
-          notification: { title: "Pesanan baru", body: `${order.public_code} · ${new Intl.NumberFormat("id-ID").format(order.total_amount)} rupiah` },
+          notification: { title: "Pesanan baru", body: `${order.public_code} Â· ${new Intl.NumberFormat("id-ID").format(order.total_amount)} rupiah` },
           data: { order_code: order.public_code },
           android: { priority: "high", notification: { channel_id: "ruma_orders" } },
         } }),
@@ -1984,3 +1987,4 @@ export default {
     return jsonResponse({ error: "not_found" }, 404);
   },
 };
+

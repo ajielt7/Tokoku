@@ -121,7 +121,7 @@ function renderCheckoutSummary() {
   for (const item of items) {
     const price = Number.isSafeInteger(item.priceAmount) ? item.priceAmount : 0;
     subtotal += price * item.quantity;
-    checkoutItemsNode.append(createTextElement("p", "summary-row", `${item.name || item.slug} × ${item.quantity}`));
+    checkoutItemsNode.append(createTextElement("p", "summary-row", `${item.name || item.slug} Ã— ${item.quantity}`));
   }
   if (subtotalNode) subtotalNode.textContent = money(subtotal);
   updateShippingSummary();
@@ -138,6 +138,19 @@ let destinationController = null;
 let quoteController = null;
 let quoteTimer = null;
 let quoteSequence = 0;
+let shippingPickerExpanded = false;
+let showAllShippingCouriers = false;
+let activeShippingCourier = null;
+const shippingCourierOrder = ["gojek", "jne", "jnt", "spx", "sicepat", "wahana", "anteraja"];
+const shippingCourierNames = {
+  gojek: "Gojek",
+  jne: "JNE",
+  jnt: "J&T",
+  spx: "SPX",
+  sicepat: "SiCepat",
+  wahana: "Wahana",
+  anteraja: "Anteraja",
+};
 
 function currentSubtotal() {
   return readCart().reduce((sum, item) => sum + (Number.isSafeInteger(item.priceAmount) ? item.priceAmount : 0) * item.quantity, 0);
@@ -202,13 +215,16 @@ function scheduleShippingQuote() {
   if (quoteController) quoteController.abort();
   quoteSequence += 1;
   selectedShipping = null;
+  shippingPickerExpanded = false;
+  showAllShippingCouriers = false;
+  activeShippingCourier = null;
   updateShippingSummary();
   const items = shippingItems();
   if (!selectedDestination || !items.length) {
     optionsNode.replaceChildren(createTextElement("p", "form-hint", "Tarif muncul setelah tujuan dan keranjang dipilih."));
     return;
   }
-  optionsNode.replaceChildren(createTextElement("p", "form-hint", "Menghitung pilihan kurir…"));
+  optionsNode.replaceChildren(createTextElement("p", "form-hint", "Menghitung pilihan kurirâ€¦"));
   quoteTimer = setTimeout(() => loadShippingQuotes(items), 450);
 }
 
@@ -219,22 +235,126 @@ function renderShippingRates(rates, optionsNode, requestSequence) {
     return;
   }
   selectedShipping = rates[0];
-  const fragment = document.createDocumentFragment();
+  shippingPickerExpanded = false;
+  showAllShippingCouriers = false;
+  activeShippingCourier = null;
+  renderShippingPicker(rates, optionsNode);
+}
+
+function shippingRateDetail(rate) {
+  return [rate.description, rate.etd ? `Estimasi ${rate.etd}` : ""].filter(Boolean).join(" Â· ");
+}
+
+function shippingRateButton(rate, { selected = false, compact = false } = {}) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `shipping-option${selected ? " shipping-option--selected" : ""}${compact ? " shipping-option--compact" : ""}`;
+  if (selected) button.setAttribute("aria-pressed", "true");
+  button.append(
+    createTextElement("strong", "shipping-option-title", `${rate.name} ${rate.service}`),
+    createTextElement("span", "shipping-option-price", money(rate.cost)),
+    createTextElement("small", "shipping-option-detail", shippingRateDetail(rate)),
+  );
+  return button;
+}
+
+function shippingRateGroups(rates) {
+  const grouped = new Map();
   for (const rate of rates) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "shipping-option";
-    button.setAttribute("aria-pressed", String(rate === selectedShipping));
-    const title = createTextElement("strong", "shipping-option-title", `${rate.name} ${rate.service}`);
-    const price = createTextElement("span", "shipping-option-price", money(rate.cost));
-    const detail = createTextElement("small", "shipping-option-detail", [rate.description, rate.etd ? `Estimasi ${rate.etd}` : ""].filter(Boolean).join(" · "));
-    button.append(title, price, detail);
-    button.addEventListener("click", () => {
-      selectedShipping = rate;
-      optionsNode.querySelectorAll(".shipping-option").forEach((option) => option.setAttribute("aria-pressed", String(option === button)));
-      updateShippingSummary();
-    });
-    fragment.append(button);
+    const code = String(rate.code).toLowerCase();
+    if (!grouped.has(code)) grouped.set(code, []);
+    grouped.get(code).push(rate);
+  }
+  return [...grouped.entries()]
+    .map(([code, services]) => ({ code, name: shippingCourierNames[code] || services[0].name, services }))
+    .sort((a, b) => shippingCourierOrder.indexOf(a.code) - shippingCourierOrder.indexOf(b.code));
+}
+
+function renderShippingPicker(rates, optionsNode) {
+  const groups = shippingRateGroups(rates);
+  const selected = shippingRateButton(selectedShipping, { selected: true });
+  selected.setAttribute("aria-expanded", String(shippingPickerExpanded));
+  selected.append(createTextElement("small", "shipping-option-change", shippingPickerExpanded ? "Tutup pilihan" : "Ubah pilihan"));
+  selected.addEventListener("click", () => {
+    shippingPickerExpanded = !shippingPickerExpanded;
+    activeShippingCourier = null;
+    renderShippingPicker(rates, optionsNode);
+  });
+  const fragment = document.createDocumentFragment();
+  fragment.append(selected);
+
+  if (shippingPickerExpanded) {
+    const picker = document.createElement("div");
+    picker.className = "shipping-picker";
+    if (activeShippingCourier) {
+      const group = groups.find((item) => item.code === activeShippingCourier);
+      if (group) {
+        const heading = createTextElement("h3", "shipping-picker-title", `Pilih paket ${group.name}`);
+        const back = document.createElement("button");
+        back.type = "button";
+        back.className = "shipping-picker-back";
+        back.textContent = "Kembali ke daftar kurir";
+        back.addEventListener("click", () => {
+          activeShippingCourier = null;
+          renderShippingPicker(rates, optionsNode);
+        });
+        picker.append(heading, back);
+        for (const rate of group.services) {
+          const option = shippingRateButton(rate, { compact: true });
+          option.addEventListener("click", () => {
+            selectedShipping = rate;
+            shippingPickerExpanded = false;
+            activeShippingCourier = null;
+            renderShippingPicker(rates, optionsNode);
+            updateShippingSummary();
+          });
+          picker.append(option);
+        }
+      }
+    } else {
+      const visibleGroups = showAllShippingCouriers ? groups : groups.slice(0, 4);
+      for (const group of visibleGroups) {
+        const cheapest = group.services[0];
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "shipping-courier-option";
+        const serviceLabel = group.services.length > 1
+          ? `Mulai ${money(cheapest.cost)} Â· ${group.services.length} pilihan paket`
+          : `${cheapest.service} Â· ${money(cheapest.cost)}`;
+        button.append(
+          createTextElement("strong", "shipping-courier-name", group.name),
+          createTextElement("span", "shipping-courier-price", money(cheapest.cost)),
+          createTextElement("small", "shipping-courier-detail", serviceLabel),
+        );
+        button.addEventListener("click", () => {
+          activeShippingCourier = group.code;
+          renderShippingPicker(rates, optionsNode);
+        });
+        picker.append(button);
+      }
+      if (!showAllShippingCouriers && groups.length > 4) {
+        const showAll = document.createElement("button");
+        showAll.type = "button";
+        showAll.className = "shipping-picker-more";
+        showAll.textContent = "Lihat semua kurir";
+        showAll.addEventListener("click", () => {
+          showAllShippingCouriers = true;
+          renderShippingPicker(rates, optionsNode);
+        });
+        picker.append(showAll);
+      } else if (showAllShippingCouriers && groups.length > 4) {
+        const showLess = document.createElement("button");
+        showLess.type = "button";
+        showLess.className = "shipping-picker-more";
+        showLess.textContent = "Tampilkan 4 kurir";
+        showLess.addEventListener("click", () => {
+          showAllShippingCouriers = false;
+          renderShippingPicker(rates, optionsNode);
+        });
+        picker.append(showLess);
+      }
+    }
+    fragment.append(picker);
   }
   optionsNode.replaceChildren(fragment);
   updateShippingSummary();
@@ -452,7 +572,7 @@ if (checkoutForm) {
 
     if (!idempotencyKey) idempotencyKey = crypto.randomUUID();
     submitButton.disabled = true;
-    showMessage(messageNode, "Menyimpan pesanan…");
+    showMessage(messageNode, "Menyimpan pesananâ€¦");
     try {
       const response = await fetch(`${apiBaseUrl}/api/orders`, {
         method: "POST",
@@ -524,7 +644,7 @@ if (proofForm) {
       return;
     }
     submitProofButton.disabled = true;
-    showMessage(proofMessage, "Mengirim bukti pembayaran…");
+    showMessage(proofMessage, "Mengirim bukti pembayaranâ€¦");
     try {
       const response = await fetch(`${apiBaseUrl}/api/orders/proof`, {
         method: "POST",
@@ -533,7 +653,7 @@ if (proofForm) {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Bukti belum berhasil dikirim.");
       paymentProofSubmitted = true;
-      showMessage(proofMessage, `${result.message || "Bukti transfer tersimpan."} Admin menargetkan pemeriksaan maksimal 1 × 24 jam. Jika bukti ditolak, hubungi admin melalui WhatsApp.`);
+      showMessage(proofMessage, `${result.message || "Bukti transfer tersimpan."} Admin menargetkan pemeriksaan maksimal 1 Ã— 24 jam. Jika bukti ditolak, hubungi admin melalui WhatsApp.`);
       submitProofButton.textContent = "Bukti terkirim";
       submitProofButton.disabled = true;
       proofForm.elements.proof.disabled = true;
@@ -547,3 +667,4 @@ if (proofForm) {
 updateCartCounts();
 renderCart();
 renderCheckoutSummary();
+
