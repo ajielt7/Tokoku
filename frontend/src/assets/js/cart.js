@@ -5,6 +5,12 @@ const apiBaseUrl = document.currentScript?.dataset.apiBase?.replace(/\/$/, "") |
 const previewMode = document.currentScript?.dataset.previewMode === "true";
 const previewDestinations = [
   { id: "demo-cileunyi", label: "Cileunyi, Kabupaten Bandung" },
+  { id: "demo-cileunyi-kulon", label: "Desa Cileunyi Kulon, Kecamatan Cileunyi, Kabupaten Bandung" },
+  { id: "demo-cileunyi-wetan", label: "Desa Cileunyi Wetan, Kecamatan Cileunyi, Kabupaten Bandung" },
+  { id: "demo-cimekar", label: "Desa Cimekar, Kecamatan Cileunyi, Kabupaten Bandung" },
+  { id: "demo-cinunuk", label: "Desa Cinunuk, Kecamatan Cileunyi, Kabupaten Bandung" },
+  { id: "demo-cibiru-hilir", label: "Desa Cibiru Hilir, Kecamatan Cileunyi, Kabupaten Bandung" },
+  { id: "demo-cibiru-wetan", label: "Desa Cibiru Wetan, Kecamatan Cileunyi, Kabupaten Bandung" },
   { id: "demo-cibiru", label: "Cibiru, Kota Bandung" },
   { id: "demo-coblong", label: "Coblong, Kota Bandung" },
   { id: "demo-cimahi", label: "Cimahi, Kota Cimahi" },
