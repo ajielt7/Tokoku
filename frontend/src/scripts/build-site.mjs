@@ -177,11 +177,27 @@ function featuredProductCard(idea, index) {
   </article>`;
 }
 
-function customizationFields(fields) {
-  if (!fields?.length) return '<p class="form-hint">Tidak ada bagian custom untuk produk ini.</p>';
-  return fields.map((field) => {
+function customizationFields(fields, productSlug) {
+  let productFields = Array.isArray(fields) ? [...fields] : [];
+  if (previewMode && /^nomor-rumah-/.test(productSlug || "")) {
+    productFields = productFields.map((field) => field.key === "house_number"
+      ? { ...field, label: "Nomor rumah", type: "text", required: true, max_length: 3, rules: { pattern: "[A-Za-z0-9]{1,3}", uppercase: true } }
+      : field);
+    if (!productFields.some((field) => field.key === "area_name")) {
+      productFields.push({
+        key: "area_name",
+        label: "Nama area (opsional)",
+        type: "text",
+        required: false,
+        max_length: 14,
+        rules: { pattern: String.raw`[\p{L}\p{N} ./-]{1,14}` },
+      });
+    }
+  }
+  if (!productFields.length) return '<p class="form-hint">Tidak ada bagian custom untuk produk ini.</p>';
+  return productFields.map((field) => {
     const key = escapeHtml(field.key);
-    const label = escapeHtml(field.key === "area_name" ? "Area / alamat" : field.label);
+    const label = escapeHtml(field.label);
     const length = Number.isInteger(field.max_length) && field.max_length > 0 ? ` maxlength="${field.max_length}"` : "";
     const required = field.required ? " required" : "";
     const numeric = field.type === "number";
@@ -414,7 +430,7 @@ for (const product of catalog.products) {
     PRODUCT_MEDIA_CAPTION: '<figcaption>Foto ilustrasi Unsplash; bukan foto produk Toqoku.</figcaption>',
     PRODUCT_SIZE: escapeHtml(displayFixedSize(product.fixed_size) || "Belum ditentukan"),
     PRODUCT_CUSTOMIZATION: escapeHtml(product.customization || "Belum ditentukan"),
-    CUSTOM_FIELDS: customizationFields(product.customization_fields),
+    CUSTOM_FIELDS: customizationFields(product.customization_fields, product.slug),
     PRODUCT_PRICE: formatPrice(product.price_amount),
     RELATED_PRODUCTS: [
       ...related.map((item) => productCard(item, prefix)),
