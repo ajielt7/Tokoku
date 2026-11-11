@@ -2,6 +2,14 @@ const cartStorageKey = "ruma-cart-v1";
 const cartItemsNode = document.querySelector("[data-cart-items]");
 const checkoutItemsNode = document.querySelector("[data-checkout-items]");
 const apiBaseUrl = document.currentScript?.dataset.apiBase?.replace(/\/$/, "") || "http://127.0.0.1:8787";
+const previewMode = document.currentScript?.dataset.previewMode === "true";
+const previewDestinations = [
+  { id: "demo-cileunyi", label: "Cileunyi, Kabupaten Bandung" },
+  { id: "demo-cibiru", label: "Cibiru, Kota Bandung" },
+  { id: "demo-coblong", label: "Coblong, Kota Bandung" },
+  { id: "demo-cimahi", label: "Cimahi, Kota Cimahi" },
+  { id: "demo-jaksel", label: "Kebayoran Baru, Jakarta Selatan" },
+];
 
 function readCart() {
   try {
@@ -211,11 +219,53 @@ function scheduleShippingQuote() {
   quoteTimer = setTimeout(() => loadShippingQuotes(items), 450);
 }
 
+function renderShippingRates(rates, optionsNode, requestSequence) {
+  if (requestSequence !== quoteSequence) return;
+  if (!rates.length) {
+    optionsNode.replaceChildren(createTextElement("p", "form-hint", "Belum ada layanan kurir untuk tujuan ini."));
+    return;
+  }
+  selectedShipping = rates[0];
+  const fragment = document.createDocumentFragment();
+  for (const rate of rates) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "shipping-option";
+    button.setAttribute("aria-pressed", String(rate === selectedShipping));
+    const title = createTextElement("strong", "shipping-option-title", `${rate.name} ${rate.service}`);
+    const price = createTextElement("span", "shipping-option-price", money(rate.cost));
+    const detail = createTextElement("small", "shipping-option-detail", [rate.description, rate.etd ? `Estimasi ${rate.etd}` : ""].filter(Boolean).join(" · "));
+    button.append(title, price, detail);
+    button.addEventListener("click", () => {
+      selectedShipping = rate;
+      optionsNode.querySelectorAll(".shipping-option").forEach((option) => option.setAttribute("aria-pressed", String(option === button)));
+      updateShippingSummary();
+    });
+    fragment.append(button);
+  }
+  optionsNode.replaceChildren(fragment);
+  updateShippingSummary();
+}
+
 async function loadShippingQuotes(items) {
   if (!selectedDestination) return;
-  quoteController = new AbortController();
   const requestSequence = ++quoteSequence;
   const optionsNode = document.querySelector("[data-shipping-options]");
+  if (previewMode) {
+    const distanceFee = selectedDestination.id === "demo-jaksel" ? 7000 : 0;
+    const rates = [
+      { name: "JNE", code: "jne", service: "REG", cost: 12000 + distanceFee, description: "Tarif simulasi", etd: "2–3 hari" },
+      { name: "J&T", code: "jnt", service: "EZ", cost: 14000 + distanceFee, description: "Tarif simulasi", etd: "2–3 hari" },
+      { name: "SiCepat", code: "sicepat", service: "REG", cost: 15000 + distanceFee, description: "Tarif simulasi", etd: "2–3 hari" },
+      { name: "AnterAja", code: "anteraja", service: "Reguler", cost: 13000 + distanceFee, description: "Tarif simulasi", etd: "2–4 hari" },
+    ];
+    if (deliveryCoordinates) rates.push({ name: "Gojek", code: "gojek", service: "Same Day", cost: 22000, description: "Tarif simulasi dari titik peta", etd: "Hari ini" });
+    rates.sort((a, b) => a.cost - b.cost);
+    renderShippingRates(rates, optionsNode, requestSequence);
+    return;
+  }
+
+  quoteController = new AbortController();
   try {
     const response = await fetch(`${apiBaseUrl}/api/shipping/quotes`, {
       method: "POST",
@@ -230,34 +280,10 @@ async function loadShippingQuotes(items) {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || "Tarif ongkir belum berhasil dimuat.");
-    if (requestSequence !== quoteSequence) return;
     const rates = (Array.isArray(result.data) ? result.data : [])
       .filter((rate) => rate && Number.isSafeInteger(rate.cost) && rate.cost >= 0 && rate.code && rate.service)
       .sort((a, b) => a.cost - b.cost || String(a.name).localeCompare(String(b.name)));
-    if (!rates.length) {
-      optionsNode.replaceChildren(createTextElement("p", "form-hint", "Belum ada layanan kurir untuk tujuan ini."));
-      return;
-    }
-    selectedShipping = rates[0];
-    const fragment = document.createDocumentFragment();
-    for (const rate of rates) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "shipping-option";
-      button.setAttribute("aria-pressed", String(rate === selectedShipping));
-      const title = createTextElement("strong", "shipping-option-title", `${rate.name} ${rate.service}`);
-      const price = createTextElement("span", "shipping-option-price", money(rate.cost));
-      const detail = createTextElement("small", "shipping-option-detail", [rate.description, rate.etd ? `Estimasi ${rate.etd}` : ""].filter(Boolean).join(" · "));
-      button.append(title, price, detail);
-      button.addEventListener("click", () => {
-        selectedShipping = rate;
-        optionsNode.querySelectorAll(".shipping-option").forEach((option) => option.setAttribute("aria-pressed", String(option === button)));
-        updateShippingSummary();
-      });
-      fragment.append(button);
-    }
-    optionsNode.replaceChildren(fragment);
-    updateShippingSummary();
+    renderShippingRates(rates, optionsNode, requestSequence);
   } catch (error) {
     if (error.name === "AbortError" || requestSequence !== quoteSequence) return;
     optionsNode.replaceChildren(createTextElement("p", "form-hint is-error", error.message || "Tarif ongkir belum berhasil dimuat."));
@@ -274,10 +300,16 @@ if (destinationInput && destinationResults) {
     if (destinationController) destinationController.abort();
     destinationController = new AbortController();
     try {
-      const response = await fetch(`${apiBaseUrl}/api/shipping/destinations?search=${encodeURIComponent(query)}`, { signal: destinationController.signal });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Pencarian tujuan belum berhasil.");
-      const locations = Array.isArray(result.data) ? result.data : [];
+      let locations;
+      if (previewMode) {
+        const normalizedQuery = query.toLocaleLowerCase("id-ID");
+        locations = previewDestinations.filter((location) => location.label.toLocaleLowerCase("id-ID").includes(normalizedQuery));
+      } else {
+        const response = await fetch(`${apiBaseUrl}/api/shipping/destinations?search=${encodeURIComponent(query)}`, { signal: destinationController.signal });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || "Pencarian tujuan belum berhasil.");
+        locations = Array.isArray(result.data) ? result.data : [];
+      }
       destinationResults.replaceChildren();
       if (!locations.length) {
         destinationResults.append(createTextElement("p", "form-hint", "Tujuan tidak ditemukan. Coba nama kecamatan atau kelurahan."));
@@ -441,6 +473,26 @@ if (checkoutForm) {
       items: items.map(({ slug, quantity, customization }) => ({ slug, quantity, customization: customization || {} })),
     };
 
+    if (previewMode) {
+      const paymentReference = `DEMO-${Date.now().toString(36).toUpperCase()}`;
+      const success = document.querySelector("[data-order-success]");
+      const layout = document.querySelector("[data-checkout-layout]");
+      const proofForm = document.querySelector("[data-proof-form]");
+      success.hidden = false;
+      layout.hidden = true;
+      document.querySelector("[data-order-code]").textContent = paymentReference;
+      document.querySelector("[data-order-total]").textContent = money(currentSubtotal() + selectedShipping.cost);
+      document.querySelector("[data-order-message]").textContent = "Pesanan demo tersimpan di halaman ini saja. Tidak ada pesanan atau pembayaran yang dikirim ke toko.";
+      const deadlineNode = document.querySelector("[data-payment-deadline]");
+      if (deadlineNode) deadlineNode.textContent = "Mode demo: tidak ada pembayaran sungguhan.";
+      if (proofForm) {
+        proofForm.elements.payment_reference.value = paymentReference;
+        proofForm.elements.phone.value = payload.customer.phone;
+      }
+      saveCart([]);
+      return;
+    }
+
     if (!idempotencyKey) idempotencyKey = crypto.randomUUID();
     submitButton.disabled = true;
     showMessage(messageNode, "Menyimpan pesanan…");
@@ -508,6 +560,14 @@ if (proofForm) {
     }
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       showMessage(proofMessage, "Format bukti harus JPG, PNG, atau WebP.", true);
+      return;
+    }
+    if (previewMode) {
+      paymentProofSubmitted = true;
+      showMessage(proofMessage, "Bukti simulasi diterima di browser. File tidak diunggah.");
+      submitProofButton.textContent = "Bukti simulasi";
+      submitProofButton.disabled = true;
+      proofForm.elements.proof.disabled = true;
       return;
     }
     submitProofButton.disabled = true;
