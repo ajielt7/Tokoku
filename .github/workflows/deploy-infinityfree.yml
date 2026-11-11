@@ -1,0 +1,66 @@
+name: Build and deploy InfinityFree site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-infinityfree.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infinityfree-deploy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      SITE_URL: https://toqoku.gt.tc
+      PUBLIC_API_BASE_URL: https://ruma-api-production.ajielt7.workers.dev
+      CATALOG_API_URL: https://ruma-api-production.ajielt7.workers.dev/api/catalog
+      SEO_INDEXABLE: "false"
+      CONTENT_READY: "true"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build from production catalog
+        run: node frontend/src/scripts/build-site.mjs
+      - name: Check live catalog output
+        run: node frontend/src/scripts/check-release.mjs --preview
+      - name: Upload static site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: toqoku-infinityfree-site
+          path: frontend/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    if: vars.INFINITYFREE_DEPLOY_ENABLED == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download static site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: toqoku-infinityfree-site
+          path: frontend/dist/
+      - name: Upload site files to InfinityFree
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.INFINITYFREE_FTP_SERVER }}
+          username: ${{ secrets.INFINITYFREE_FTP_USERNAME }}
+          password: ${{ secrets.INFINITYFREE_FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: frontend/dist/
+          server-dir: htdocs/
+          log-level: minimal

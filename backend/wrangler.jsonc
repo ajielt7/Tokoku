@@ -67,7 +67,7 @@
       },
       "vars": {
         "APP_ENV": "production",
-        "ALLOWED_ORIGINS": "https://ajielt7.github.io",
+        "ALLOWED_ORIGINS": "https://ajielt7.github.io,https://toqoku.gt.tc",
         "RAJAONGKIR_ORIGIN_ID": "5052",
         "IMAGEKIT_URL_ENDPOINT": "https://ik.imagekit.io/ajielt7"
       },
