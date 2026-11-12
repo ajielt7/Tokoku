@@ -1,6 +1,6 @@
 const workerUrl = () => {
-  const value = Netlify.env.get("CLOUDFLARE_WORKER_URL")?.trim();
-  if (!value) throw new Error("CLOUDFLARE_WORKER_URL is not configured.");
+  const value = Netlify.env.get("CLOUDFLARE_WORKER_URL")?.trim()
+    || "https://ruma-api-production.ajielt7.workers.dev";
   const url = new URL(value);
   if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash || !["", "/"].includes(url.pathname)) {
     throw new Error("CLOUDFLARE_WORKER_URL must be a clean HTTPS base URL.");
