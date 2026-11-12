@@ -52,7 +52,7 @@ export default async (request, context) => {
     });
 
     const responseHeaders = new Headers(upstreamResponse.headers);
-    for (const name of ["connection", "content-length", "keep-alive", "transfer-encoding", "upgrade"]) {
+    for (const name of ["connection", "content-encoding", "content-length", "keep-alive", "transfer-encoding", "upgrade"]) {
       responseHeaders.delete(name);
     }
     responseHeaders.set("cache-control", "no-store");
