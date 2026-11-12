@@ -20,8 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SITE_URL: https://toqoku.gt.tc
-      PUBLIC_API_BASE_URL: https://ruma-api-production.ajielt7.workers.dev
-      CATALOG_API_URL: https://ruma-api-production.ajielt7.workers.dev/api/catalog
+      PUBLIC_API_BASE_URL: https://toqoku-api.netlify.app
+      CATALOG_API_URL: https://toqoku-api.netlify.app/api/catalog
       SEO_INDEXABLE: "false"
       CONTENT_READY: "true"
     steps:
@@ -64,3 +64,4 @@ jobs:
           local-dir: frontend/dist/
           server-dir: htdocs/
           log-level: minimal
+
