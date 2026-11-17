@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Build;
 
 import androidx.annotation.NonNull;
@@ -15,6 +16,9 @@ import com.google.firebase.messaging.RemoteMessage;
 
 public final class AdminFirebaseMessagingService extends FirebaseMessagingService {
     static final String CHANNEL_ID = "ruma_orders";
+    private static final String NOTIFICATION_PREFS = "admin_notifications";
+    private static final String UNREAD_COUNT = "unread_orders";
+    private static final int NOTIFICATION_ID = 10901;
 
     @Override
     public void onNewToken(@NonNull String token) {
@@ -23,12 +27,34 @@ public final class AdminFirebaseMessagingService extends FirebaseMessagingServic
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage message) {
-        RemoteMessage.Notification remoteNotification = message.getNotification();
-        String title = remoteNotification == null || remoteNotification.getTitle() == null
-                ? "Pesanan baru" : remoteNotification.getTitle();
-        String body = remoteNotification == null || remoteNotification.getBody() == null
-                ? "Ada pembaruan pesanan. Buka Ruma Admin." : remoteNotification.getBody();
-        showNotification(title, body, message.getData().get("order_code"));
+        String orderCode = message.getData().get("order_code");
+        String firstName = message.getData().get("customer_first_name");
+        if (firstName == null || firstName.trim().isEmpty()) firstName = "Pelanggan";
+        else firstName = firstName.trim().split("\\s+", 2)[0];
+
+        try {
+            MainActivity.syncOrdersCacheFromPush(this);
+        } catch (Exception ignored) {
+            // The next push or manual refresh can retry if the network is temporarily unavailable.
+        }
+
+        if (MainActivity.isAppVisible()) {
+            markAllRead(this);
+            MainActivity.refreshVisibleOrderListFromPush();
+            return;
+        }
+        SharedPreferences preferences = getSharedPreferences(NOTIFICATION_PREFS, MODE_PRIVATE);
+        int unread = preferences.getInt(UNREAD_COUNT, 0) + 1;
+        preferences.edit().putInt(UNREAD_COUNT, unread).apply();
+        String title = unread + " Pesanan Baru";
+        String body = firstName + (orderCode == null || orderCode.isEmpty() ? "" : " " + orderCode);
+        showNotification(title, body, orderCode);
+    }
+
+    static void markAllRead(Context context) {
+        context.getSharedPreferences(NOTIFICATION_PREFS, MODE_PRIVATE).edit().putInt(UNREAD_COUNT, 0).apply();
+        NotificationManager manager = context.getSystemService(NotificationManager.class);
+        if (manager != null) manager.cancel(NOTIFICATION_ID);
     }
 
     static void createChannel(Context context) {
@@ -56,6 +82,7 @@ public final class AdminFirebaseMessagingService extends FirebaseMessagingServic
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
                 .build();
-        manager.notify(orderCode == null ? (int) System.currentTimeMillis() : orderCode.hashCode(), notification);
+        manager.notify(NOTIFICATION_ID, notification);
     }
 }
+
