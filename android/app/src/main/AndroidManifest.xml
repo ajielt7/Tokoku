@@ -4,8 +4,10 @@
 
     <application
         android:allowBackup="false"
-        android:label="Ruma Admin"
+        android:icon="@mipmap/ic_launcher"
+        android:label="Ajielt7"
         android:networkSecurityConfig="@xml/network_security_config"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="false">
@@ -28,3 +30,4 @@
         </activity>
     </application>
 </manifest>
+
