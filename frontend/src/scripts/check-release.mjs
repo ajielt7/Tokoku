@@ -49,7 +49,14 @@ if (!previewMode) {
 
 let files = [];
 try { files = await walk(outputDirectory); } catch { fail("frontend/dist belum ada; jalankan build-site.mjs terlebih dahulu."); }
-const htmlFiles = files.filter((file) => file.endsWith(".html"));
+const googleVerificationFile = "google38392546284992d2.html";
+const googleVerificationContent = "google-site-verification: google38392546284992d2.html";
+if (!files.includes(googleVerificationFile)) {
+  fail(`File verifikasi Google tidak ditemukan: ${googleVerificationFile}.`);
+} else if ((await readFile(path.join(outputDirectory, googleVerificationFile), "utf8")).trim() !== googleVerificationContent) {
+  fail(`Isi file verifikasi Google tidak cocok: ${googleVerificationFile}.`);
+}
+const htmlFiles = files.filter((file) => file.endsWith(".html") && file !== googleVerificationFile);
 if (!htmlFiles.includes("index.html")) fail("Halaman beranda dist/index.html tidak ditemukan.");
 if (htmlFiles.length === 0) fail("Tidak ada halaman HTML yang dibangun.");
 
