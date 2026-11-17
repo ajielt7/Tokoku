@@ -8,7 +8,7 @@
     "youtube": null
   },
   "siteUrl": "https://zieus.gt.tc",
-  "apiBaseUrl": "https://ruma-api-production.ajielt7.workers.dev",
+  "apiBaseUrl": "https://toqoku-api.netlify.app",
   "indexable": false,
   "contentReady": true,
   "bankTransfer": {
