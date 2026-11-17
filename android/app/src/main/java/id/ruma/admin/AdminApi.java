@@ -91,6 +91,51 @@ final class AdminApi {
         return signedUrl;
     }
 
+    String getRefundProofUrl(String refundId) throws IOException {
+        JSONObject response = get("/api/admin/refunds/" + refundId + "/proof");
+        JSONObject data = response.optJSONObject("data");
+        String signedUrl = data == null ? null : data.optString("proof_url", null);
+        if (signedUrl == null || !signedUrl.startsWith("https://")) {
+            throw new IOException("Tautan bukti pengembalian tidak tersedia.");
+        }
+        return signedUrl;
+    }
+
+    JSONObject postRefundProof(String refundId, String mimeType, byte[] fileBytes) throws IOException {
+        String boundary = "RumaBoundary" + java.util.UUID.randomUUID().toString().replace("-", "");
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new URL(baseUrl + "/api/admin/refunds/" + refundId + "/proof").openConnection();
+            connection.setRequestMethod("POST");
+            connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+            connection.setReadTimeout(READ_TIMEOUT_MS);
+            connection.setInstanceFollowRedirects(false);
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("Authorization", "Bearer " + token);
+            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+            try (OutputStream output = connection.getOutputStream()) {
+                output.write(("--" + boundary + "\r\n" +
+                        "Content-Disposition: form-data; name=\"proof\"; filename=\"refund-proof\"\r\n" +
+                        "Content-Type: " + mimeType + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+                output.write(fileBytes);
+                output.write(("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+            }
+            int status = connection.getResponseCode();
+            InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
+            String responseBody = stream == null ? "{}" : readLimited(stream);
+            JSONObject response;
+            try { response = new JSONObject(responseBody); }
+            catch (JSONException exception) { throw new IOException("Respons server tidak dapat dibaca."); }
+            if (status < 200 || status >= 300) {
+                throw new ApiException(response.optString("message", "Unggah bukti gagal (HTTP " + status + ")."), status);
+            }
+            return response;
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
     private JSONObject request(String method, String path, JSONObject body) throws IOException {
         HttpURLConnection connection = null;
         try {
@@ -153,3 +198,4 @@ final class AdminApi {
         }
     }
 }
+
