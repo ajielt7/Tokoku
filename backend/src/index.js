@@ -8,7 +8,6 @@ const jsonHeaders = {
   "x-content-type-options": "nosniff",
 };
 const maxOrderBodyBytes = 16 * 1024;
-const orderCodeAlphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 const rajaOngkirBaseUrl = "https://rajaongkir.komerce.id/api/v1";
 const rajaOngkirCouriers = "jne:jnt:spx:sicepat:wahana:anteraja";
 const allowedRajaOngkirCouriers = new Set(rajaOngkirCouriers.split(":"));
@@ -130,7 +129,7 @@ function localCourierRate(route) {
     code: "gojek",
     name: "Gojek",
     service: "Same Day",
-    description: `${route.distanceKm} km Â· 4 km pertama Rp10.000, selanjutnya Rp2.500/km`,
+    description: `${route.distanceKm} km · 4 km pertama Rp10.000, selanjutnya Rp2.500/km`,
     cost: calculateLocalShipping(route.distanceMeters),
     etd: "Hari yang sama",
     route_distance_km: route.distanceKm,
@@ -262,11 +261,12 @@ function hasSupportedImageSignature(bytes, contentType) {
   return false;
 }
 
-async function uploadPrivatePaymentProof(file, paymentId, env) {
+async function uploadPrivatePaymentProof(file, paymentId, env, purpose = "payment") {
+  const folder = purpose === "refund" ? "/ruma/refund-proofs" : "/ruma/payment-proofs";
   if (env.APP_ENV === "test" && env.TEST_PAYMENT_PROOF_STORAGE === "memory") {
     const fileId = `test-${crypto.randomUUID()}`;
     const extension = file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
-    return { fileId, filePath: `/test/payment-proofs/${fileId}.${extension}` };
+    return { fileId, filePath: `/test/${purpose}-proofs/${fileId}.${extension}` };
   }
   if (!env.IMAGEKIT_PRIVATE_KEY && !(env.APP_ENV === "test" && env.TEST_PAYMENT_PROOF_STORAGE === "memory")) {
     const error = new Error("Penyimpanan bukti pembayaran belum dikonfigurasi.");
@@ -276,11 +276,11 @@ async function uploadPrivatePaymentProof(file, paymentId, env) {
   const extension = file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
   const form = new FormData();
   form.set("file", file, `proof-${paymentId}.${extension}`);
-  form.set("fileName", `proof-${paymentId}-${crypto.randomUUID()}.${extension}`);
-  form.set("folder", "/ruma/payment-proofs");
+  form.set("fileName", `${purpose}-proof-${paymentId}-${crypto.randomUUID()}.${extension}`);
+  form.set("folder", folder);
   form.set("isPrivateFile", "true");
   form.set("useUniqueFileName", "true");
-  form.set("tags", "ruma-payment-proof");
+  form.set("tags", `ruma-${purpose}-proof`);
   let response;
   try {
     response = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
@@ -411,7 +411,12 @@ async function enforceRateLimit(request, env, pathname) {
   const bindingName = rateLimitPolicy(pathname, request.method);
   if (!bindingName) return null;
   const limiter = env[bindingName];
-  const ipAddress = request.headers.get("cf-connecting-ip");
+  const proxySecret = request.headers.get("x-ruma-proxy-secret") ?? "";
+  const isTrustedNetlifyProxy = env.NETLIFY_PROXY_SECRET
+    && constantTimeEquals(proxySecret, env.NETLIFY_PROXY_SECRET);
+  const ipAddress = isTrustedNetlifyProxy
+    ? request.headers.get("x-ruma-client-ip")
+    : request.headers.get("cf-connecting-ip");
   if (!limiter || !ipAddress) {
     if (env.APP_ENV === "production") {
       return jsonResponse({ error: "rate_limit_not_configured", message: "Perlindungan request belum tersedia." }, 503);
@@ -433,7 +438,7 @@ async function enforceRateLimit(request, env, pathname) {
 }
 
 function validPaymentReference(value) {
-  return typeof value === "string" && /^RUMA-[A-Z0-9]{16}$/.test(value);
+  return typeof value === "string" && /^(?:\d{5}|RUMA-[A-Z0-9]{16})$/.test(value);
 }
 
 async function listAdminPayments(request, env, headers) {
@@ -472,13 +477,13 @@ async function requestOrderRefund(request, env, headers) {
   }
   try {
     const body = await readBoundedJson(request);
-    const orderCode = boundedText(body?.order_code, "Kode pesanan", 21, 21).toUpperCase();
+    const orderCode = boundedText(body?.order_code, "Kode pesanan", 5, 21).toUpperCase();
     const phone = boundedText(body?.phone, "Nomor telepon", 8, 24).replace(/\D/g, "");
     const note = boundedText(body?.note ?? "", "Catatan", 0, 300, false);
     if (!validOrderCode(orderCode) || phone.length < 8) throw inputError("Kode pesanan atau nomor telepon tidak valid.");
     const order = await env.DB.prepare(
       `SELECT o.id, o.customer_phone, o.order_status, o.production_status,
-              p.payment_status,
+              p.payment_status, p.proof_file_id,
               r.id AS refund_id, r.status AS refund_status
        FROM orders AS o
        LEFT JOIN payments AS p ON p.id = (
@@ -493,8 +498,8 @@ async function requestOrderRefund(request, env, headers) {
     if (order.production_status !== "pending") {
       return jsonResponse({ error: "refund_unavailable", message: "Produksi sudah dimulai. Hubungi admin melalui chat untuk koordinasi." }, 409, headers);
     }
-    if (order.payment_status !== "paid" || !["new", "accepted"].includes(order.order_status)) {
-      return jsonResponse({ error: "refund_unavailable", message: "Permintaan refund hanya tersedia untuk pesanan lunas yang belum mulai diproduksi." }, 409, headers);
+    if (order.payment_status !== "paid" || !order.proof_file_id || !["new", "accepted"].includes(order.order_status)) {
+      return jsonResponse({ error: "refund_unavailable", message: "Refund hanya tersedia jika bukti pembayaran pernah diunggah, pembayaran lunas, dan produksi belum dimulai." }, 409, headers);
     }
     if (order.refund_id) {
       return jsonResponse({ data: { status: order.refund_status }, message: "Permintaan pembatalan/refund sudah tercatat." }, 200, { ...headers, "cache-control": "no-store" });
@@ -509,6 +514,7 @@ async function requestOrderRefund(request, env, headers) {
            SELECT 1 FROM orders o JOIN payments p ON p.order_id = o.id
            WHERE o.id = ?2 AND o.order_status IN ('new', 'accepted')
              AND o.production_status = 'pending' AND p.payment_status = 'paid'
+             AND p.proof_file_id IS NOT NULL
          )`,
       ).bind(refundId, order.id, note, now),
       env.DB.prepare(
@@ -540,7 +546,10 @@ async function listAdminRefunds(request, env, headers) {
       `SELECT r.id AS refund_id, r.status AS refund_status, r.customer_note,
               r.admin_note, r.requested_at, r.approved_at, r.refund_due_at, r.processed_at,
               o.public_code AS order_code, o.customer_name, o.customer_phone,
-              o.order_status, o.production_status, p.amount, p.currency, p.payment_status
+              o.order_status, o.production_status, p.amount, p.currency, p.payment_status,
+              p.proof_uploaded_at AS payment_proof_uploaded_at,
+              r.proof_uploaded_at AS refund_proof_uploaded_at,
+              CASE WHEN r.proof_file_id IS NULL THEN 0 ELSE 1 END AS has_refund_proof
        FROM refund_requests r
        JOIN orders o ON o.id = r.order_id
        JOIN payments p ON p.order_id = o.id
@@ -648,7 +657,7 @@ async function updateAdminRefund(request, env, headers, refundId, action) {
 }
 
 function validOrderCode(value) {
-  return typeof value === "string" && /^RUMA-[A-Z0-9]{16}$/.test(value);
+  return typeof value === "string" && /^(?:\d{5}|RUMA-[A-Z0-9]{16})$/.test(value);
 }
 
 async function listAdminOrders(request, env, headers) {
@@ -658,7 +667,7 @@ async function listAdminOrders(request, env, headers) {
   const orderStatus = url.searchParams.get("order_status") ?? "";
   const paymentStatus = url.searchParams.get("payment_status") ?? "";
   const query = url.searchParams.get("q")?.trim() ?? "";
-  if (orderStatus && !["new", "accepted", "completed", "cancelled"].includes(orderStatus)) {
+  if (orderStatus && !["new", "accepted", "completed", "cancelled", "history"].includes(orderStatus)) {
     return jsonResponse({ error: "invalid_order_status", message: "Filter status pesanan tidak valid." }, 400, headers);
   }
   if (paymentStatus && !["pending", "paid", "failed", "refunded"].includes(paymentStatus)) {
@@ -667,7 +676,8 @@ async function listAdminOrders(request, env, headers) {
   if (query.length > 80) return jsonResponse({ error: "invalid_query", message: "Pencarian maksimal 80 karakter." }, 400, headers);
   const clauses = [];
   const bindings = [];
-  if (orderStatus) { bindings.push(orderStatus); clauses.push(`o.order_status = ?${bindings.length}`); }
+  if (orderStatus === "history") clauses.push("o.order_status IN ('completed', 'cancelled')");
+  else if (orderStatus) { bindings.push(orderStatus); clauses.push(`o.order_status = ?${bindings.length}`); }
   if (paymentStatus) { bindings.push(paymentStatus); clauses.push(`p.payment_status = ?${bindings.length}`); }
   if (query) {
     bindings.push(`%${query}%`);
@@ -707,16 +717,20 @@ async function getAdminOrder(request, env, headers, orderCode) {
               o.subtotal_amount, o.shipping_amount, o.total_amount, o.currency,
               o.order_status, o.production_status, o.shipping_destination_label,
               o.shipping_courier_name, o.shipping_service, o.shipping_distance_km, o.created_at,
-              o.payment_expires_at,
+              o.shipping_latitude, o.shipping_longitude, o.payment_expires_at,
               p.payment_reference, p.payment_status, p.amount AS payment_amount,
               p.proof_uploaded_at,
               CASE WHEN p.proof_file_id IS NULL THEN 0 ELSE 1 END AS has_payment_proof,
+              r.id AS refund_id, r.status AS refund_status,
+              r.proof_uploaded_at AS refund_proof_uploaded_at,
+              CASE WHEN r.proof_file_id IS NULL THEN 0 ELSE 1 END AS has_refund_proof,
               s.carrier, s.tracking_number, s.tracking_url, s.shipment_status,
               s.shipped_at, s.delivered_at
        FROM orders AS o
        LEFT JOIN payments AS p ON p.id = (
          SELECT p2.id FROM payments AS p2 WHERE p2.order_id = o.id ORDER BY p2.created_at DESC LIMIT 1
        )
+       LEFT JOIN refund_requests AS r ON r.order_id = o.id
        LEFT JOIN shipments AS s ON s.id = (
          SELECT s2.id FROM shipments AS s2 WHERE s2.order_id = o.id ORDER BY s2.created_at DESC LIMIT 1
        )
@@ -757,7 +771,13 @@ async function getAdminOrder(request, env, headers, orderCode) {
       };
     });
     const { id, ...safeOrder } = order;
-    return jsonResponse({ data: { ...safeOrder, has_payment_proof: Boolean(order.has_payment_proof), items, history: historyResult.results } }, 200, { ...headers, "cache-control": "no-store" });
+    return jsonResponse({ data: {
+      ...safeOrder,
+      has_payment_proof: Boolean(order.has_payment_proof),
+      has_refund_proof: Boolean(order.has_refund_proof),
+      items,
+      history: historyResult.results,
+    } }, 200, { ...headers, "cache-control": "no-store" });
   } catch (error) {
     logDatabaseError("get_admin_order", error);
     return jsonResponse({ error: "internal_server_error" }, 500, headers);
@@ -876,7 +896,9 @@ async function updateAdminShipment(request, env, headers, orderCode) {
        ) WHERE o.public_code = ?1 LIMIT 1`,
     ).bind(orderCode).first();
     if (!order) return jsonResponse({ error: "not_found" }, 404, headers);
-    if (order.payment_status !== "paid" || order.order_status !== "accepted" || order.production_status !== "completed") {
+    const readyToShip = order.payment_status === "paid" && order.order_status === "accepted" && order.production_status === "completed";
+    const completedOrder = order.payment_status === "paid" && order.order_status === "completed" && order.production_status === "completed";
+    if (!readyToShip && !completedOrder) {
       return jsonResponse({ error: "order_not_ready_to_ship", message: "Pesanan harus lunas, diterima, dan produksinya selesai sebelum dikirim." }, 409, headers);
     }
 
@@ -891,7 +913,8 @@ async function updateAdminShipment(request, env, headers, orderCode) {
       delivered: [],
     };
     const previousStatus = existing?.shipment_status ?? "pending";
-    if (!transitionMap[previousStatus]?.includes(nextStatus)) {
+    const isDeliveredMetadataEdit = completedOrder && previousStatus === "delivered" && nextStatus === "delivered";
+    if (completedOrder ? !isDeliveredMetadataEdit : !transitionMap[previousStatus]?.includes(nextStatus)) {
       return jsonResponse({ error: "invalid_shipment_transition", message: `Status ${previousStatus} tidak dapat diubah menjadi ${nextStatus}.` }, 409, headers);
     }
 
@@ -918,7 +941,7 @@ async function updateAdminShipment(request, env, headers, orderCode) {
          WHERE EXISTS (SELECT 1 FROM shipments WHERE id = ?6 AND shipment_status = ?4 AND updated_at = ?7)`,
     ).bind(
       crypto.randomUUID(), order.id, previousStatus, nextStatus,
-      note || `${carrier} Â· resi ${trackingNumber}`, shipmentId, changedAt,
+      note || `${carrier} · resi ${trackingNumber}`, shipmentId, changedAt,
     );
     const result = await env.DB.batch([shipmentStatement, historyStatement]);
     if (result[0]?.meta?.changes !== 1 || result[1]?.meta?.changes !== 1) {
@@ -938,7 +961,7 @@ async function getPublicOrderStatus(request, env, headers) {
   }
   try {
     const body = await readBoundedJson(request);
-    const orderCode = boundedText(body?.order_code, "Kode pesanan", 21, 21).toUpperCase();
+    const orderCode = boundedText(body?.order_code, "Kode pesanan", 5, 21).toUpperCase();
     const phone = boundedText(body?.phone, "Nomor telepon", 8, 24).replace(/\D/g, "");
     if (!validOrderCode(orderCode) || phone.length < 8) throw inputError("Kode pesanan atau nomor telepon tidak valid.");
     const order = await env.DB.prepare(
@@ -947,6 +970,7 @@ async function getPublicOrderStatus(request, env, headers) {
               r.status AS refund_status, r.requested_at AS refund_requested_at,
               r.approved_at AS refund_approved_at, r.refund_due_at,
               r.processed_at AS refund_processed_at,
+              r.proof_uploaded_at AS refund_proof_uploaded_at,
               s.carrier, s.tracking_number, s.tracking_url, s.shipment_status,
               s.shipped_at, s.delivered_at
        FROM orders AS o
@@ -973,6 +997,7 @@ async function getPublicOrderStatus(request, env, headers) {
       && !order.proof_uploaded_at
       && (!order.payment_expires_at || Date.parse(order.payment_expires_at) <= Date.now());
     const canRequestRefund = order.payment_status === "paid"
+      && Boolean(order.proof_uploaded_at)
       && order.production_status === "pending"
       && ["new", "accepted"].includes(order.order_status)
       && !order.refund_status;
@@ -1064,9 +1089,14 @@ async function sendAdminNewOrderNotification(env, order) {
         headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
         body: JSON.stringify({ message: {
           token,
-          notification: { title: "Pesanan baru", body: `${order.public_code} Â· ${new Intl.NumberFormat("id-ID").format(order.total_amount)} rupiah` },
-          data: { order_code: order.public_code },
-          android: { priority: "high", notification: { channel_id: "ruma_orders" } },
+          // Data-only push lets Android refresh its encrypted order cache and
+          // compose the aggregated unread-count notification itself.
+          data: {
+            event: "new_order",
+            order_code: String(order.public_code),
+            customer_first_name: String(order.customer_name || "Pelanggan").trim().split(/\s+/)[0],
+          },
+          android: { priority: "high" },
         } }),
         signal: AbortSignal.timeout(10_000),
       });
@@ -1201,6 +1231,89 @@ async function getAdminPaymentProof(request, env, headers, paymentReference) {
   } catch (error) {
     logDatabaseError("get_admin_payment_proof", error);
     return jsonResponse({ error: "internal_server_error" }, 500, headers);
+  }
+}
+
+async function getAdminRefundProof(request, env, headers, refundId) {
+  const authError = adminAuthError(request, env, headers);
+  if (authError) return authError;
+  if (!/^[0-9a-f-]{36}$/i.test(refundId)) return jsonResponse({ error: "not_found" }, 404, headers);
+  try {
+    const refund = await env.DB.prepare(
+      `SELECT r.id AS refund_id, r.status AS refund_status, r.proof_file_path,
+              r.proof_uploaded_at, o.public_code AS order_code
+       FROM refund_requests r JOIN orders o ON o.id = r.order_id
+       WHERE r.id = ?1 LIMIT 1`,
+    ).bind(refundId).first();
+    if (!refund || !refund.proof_file_path) return jsonResponse({ error: "proof_not_found" }, 404, headers);
+    const signed = await buildImageKitSignedUrl(refund.proof_file_path, env);
+    if (!signed) return jsonResponse({ error: "imagekit_delivery_not_configured", message: "URL aman ImageKit belum dikonfigurasi." }, 503, headers);
+    return jsonResponse({ data: { ...refund, proof_url: signed.url, proof_url_expires_at: signed.expires_at } }, 200, { ...headers, "cache-control": "no-store" });
+  } catch (error) {
+    logDatabaseError("get_admin_refund_proof", error);
+    return jsonResponse({ error: "internal_server_error" }, 500, headers);
+  }
+}
+
+async function uploadAdminRefundProof(request, env, headers, refundId) {
+  const authError = adminAuthError(request, env, headers);
+  if (authError) return authError;
+  if (!/^[0-9a-f-]{36}$/i.test(refundId)) return jsonResponse({ error: "not_found" }, 404, headers);
+  const contentLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > maxPaymentProofBytes + 16 * 1024) {
+    return jsonResponse({ error: "file_too_large", message: "Ukuran bukti maksimal 5 MB." }, 413, headers);
+  }
+  if (!env.IMAGEKIT_PRIVATE_KEY) return jsonResponse({ error: "proof_storage_not_configured", message: "Penyimpanan bukti belum dikonfigurasi." }, 503, headers);
+  try {
+    if (!request.headers.get("content-type")?.toLowerCase().startsWith("multipart/form-data")) {
+      return jsonResponse({ error: "content_type_required", message: "Pilih gambar bukti pengembalian dana." }, 415, headers);
+    }
+    const form = await request.formData();
+    const proof = form.get("proof");
+    if (!(proof instanceof File) || proof.size < 1 || proof.size > maxPaymentProofBytes) {
+      return jsonResponse({ error: "invalid_file", message: "Pilih gambar maksimal 5 MB." }, 400, headers);
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(proof.type)) {
+      return jsonResponse({ error: "invalid_file_type", message: "Format harus JPG, PNG, atau WebP." }, 400, headers);
+    }
+    const refund = await env.DB.prepare(
+      `SELECT r.order_id, r.status, r.proof_file_id,
+              o.order_status, p.payment_status, p.proof_file_id AS payment_proof_file_id
+       FROM refund_requests r JOIN orders o ON o.id = r.order_id
+       JOIN payments p ON p.order_id = o.id
+       WHERE r.id = ?1 LIMIT 1`,
+    ).bind(refundId).first();
+    if (!refund) return jsonResponse({ error: "not_found" }, 404, headers);
+    if (refund.status !== "processed" || refund.order_status !== "cancelled" || refund.payment_status !== "refunded" || !refund.payment_proof_file_id) {
+      return jsonResponse({ error: "refund_not_complete", message: "Bukti refund dapat diunggah setelah pengembalian dana selesai dan tercatat." }, 409, headers);
+    }
+    if (refund.proof_file_id) return jsonResponse({ error: "proof_already_uploaded", message: "Bukti pengembalian dana sudah tersimpan." }, 409, headers);
+    const bytes = new Uint8Array(await proof.arrayBuffer());
+    if (!hasSupportedImageSignature(bytes, proof.type)) {
+      return jsonResponse({ error: "invalid_image", message: "Isi file tidak cocok dengan format gambar yang dipilih." }, 400, headers);
+    }
+    const storedFile = await uploadPrivatePaymentProof(proof, refundId, env, "refund");
+    const uploadedAt = new Date().toISOString();
+    const result = await env.DB.batch([
+      env.DB.prepare(
+        `UPDATE refund_requests SET proof_file_id = ?1, proof_file_path = ?2,
+           proof_uploaded_at = ?3, updated_at = ?3
+         WHERE id = ?4 AND status = 'processed' AND proof_file_id IS NULL`,
+      ).bind(storedFile.fileId, storedFile.filePath, uploadedAt, refundId),
+      env.DB.prepare(
+        `INSERT INTO order_status_history (id, order_id, status_type, previous_status, new_status, actor_type, note)
+         SELECT ?1, ?2, 'payment', 'refunded', 'refund_proof_uploaded', 'admin', 'Bukti pengembalian dana diunggah admin'
+         WHERE EXISTS (SELECT 1 FROM refund_requests WHERE id = ?3 AND proof_file_id = ?4 AND proof_uploaded_at = ?5)`,
+      ).bind(crypto.randomUUID(), refund.order_id, refundId, storedFile.fileId, uploadedAt),
+    ]);
+    if (result[0]?.meta?.changes !== 1 || result[1]?.meta?.changes !== 1) {
+      await deleteImageKitFile(storedFile.fileId, env);
+      return jsonResponse({ error: "proof_upload_conflict", message: "Status berubah. Muat ulang pesanan lalu coba lagi." }, 409, headers);
+    }
+    return jsonResponse({ data: { refund_id: refundId, proof_received: true }, message: "Bukti pengembalian dana tersimpan." }, 201, { ...headers, "cache-control": "no-store" });
+  } catch (error) {
+    logDatabaseError("upload_admin_refund_proof", error);
+    return jsonResponse({ error: "internal_server_error", message: "Bukti refund belum tersimpan. Coba lagi." }, 500, headers);
   }
 }
 
@@ -1439,9 +1552,13 @@ function validateCustomization(fields, values) {
 }
 
 function generateOrderCode() {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  const suffix = [...bytes].map((byte) => orderCodeAlphabet[byte & 31]).join("");
-  return `RUMA-${suffix}`;
+  const range = 100000;
+  const limit = Math.floor(0x100000000 / range) * range;
+  let random;
+  do {
+    random = crypto.getRandomValues(new Uint32Array(1))[0];
+  } while (random >= limit);
+  return String(random % range).padStart(5, "0");
 }
 
 function orderResult(order, status = 201, headers = {}) {
@@ -1554,14 +1671,14 @@ async function createOrder(request, env, origin, executionContext) {
     const destinationLabel = boundedText(body.shipping?.destination_label, "Tujuan pengiriman", 3, 180);
     const courierCode = boundedText(body.shipping?.courier_code, "Kurir", 2, 24).toLowerCase();
     const shippingService = boundedText(body.shipping?.service, "Layanan kurir", 1, 80);
+    const shippingLatitude = Number(body.shipping?.latitude);
+    const shippingLongitude = Number(body.shipping?.longitude);
     if (!/^\d{1,12}$/.test(destinationId)) throw inputError("Pilih tujuan pengiriman dari hasil pencarian.");
+    if (!validCoordinates(shippingLatitude, shippingLongitude)) throw inputError("Tandai titik alamat penerima di peta sebelum membuat pesanan.");
     let selectedRate = null;
     let route = null;
     if (courierCode === "gojek") {
-      const latitude = Number(body.shipping?.latitude);
-      const longitude = Number(body.shipping?.longitude);
-      if (!validCoordinates(latitude, longitude)) throw inputError("Pasang pin tujuan di peta untuk memilih Gojek.");
-      route = await getRouteDistance(latitude, longitude);
+      route = await getRouteDistance(shippingLatitude, shippingLongitude);
       selectedRate = localCourierRate(route);
       if (!selectedRate || selectedRate.service !== shippingService) {
         throw inputError("Gojek Same Day hanya tersedia bila rute jalan kurang dari 30 km. Hitung ulang ongkir.");
@@ -1574,7 +1691,16 @@ async function createOrder(request, env, origin, executionContext) {
     const total = subtotal + selectedRate.cost;
     if (!Number.isSafeInteger(total)) throw inputError("Total pesanan terlalu besar.");
     const orderId = crypto.randomUUID();
-    const orderCode = generateOrderCode();
+    let orderCode = "";
+    for (let attempt = 0; attempt < 20 && !orderCode; attempt += 1) {
+      const candidate = generateOrderCode();
+      const existingCode = await env.DB.prepare(
+        `SELECT 1 AS found FROM orders WHERE public_code = ?1
+         UNION ALL SELECT 1 AS found FROM payments WHERE payment_reference = ?1 LIMIT 1`,
+      ).bind(candidate).first();
+      if (!existingCode) orderCode = candidate;
+    }
+    if (!orderCode) throw new Error("Could not allocate a unique five-digit order code.");
     const paymentExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const statements = [
       env.DB.prepare(
@@ -1583,8 +1709,8 @@ async function createOrder(request, env, origin, executionContext) {
            customer_email, shipping_address, shipping_destination_id,
            shipping_destination_label, shipping_courier_code, shipping_courier_name,
            shipping_service, shipping_distance_km, subtotal_amount, shipping_amount, total_amount,
-           currency, customer_note, payment_expires_at
-         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, 'IDR', ?17, ?18)`,
+           currency, customer_note, payment_expires_at, shipping_latitude, shipping_longitude
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, 'IDR', ?17, ?18, ?19, ?20)`,
       ).bind(
         orderId,
         orderCode,
@@ -1604,6 +1730,8 @@ async function createOrder(request, env, origin, executionContext) {
         total,
         customer.customerNote,
         paymentExpiresAt,
+        shippingLatitude,
+        shippingLongitude,
       ),
     ];
 
@@ -1667,7 +1795,11 @@ async function createOrder(request, env, origin, executionContext) {
     ).bind(crypto.randomUUID(), orderId));
 
     await env.DB.batch(statements);
-    const notification = sendAdminNewOrderNotification(env, { public_code: orderCode, total_amount: total });
+    const notification = sendAdminNewOrderNotification(env, {
+      public_code: orderCode,
+      customer_name: customer.customerName,
+      total_amount: total,
+    });
     if (executionContext?.waitUntil) executionContext.waitUntil(notification);
     else void notification;
     return orderResult({
@@ -1751,6 +1883,7 @@ export default {
     if (rateLimitResponse) return rateLimitResponse;
     const adminProofMatch = pathname.match(/^\/api\/admin\/payments\/([^/]+)\/proof$/);
     const adminReviewMatch = pathname.match(/^\/api\/admin\/payments\/([^/]+)\/review$/);
+    const adminRefundProofMatch = pathname.match(/^\/api\/admin\/refunds\/([0-9a-f-]{36})\/proof$/i);
     const adminRefundActionMatch = pathname.match(/^\/api\/admin\/refunds\/([0-9a-f-]{36})\/(approve|process)$/i);
     const adminShipmentMatch = pathname.match(/^\/api\/admin\/orders\/([^/]+)\/shipment$/);
     const adminGenerateProductionFileMatch = pathname.match(/^\/api\/admin\/orders\/([^/]+)\/items\/([^/]+)\/production-files\/dxf$/);
@@ -1801,6 +1934,16 @@ export default {
       const origin = getAllowedOrigin(request, env);
       if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
       return listAdminRefunds(request, env, corsHeaders(origin));
+    }
+    if (adminRefundProofMatch && request.method === "GET") {
+      const origin = getAllowedOrigin(request, env);
+      if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
+      return getAdminRefundProof(request, env, corsHeaders(origin), adminRefundProofMatch[1]);
+    }
+    if (adminRefundProofMatch && request.method === "POST") {
+      const origin = getAllowedOrigin(request, env);
+      if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
+      return uploadAdminRefundProof(request, env, corsHeaders(origin), adminRefundProofMatch[1]);
     }
     if (adminRefundActionMatch && request.method === "POST") {
       const origin = getAllowedOrigin(request, env);
