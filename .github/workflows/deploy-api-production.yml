@@ -1,12 +1,6 @@
 name: Deploy Cloudflare API production
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "backend/src/**"
-      - "backend/wrangler.jsonc"
-      - ".github/workflows/deploy-api-production.yml"
   workflow_dispatch:
 
 permissions:
