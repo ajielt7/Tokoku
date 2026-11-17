@@ -67,6 +67,7 @@
       },
       "vars": {
         "APP_ENV": "production",
+        // Public storefront origin for production browser requests.
         "ALLOWED_ORIGINS": "https://ajielt7.github.io,https://zieus.gt.tc",
         "RAJAONGKIR_ORIGIN_ID": "5052",
         "IMAGEKIT_URL_ENDPOINT": "https://ik.imagekit.io/ajielt7"
