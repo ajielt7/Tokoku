@@ -514,4 +514,5 @@ if (site.indexable) {
 }
 
 await copyAssetFiles(path.join(sourceDirectory, "assets"), path.join(outputDirectory, "assets"));
+await copyAssetFiles(path.join(sourceDirectory, "static"), outputDirectory);
 console.log(`Situs statis dibuat dari API (${catalog.categories.length} kategori, ${catalog.products.length} produk).`);
