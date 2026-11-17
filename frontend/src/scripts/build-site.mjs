@@ -104,6 +104,22 @@ function addNoIndex(html) {
   return html.replace("</head>", '    <meta name="robots" content="noindex,nofollow">\n  </head>');
 }
 
+function addTawkWidget(html) {
+  if (html.includes("embed.tawk.to/6afc63a231f8653cc3bb52ac/1k7kuad8o")) return html;
+  const widget = `<script type="text/javascript">
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+(function(){
+var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+s1.async=true;
+s1.src='https://embed.tawk.to/6afc63a231f8653cc3bb52ac/1k7kuad8o';
+s1.charset='UTF-8';
+s1.setAttribute('crossorigin','*');
+s0.parentNode.insertBefore(s1,s0);
+})();
+</script>`;
+  return html.replace("</body>", `  ${widget}\n</body>`);
+}
+
 function formatPrice(amount) {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -369,7 +385,7 @@ const homeSeo = addSeo(homeHtml, {
   pathname: "/",
   breadcrumbs: [{ name: "Beranda", path: "/" }],
 });
-await writeFile(path.join(outputDirectory, "index.html"), homeSeo, "utf8");
+await writeFile(path.join(outputDirectory, "index.html"), addTawkWidget(homeSeo), "utf8");
 
 for (const category of catalog.categories) {
   const categoryProducts = catalog.products.filter((product) => product.category === category.slug);
@@ -402,7 +418,7 @@ for (const category of catalog.categories) {
   });
   const destination = path.join(outputDirectory, "kategori", category.slug);
   await mkdir(destination, { recursive: true });
-  await writeFile(path.join(destination, "index.html"), seoHtml, "utf8");
+  await writeFile(path.join(destination, "index.html"), addTawkWidget(seoHtml), "utf8");
 }
 
 for (const product of catalog.products) {
@@ -470,7 +486,7 @@ for (const product of catalog.products) {
   });
   const destination = path.join(outputDirectory, "produk", product.slug);
   await mkdir(destination, { recursive: true });
-  await writeFile(path.join(destination, "index.html"), seoHtml, "utf8");
+  await writeFile(path.join(destination, "index.html"), addTawkWidget(seoHtml), "utf8");
 }
 
 for (const [slug, template] of [["keranjang", cartTemplate], ["checkout", checkoutTemplate], ["lacak-pesanan", trackingTemplate]]) {
@@ -493,7 +509,7 @@ for (const [slug, template] of [["keranjang", cartTemplate], ["checkout", checko
   });
   const destination = path.join(outputDirectory, slug);
   await mkdir(destination, { recursive: true });
-  await writeFile(path.join(destination, "index.html"), addNoIndex(html), "utf8");
+  await writeFile(path.join(destination, "index.html"), addTawkWidget(addNoIndex(html)), "utf8");
 }
 
 const publicPages = [
