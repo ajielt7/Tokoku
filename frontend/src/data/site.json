@@ -9,7 +9,7 @@
   },
   "siteUrl": "https://zieus.gt.tc",
   "apiBaseUrl": "https://toqoku-api.netlify.app",
-  "indexable": false,
+  "indexable": true,
   "contentReady": true,
   "bankTransfer": {
     "bankName": "SEA BANK",
