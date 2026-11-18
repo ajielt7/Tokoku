@@ -27,10 +27,10 @@ if (!/^\d{8,15}$/.test(site.whatsappNumber || "")) {
 }
 const whatsappLink = `https://wa.me/${site.whatsappNumber}?${new URLSearchParams({ text: "Halo Toqoku, saya ingin bertanya tentang produk." })}`;
 const socialPlatforms = {
-  facebook: { label: "Facebook", domain: "facebook.com", icon: "fa-facebook-f" },
-  instagram: { label: "Instagram", domain: "instagram.com", icon: "fa-instagram" },
-  tiktok: { label: "TikTok", domain: "tiktok.com", icon: "fa-tiktok" },
-  youtube: { label: "YouTube", domain: "youtube.com", icon: "fa-youtube" },
+  facebook: { label: "Facebook", domain: "facebook.com", icon: "facebook" },
+  instagram: { label: "Instagram", domain: "instagram.com", icon: "instagram" },
+  tiktok: { label: "TikTok", domain: "tiktok.com", icon: "tiktok" },
+  youtube: { label: "YouTube", domain: "youtube.com", icon: "youtube" },
 };
 const socialLinks = Object.entries(socialPlatforms).flatMap(([key, platform]) => {
   const value = site.socialLinks?.[key];
@@ -40,7 +40,7 @@ const socialLinks = Object.entries(socialPlatforms).flatMap(([key, platform]) =>
   if (url.protocol !== "https:" || !(url.hostname === platform.domain || url.hostname.endsWith(`.${platform.domain}`))) {
     throw new Error(`URL ${platform.label} harus berasal dari ${platform.domain}.`);
   }
-  return [`<a href="${escapeHtml(url.href)}" aria-label="${platform.label} Toqoku" target="_blank" rel="noopener noreferrer"><i class="fa-brands ${platform.icon}" aria-hidden="true"></i></a>`];
+  return [`<a href="${escapeHtml(url.href)}" aria-label="${platform.label} Toqoku" target="_blank" rel="noopener noreferrer">${iconSvg(platform.icon)}</a>`];
 }).join("");
 const socialLinksMarkup = socialLinks ? `<nav class="footer-social" aria-label="Media sosial Toqoku">${socialLinks}</nav>` : "";
 const catalogApiUrl = process.env.CATALOG_API_URL || "http://127.0.0.1:8787/api/catalog";
@@ -57,8 +57,46 @@ function escapeHtml(value) {
   })[character]);
 }
 
+function iconSvg(name, extraClass = "") {
+  const icons = {
+    "arrow-right": '<path d="M4 12h15M13 5l7 7-7 7"/>',
+    "arrow-up-right-from-square": '<path d="M14 4h6v6M20 4 10 14"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/>',
+    "bag-shopping": '<path d="M5 8h14l1 13H4L5 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/>',
+    bars: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+    xmark: '<path d="m6 6 12 12M18 6 6 18"/>',
+    "circle-info": '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+    house: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H5a2 2 0 0 1-2-2V10Z"/>',
+    "magnifying-glass": '<circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/>',
+    "pen-to-square": '<path d="M13 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m11 13 9-9 3 3-9 9-4 1 1-4Z"/>',
+    "ruler-combined": '<path d="M3 7V3h18v18h-4V7H3Z"/><path d="M7 3v4M11 3v4M15 3v4M17 11h4M17 15h4M17 19h4"/>',
+    whatsapp: '<path d="M20.5 11.6a8.6 8.6 0 0 1-12.7 7.6L3 20.5l1.3-4.6a8.6 8.6 0 1 1 16.2-4.3Z"/><path d="M8.2 7.6c-.5.2-.9.8-.9 1.5 0 2.1 3.4 5.8 5.5 6.5.7.2 1.4-.1 1.8-.6l.7-1-2.5-1.3-.9 1c-1.1-.5-2-1.4-2.5-2.5l.8-.9-1.2-2.7-.8 0Z"/>',
+    facebook: '<path d="M13.8 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.5 1.6-1.5H17V4a17 17 0 0 0-2.3-.1c-2.3 0-3.8 1.4-3.8 4V10H8.4v3h2.5v8a10 10 0 1 1 2.9 0Z"/>',
+    instagram: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/>',
+    tiktok: '<path d="M14 3h3c.2 2 1.4 3.4 4 3.7v3.1a9 9 0 0 1-4-1.3v6.8a6.3 6.3 0 1 1-6.3-6.3c.4 0 .8 0 1.2.1v3.3a3.1 3.1 0 1 0 1.9 2.9V3Z"/>',
+    youtube: '<path d="M22 8a3 3 0 0 0-2.1-2.1C18 5.4 12 5.4 12 5.4s-6 0-7.9.5A3 3 0 0 0 2 8a31 31 0 0 0-.5 4 31 31 0 0 0 .5 4 3 3 0 0 0 2.1 2.1c1.9.5 7.9.5 7.9.5s6 0 7.9-.5A3 3 0 0 0 22 16a31 31 0 0 0 .5-4 31 31 0 0 0-.5-4Z"/><path d="m10 15 5-3-5-3v6Z"/>',
+  };
+  const strokeIcons = new Set(["arrow-right", "arrow-up-right-from-square", "circle-info", "magnifying-glass", "pen-to-square", "ruler-combined", "whatsapp", "instagram"]);
+  const stroke = strokeIcons.has(name) ? ' fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"' : ' fill="currentColor"';
+  return `<svg class="icon${extraClass ? ` ${extraClass}` : ""}" viewBox="0 0 24 24"${stroke} aria-hidden="true" focusable="false">${icons[name] || ""}</svg>`;
+}
+
+const iconTokens = {
+  ICON_ARROW_RIGHT: iconSvg("arrow-right"),
+  ICON_ARROW_UP_RIGHT_FROM_SQUARE: iconSvg("arrow-up-right-from-square"),
+  ICON_BAG_SHOPPING: iconSvg("bag-shopping"),
+  ICON_MAGNIFYING_GLASS: iconSvg("magnifying-glass"),
+  ICON_SEARCH_FIELD: iconSvg("magnifying-glass", "search-field-icon"),
+  ICON_XMARK: iconSvg("xmark"),
+  ICON_RULER_BENEFIT: iconSvg("ruler-combined", "benefit-icon"),
+  ICON_EDIT_BENEFIT: iconSvg("pen-to-square", "benefit-icon"),
+  ICON_INFO_BENEFIT: iconSvg("circle-info", "benefit-icon"),
+  ICON_HOUSE: iconSvg("house"),
+  ICON_WHATSAPP: iconSvg("whatsapp"),
+};
+
 function replaceTokens(template, values) {
   const rendered = template.replace(/{{([A-Z_]+)}}/g, (_, key) => {
+    if (key in iconTokens) return iconTokens[key];
     if (!(key in values)) throw new Error(`Data template tidak tersedia: ${key}`);
     return values[key];
   });
@@ -123,7 +161,7 @@ s0.parentNode.insertBefore(s1,s0);
 function addMobileNavigation(html) {
   if (html.includes('class="menu-toggle"')) return html;
   const nav = '<nav class="main-nav" aria-label="Navigasi utama">';
-  const menuButton = '<button class="menu-toggle" type="button" aria-label="Buka menu" aria-controls="main-navigation" aria-expanded="false"><i class="fa-solid fa-bars" aria-hidden="true"></i></button>\n';
+  const menuButton = `<button class="menu-toggle" type="button" aria-label="Buka menu" aria-controls="main-navigation" aria-expanded="false">${iconSvg("bars")}</button>\n`;
   return html.replace(nav, `${menuButton}<nav id="main-navigation" class="main-nav" aria-label="Navigasi utama">`);
 }
 
@@ -175,7 +213,7 @@ function productCard(product, prefix) {
   const productForMedia = { ...product, link };
   return `<article class="product-card">
     ${productMedia(productForMedia)}
-    <div class="product-info"><div><h3><a href="${link}">${escapeHtml(product.name)}</a></h3><p>${escapeHtml(product.customization || "Produk custom")} · ${formatPrice(product.price_amount)}</p></div><a class="round-link" href="${link}" aria-label="Lihat ${escapeHtml(product.name)}"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></div>
+    <div class="product-info"><div><h3><a href="${link}">${escapeHtml(product.name)}</a></h3><p>${escapeHtml(product.customization || "Produk custom")} · ${formatPrice(product.price_amount)}</p></div><a class="round-link" href="${link}" aria-label="Lihat ${escapeHtml(product.name)}">${iconSvg("arrow-up-right-from-square")}</a></div>
   </article>`;
 }
 
@@ -191,13 +229,14 @@ function featuredProductCard(idea, index) {
   const image = idea.image.replace(/w=640&q=60/, index === 0 ? "w=720&q=65" : "w=640&q=60");
   const alt = `Foto inspirasi Unsplash untuk ${idea.title}; bukan foto produk Toqoku.`;
   const loading = index === 0 ? "eager" : "lazy";
-  const priority = index === 0 ? ' fetchpriority="high"' : "";
+  const sourceSet = `${image.replace(/w=\d+&q=\d+/, "w=480&q=55")} 480w, ${image} ${index === 0 ? 720 : 640}w`;
+  const priority = index === 0 ? ' fetchpriority="high"' : ' fetchpriority="low"';
   return `<article class="featured-tile featured-tile-${index % 2 === 0 ? "green" : "orange"}">
     <a class="featured-tile-link" href="#produk" aria-label="Lihat katalog: ${escapeHtml(idea.title)}">
-      <img class="featured-tile-photo" src="${escapeHtml(image)}" alt="${escapeHtml(alt)}" width="${index === 0 ? 720 : 640}" height="${index === 0 ? 880 : 782}" loading="${loading}" decoding="async"${priority}>
+      <img class="featured-tile-photo" src="${escapeHtml(image)}" srcset="${escapeHtml(sourceSet)}" sizes="(max-width: 620px) 82vw, 25vw" alt="${escapeHtml(alt)}" width="${index === 0 ? 720 : 640}" height="${index === 0 ? 880 : 782}" loading="${loading}" decoding="async"${priority}>
       <span class="featured-tile-shade" aria-hidden="true"></span>
       <span class="featured-tile-copy"><span class="featured-tile-kicker">Inspirasi custom</span><strong>${escapeHtml(idea.title)}</strong><span class="featured-tile-detail">${escapeHtml(idea.detail)}</span></span>
-      <span class="featured-tile-arrow" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span>
+      <span class="featured-tile-arrow" aria-hidden="true">${iconSvg("arrow-right")}</span>
     </a>
   </article>`;
 }
@@ -370,8 +409,9 @@ const availableCategorySlugs = new Set(catalog.categories.map((category) => cate
 const categoryTiles = categoryShowcase.map((category, index) => {
   const routeSlug = category.routeSlug || category.slug;
   const href = availableCategorySlugs.has(routeSlug) ? `./kategori/${escapeHtml(routeSlug)}/` : "#produk";
-  const image = `https://images.unsplash.com/${category.image}?auto=format&fit=crop&w=640&q=60`;
-  return `<a class="category-photo-tile category-photo-tile-${index % 3}" href="${href}" aria-label="Lihat katalog ${escapeHtml(category.name)}"><img class="category-photo" src="${image}" alt="Inspirasi ${escapeHtml(category.name)}. Foto Unsplash, bukan foto produk Toqoku." width="900" height="600" loading="lazy"><span class="category-photo-shade" aria-hidden="true"></span><strong>${escapeHtml(category.name)}</strong><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>`;
+  const image = `https://images.unsplash.com/${category.image}?auto=format&fit=crop&w=640&q=55`;
+  const sourceSet = `${image.replace("w=640&q=55", "w=420&q=45")} 420w, ${image} 640w`;
+  return `<a class="category-photo-tile category-photo-tile-${index % 3}" href="${href}" aria-label="Lihat katalog ${escapeHtml(category.name)}"><img class="category-photo" src="${image}" srcset="${sourceSet}" sizes="(max-width: 420px) 100vw, (max-width: 720px) 50vw, 33vw" alt="Inspirasi ${escapeHtml(category.name)}. Foto Unsplash, bukan foto produk Toqoku." width="640" height="427" loading="lazy" decoding="async"><span class="category-photo-shade" aria-hidden="true"></span><strong>${escapeHtml(category.name)}</strong>${iconSvg("arrow-right")}</a>`;
 }).join("");
 const homeHtml = replaceTokens(homeTemplate, {
   PREVIEW_BANNER: previewBanner,

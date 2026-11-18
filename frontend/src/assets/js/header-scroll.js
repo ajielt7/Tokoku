@@ -7,16 +7,15 @@
   const mobileMenu = window.matchMedia("(max-width: 700px)");
 
   if (menuButton && navigation) {
+    const menuIcon = menuButton.querySelector("svg path");
+    const menuPath = "M4 6h16M4 12h16M4 18h16";
+    const closePath = "M6 6l12 12M18 6 6 18";
     const setMenuOpen = (open) => {
       header.classList.toggle("menu-open", open);
       navigation.hidden = mobileMenu.matches && !open;
       menuButton.setAttribute("aria-expanded", String(open));
       menuButton.setAttribute("aria-label", open ? "Tutup menu" : "Buka menu");
-      const icon = menuButton.querySelector("i");
-      if (icon) {
-        icon.classList.toggle("fa-bars", !open);
-        icon.classList.toggle("fa-xmark", open);
-      }
+      if (menuIcon) menuIcon.setAttribute("d", open ? closePath : menuPath);
     };
 
     const syncMenuToViewport = () => {
@@ -27,11 +26,7 @@
         navigation.hidden = false;
         menuButton.setAttribute("aria-expanded", "false");
         menuButton.setAttribute("aria-label", "Buka menu");
-        const icon = menuButton.querySelector("i");
-        if (icon) {
-          icon.classList.add("fa-bars");
-          icon.classList.remove("fa-xmark");
-        }
+        if (menuIcon) menuIcon.setAttribute("d", menuPath);
       }
     };
 

@@ -7,9 +7,6 @@
     <meta name="theme-color" content="#006b3c">
     <link rel="icon" type="image/svg+xml" href="{{ROOT_PREFIX}}assets/icons/favicon.svg">
     <title>{{PRODUCT_NAME}} Custom | Toqoku by Ajielt7</title>
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer"></noscript>
     <link rel="stylesheet" href="{{ROOT_PREFIX}}assets/css/site.css">
   </head>
   <body>
@@ -26,7 +23,7 @@
           <a href="{{ROOT_PREFIX}}index.html#cara-pesan">Cara pesan</a>
           <a href="{{ROOT_PREFIX}}tentang-kami/">Tentang Kami</a>
         </nav>
-        <div class="header-actions"><a class="header-cart" href="{{ROOT_PREFIX}}keranjang/"><i class="fa-solid fa-bag-shopping" aria-hidden="true"></i> Keranjang <span data-cart-count>0</span></a><a class="header-cta" href="{{ROOT_PREFIX}}index.html#produk">Lihat produk</a></div>
+        <div class="header-actions"><a class="header-cart" href="{{ROOT_PREFIX}}keranjang/">{{ICON_BAG_SHOPPING}} Keranjang <span data-cart-count>0</span></a><a class="header-cta" href="{{ROOT_PREFIX}}index.html#produk">Lihat produk</a></div>
       </div>
     </header>
 
@@ -47,7 +44,7 @@
           </figure>
 
           <section class="related-products detail-related" aria-labelledby="related-title">
-            <div class="related-heading"><h2 id="related-title">Desain lainnya</h2><a class="text-link" href="{{ROOT_PREFIX}}index.html#produk">Semua produk <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></div>
+            <div class="related-heading"><h2 id="related-title">Desain lainnya</h2><a class="text-link" href="{{ROOT_PREFIX}}index.html#produk">Semua produk {{ICON_ARROW_RIGHT}}</a></div>
             <div class="product-grid">{{RELATED_PRODUCTS}}</div>
           </section>
 
@@ -76,8 +73,8 @@
                 </div>
               </fieldset>
               <div class="detail-actions">
-                <a class="button button-secondary" href="{{WHATSAPP_LINK}}"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Pesan</a>
-                <button class="button button-primary" type="submit"><i class="fa-solid fa-bag-shopping" aria-hidden="true"></i> Keranjang</button>
+                <a class="button button-secondary" href="{{WHATSAPP_LINK}}">{{ICON_WHATSAPP}} Pesan</a>
+                <button class="button button-primary" type="submit">{{ICON_BAG_SHOPPING}} Keranjang</button>
               </div>
               <p class="form-message" data-form-message aria-live="polite"></p>
             </form>
@@ -92,7 +89,7 @@
       <div class="container footer-inner">
         <a class="brand footer-brand" href="{{ROOT_PREFIX}}index.html"><span class="brand-mark" aria-hidden="true">T</span><span>Toqoku<span class="brand-period">.</span></span></a>
         <p>Produk dan karya dari ekosistem Ajielt7.</p>
-        <a class="footer-contact" href="{{WHATSAPP_LINK}}" aria-label="Chat WhatsApp" title="Chat WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+        <a class="footer-contact" href="{{WHATSAPP_LINK}}" aria-label="Chat WhatsApp" title="Chat WhatsApp">{{ICON_WHATSAPP}}</a>
         {{SOCIAL_LINKS}}
         <small>{{FOOTER_COPY}}</small>
       </div>
