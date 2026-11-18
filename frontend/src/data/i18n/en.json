@@ -1,0 +1,16 @@
+{
+  "locale": "en",
+  "language": "en",
+  "direction": "ltr",
+  "messages": {
+    "market.selectorLabel": "Country and currency",
+    "market.indonesia": "Indonesia · Rupiah (IDR)",
+    "market.international": "International · US Dollar (USD)",
+    "market.usdEstimate": "USD prices are estimates. Final pricing and international shipping will be confirmed before ordering.",
+    "market.contactForQuote": "Ask about international pricing and shipping",
+    "navigation.products": "Products",
+    "navigation.about": "About us",
+    "navigation.cart": "Cart",
+    "navigation.home": "Home"
+  }
+}
