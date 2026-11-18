@@ -21,7 +21,7 @@ export default async (request, context) => {
     return jsonError("API belum dikonfigurasi.", 503);
   }
 
-  const proxySecret = Netlify.env.get("NETLIFY_PROXY_SECRET")?.trim() ?? "";
+  const proxySecret = Netlify.env.get("RUMA_PROXY_SECRET")?.trim() ?? "";
 
   const incomingUrl = new URL(request.url);
   const upstreamUrl = new URL(`${incomingUrl.pathname}${incomingUrl.search}`, upstreamBase);
