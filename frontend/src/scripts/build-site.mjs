@@ -120,6 +120,8 @@ function addSeo(html, { title, description, pathname, breadcrumbs, structuredDat
   if (site.indexable && site.siteUrl) {
     const canonical = absoluteUrl(pathname);
     tags.push(`<link rel="canonical" href="${escapeHtml(canonical)}">`);
+    tags.push(`<link rel="ai-catalog" href="${escapeHtml(absoluteUrl("/.well-known/ai-catalog.json"))}">`);
+    tags.push(`<link rel="ard" href="${escapeHtml(absoluteUrl("/.well-known/ard.json"))}">`);
     tags.push('<meta property="og:type" content="website">');
     tags.push(`<meta property="og:site_name" content="${escapeHtml(site.name)}">`);
     tags.push(`<meta property="og:title" content="${escapeHtml(title)}">`);
