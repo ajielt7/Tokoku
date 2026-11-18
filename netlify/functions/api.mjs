@@ -34,12 +34,14 @@ export default async (request, context) => {
     "x-ruma-client-ip", "x-ruma-country", "x-ruma-proxy-secret", "x-forwarded-for", "x-real-ip",
   ]) headers.delete(name);
 
-  // These are trusted by the Worker only after the matching secret is installed there.
+  // Netlify replaces client-supplied geo data with its own edge location.
+  const countryCode = context.geo?.country?.code?.toUpperCase();
+  if (countryCode && /^[A-Z]{2}$/.test(countryCode)) headers.set("x-ruma-country", countryCode);
+
+  // The shared secret additionally enables trusted client-IP rate limiting.
   if (proxySecret.length >= 32) {
     headers.set("x-ruma-proxy-secret", proxySecret);
     if (context.ip) headers.set("x-ruma-client-ip", context.ip);
-    const countryCode = context.geo?.country?.code?.toUpperCase();
-    if (countryCode && /^[A-Z]{2}$/.test(countryCode)) headers.set("x-ruma-country", countryCode);
   }
 
   try {
@@ -71,3 +73,4 @@ export default async (request, context) => {
 export const config = {
   path: "/api/*",
 };
+
