@@ -43,15 +43,14 @@
     syncMenuToViewport();
   }
 
-  let scrollFrame = 0;
-  const updateHeader = () => {
-    if (scrollFrame) return;
-    scrollFrame = window.requestAnimationFrame(() => {
-      scrollFrame = 0;
-      header.classList.toggle("is-scrolled", window.scrollY > 12);
-    });
-  };
+  const scrollSentinel = document.createElement("span");
+  scrollSentinel.setAttribute("aria-hidden", "true");
+  scrollSentinel.className = "header-scroll-sentinel";
+  scrollSentinel.style.cssText = "display:block;height:1px;margin-bottom:-1px;pointer-events:none";
+  header.before(scrollSentinel);
 
-  updateHeader();
-  window.addEventListener("scroll", updateHeader, { passive: true });
+  const observer = new IntersectionObserver(([entry]) => {
+    header.classList.toggle("is-scrolled", !entry.isIntersecting);
+  }, { threshold: 0 });
+  observer.observe(scrollSentinel);
 })();
