@@ -1,0 +1,29 @@
+{
+  "defaultMarket": "ID",
+  "markets": {
+    "ID": {
+      "label": "Indonesia",
+      "locale": "id-ID",
+      "language": "id",
+      "currency": "IDR",
+      "checkoutMode": "domestic",
+      "shippingCountry": "ID"
+    },
+    "INTL": {
+      "label": "International",
+      "locale": "en",
+      "language": "en",
+      "currency": "USD",
+      "checkoutMode": "quote",
+      "shippingCountry": null,
+      "priceDisplay": {
+        "mode": "estimated-conversion",
+        "baseCurrency": "IDR",
+        "idrPerUsd": 18355.32,
+        "rateSource": "Bank Indonesia transaction sell rate",
+        "rateDate": "2026-11-18",
+        "disclaimerKey": "market.usdEstimate"
+      }
+    }
+  }
+}
