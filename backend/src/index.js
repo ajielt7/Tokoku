@@ -1057,12 +1057,8 @@ async function recordVisitorEvent(request, env, headers, executionContext) {
     if (!uuid.test(eventId) || !uuid.test(visitorId)) {
       return jsonResponse({ error: "invalid_visitor_event" }, 400, headers);
     }
-    const proxySecret = request.headers.get("x-ruma-proxy-secret") ?? "";
-    const isTrustedProxy = env.RUMA_PROXY_SECRET
-      && constantTimeEquals(proxySecret, env.RUMA_PROXY_SECRET);
     // The Netlify proxy replaces any client-supplied country hint with its edge geo.
-    // Accept the validated two-letter hint for this public analytics endpoint even if the
-    // optional shared secret is unavailable; it affects reporting only, never authorization.
+    // This hint affects analytics reporting only; it is never used for authorization.
     const proxiedCountry = request.headers.get("x-ruma-country");
     const country = /^[A-Z]{2}$/.test(proxiedCountry ?? "")
       ? proxiedCountry
