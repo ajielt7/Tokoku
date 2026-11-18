@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "177695946508",
+    "project_id": "zieus-61c10",
+    "storage_bucket": "zieus-61c10.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:177695946508:android:7c71a9ed386014d9363b29",
+        "android_client_info": {
+          "package_name": "id.ruma.admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDVn8y8kRxybbk2qNn8vFQY_3C3Blnjvr8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
