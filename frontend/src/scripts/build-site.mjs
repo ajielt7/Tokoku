@@ -193,7 +193,7 @@ s0.parentNode.insertBefore(s1,s0);
 function addMobileNavigation(html) {
   if (html.includes('class="menu-toggle"')) return html;
   const nav = '<nav class="main-nav" aria-label="Navigasi utama">';
-  const menuButton = `<button class="menu-toggle" type="button" aria-label="Buka menu" aria-controls="main-navigation" aria-expanded="false">${iconSvg("bars")}</button>\n`;
+  const menuButton = '<button class="menu-toggle" type="button" aria-label="Buka menu" aria-controls="main-navigation" aria-expanded="false"><span class="menu-icon" aria-hidden="true"><span></span></span></button>\n';
   return html.replace(nav, `${menuButton}<nav id="main-navigation" class="main-nav" aria-label="Navigasi utama">`);
 }
 
