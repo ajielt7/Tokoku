@@ -187,32 +187,50 @@ function displayFixedSize(value) {
   return String(value || "").replace(/\s*\(contoh\)\s*/gi, "").trim();
 }
 
-function productMedia(product, className = "") {
+function productMedia(product, className = "", priority = false) {
   const remoteImage = imageUrl(product);
   const fallbackImages = [
-    "https://images.unsplash.com/photo-1747862934428-899f5beb821e?auto=format&fit=crop&w=640&q=60",
-    "https://images.unsplash.com/photo-1770394644126-4a17c000c122?auto=format&fit=crop&w=640&q=60",
-    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=640&q=60",
+    "https://images.unsplash.com/photo-1747862934428-899f5beb821e?auto=format&fit=crop&w=480&q=45",
+    "https://images.unsplash.com/photo-1770394644126-4a17c000c122?auto=format&fit=crop&w=480&q=45",
+    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=480&q=45",
   ];
   const imageIndex = [...String(product.slug || product.name || "")].reduce((sum, char) => sum + char.charCodeAt(0), 0) % fallbackImages.length;
   const image = remoteImage || fallbackImages[imageIndex];
   const imageAlt = remoteImage ? (product.image_alt || product.name) : `Foto ilustrasi Unsplash untuk ${product.name}; bukan foto produk Toqoku.`;
   const visualClass = product.category === "plang-nama" ? "visual-sand" : "visual-sage";
-  const content = `<img class="product-photo" src="${escapeHtml(image)}" alt="${escapeHtml(imageAlt)}" width="800" height="600" loading="lazy">`;
-  const accessibleName = "";
+  let src = image;
+  let srcSet = "";
+  try {
+    const parsedImage = new URL(image);
+    if (parsedImage.hostname === "images.unsplash.com") {
+      const resized = (width, quality) => {
+        const candidate = new URL(image);
+        candidate.searchParams.delete("fm");
+        candidate.searchParams.set("auto", "format");
+        candidate.searchParams.set("fit", "crop");
+        candidate.searchParams.set("w", String(width));
+        candidate.searchParams.set("q", String(quality));
+        return candidate.href;
+      };
+      src = resized(480, 45);
+      srcSet = ` srcset="${escapeHtml(resized(320, 38))} 320w, ${escapeHtml(resized(480, 45))} 480w, ${escapeHtml(resized(640, 50))} 640w" sizes="(max-width: 520px) 50vw, (max-width: 720px) 33vw, (max-width: 950px) 25vw, 20vw"`;
+    }
+  } catch { /* Keep the original verified HTTPS image URL. */ }
+  const loading = priority ? "eager" : "lazy";
+  const fetchPriority = priority ? ' fetchpriority="high"' : "";
+  const content = `<img class="product-photo" src="${escapeHtml(src)}"${srcSet} alt="${escapeHtml(imageAlt)}" width="480" height="360" loading="${loading}" decoding="async"${fetchPriority}>`;
   return `<a class="product-visual ${visualClass} ${className}" href="${product.link}">
     ${content}
     <span class="product-tag">${escapeHtml(product.category_name)}</span>
     <span class="visual-caption">${escapeHtml(displayFixedSize(product.fixed_size) || "Detail produk")}</span>
-    ${accessibleName}
   </a>`;
 }
 
-function productCard(product, prefix) {
+function productCard(product, prefix, priority = false) {
   const link = `${prefix}produk/${escapeHtml(product.slug)}/`;
   const productForMedia = { ...product, link };
   return `<article class="product-card">
-    ${productMedia(productForMedia)}
+    ${productMedia(productForMedia, "", priority)}
     <div class="product-info"><div><h3><a href="${link}">${escapeHtml(product.name)}</a></h3><p>${escapeHtml(product.customization || "Produk custom")} · ${formatPrice(product.price_amount)}</p></div><a class="round-link" href="${link}" aria-label="Lihat ${escapeHtml(product.name)}">${iconSvg("arrow-up-right-from-square")}</a></div>
   </article>`;
 }
@@ -226,14 +244,14 @@ const featuredIdeas = [
 ];
 
 function featuredProductCard(idea, index) {
-  const image = idea.image.replace(/w=640&q=60/, index === 0 ? "w=720&q=65" : "w=640&q=60");
+  const image = idea.image.replace(/w=640&q=60/, index === 0 ? "w=640&q=50" : "w=480&q=40");
   const alt = `Foto inspirasi Unsplash untuk ${idea.title}; bukan foto produk Toqoku.`;
   const loading = index === 0 ? "eager" : "lazy";
-  const sourceSet = `${image.replace(/w=\d+&q=\d+/, "w=480&q=55")} 480w, ${image} ${index === 0 ? 720 : 640}w`;
+  const sourceSet = `${image.replace(/w=\d+&q=\d+/, "w=320&q=35")} 320w, ${image} ${index === 0 ? 640 : 480}w`;
   const priority = index === 0 ? ' fetchpriority="high"' : ' fetchpriority="low"';
   return `<article class="featured-tile featured-tile-${index % 2 === 0 ? "green" : "orange"}">
     <a class="featured-tile-link" href="#produk" aria-label="Lihat katalog: ${escapeHtml(idea.title)}">
-      <img class="featured-tile-photo" src="${escapeHtml(image)}" srcset="${escapeHtml(sourceSet)}" sizes="(max-width: 620px) 82vw, 25vw" alt="${escapeHtml(alt)}" width="${index === 0 ? 720 : 640}" height="${index === 0 ? 880 : 782}" loading="${loading}" decoding="async"${priority}>
+      <img class="featured-tile-photo" src="${escapeHtml(image)}" srcset="${escapeHtml(sourceSet)}" sizes="(max-width: 620px) 82vw, 25vw" alt="${escapeHtml(alt)}" width="${index === 0 ? 640 : 480}" height="${index === 0 ? 782 : 587}" loading="${loading}" decoding="async"${priority}>
       <span class="featured-tile-shade" aria-hidden="true"></span>
       <span class="featured-tile-copy"><span class="featured-tile-kicker">Inspirasi custom</span><strong>${escapeHtml(idea.title)}</strong><span class="featured-tile-detail">${escapeHtml(idea.detail)}</span></span>
       <span class="featured-tile-arrow" aria-hidden="true">${iconSvg("arrow-right")}</span>
@@ -353,6 +371,7 @@ if (site.contentReady) {
   }
 }
 const homeTemplate = await readFile(path.join(templateDirectory, "home.html"), "utf8");
+const homeStylesheet = await readFile(path.join(sourceDirectory, "assets", "css", "site.css"), "utf8");
 const categoryTemplate = await readFile(path.join(templateDirectory, "category.html"), "utf8");
 const productTemplate = await readFile(path.join(templateDirectory, "product.html"), "utf8");
 const cartTemplate = await readFile(path.join(templateDirectory, "cart.html"), "utf8");
@@ -394,7 +413,7 @@ function previewIdeaCard(idea, index) {
   </article>`;
 }
 const homeCards = [
-  ...catalog.products.map((product) => productCard(product, homePrefix)),
+  ...catalog.products.map((product, index) => productCard(product, homePrefix, index === 0)),
   ...(!site.contentReady ? previewProductIdeas.slice(0, Math.max(0, 20 - catalog.products.length)).map(previewIdeaCard) : []),
 ].join("\n") || '<p class="empty-catalog">Produk akan segera tersedia.</p>';
 const categoryShowcase = [
@@ -409,9 +428,9 @@ const availableCategorySlugs = new Set(catalog.categories.map((category) => cate
 const categoryTiles = categoryShowcase.map((category, index) => {
   const routeSlug = category.routeSlug || category.slug;
   const href = availableCategorySlugs.has(routeSlug) ? `./kategori/${escapeHtml(routeSlug)}/` : "#produk";
-  const image = `https://images.unsplash.com/${category.image}?auto=format&fit=crop&w=640&q=55`;
-  const sourceSet = `${image.replace("w=640&q=55", "w=420&q=45")} 420w, ${image} 640w`;
-  return `<a class="category-photo-tile category-photo-tile-${index % 3}" href="${href}" aria-label="Lihat katalog ${escapeHtml(category.name)}"><img class="category-photo" src="${image}" srcset="${sourceSet}" sizes="(max-width: 420px) 100vw, (max-width: 720px) 50vw, 33vw" alt="Inspirasi ${escapeHtml(category.name)}. Foto Unsplash, bukan foto produk Toqoku." width="640" height="427" loading="lazy" decoding="async"><span class="category-photo-shade" aria-hidden="true"></span><strong>${escapeHtml(category.name)}</strong>${iconSvg("arrow-right")}</a>`;
+  const image = `https://images.unsplash.com/${category.image}?auto=format&fit=crop&w=480&q=40`;
+  const sourceSet = `${image.replace("w=480&q=40", "w=320&q=35")} 320w, ${image} 480w`;
+  return `<a class="category-photo-tile category-photo-tile-${index % 3}" href="${href}" aria-label="Lihat katalog ${escapeHtml(category.name)}"><img class="category-photo" src="${image}" srcset="${sourceSet}" sizes="(max-width: 420px) 100vw, (max-width: 720px) 50vw, 33vw" alt="Inspirasi ${escapeHtml(category.name)}. Foto Unsplash, bukan foto produk Toqoku." width="480" height="320" loading="lazy" decoding="async"><span class="category-photo-shade" aria-hidden="true"></span><strong>${escapeHtml(category.name)}</strong>${iconSvg("arrow-right")}</a>`;
 }).join("");
 const homeHtml = replaceTokens(homeTemplate, {
   PREVIEW_BANNER: previewBanner,
@@ -435,7 +454,9 @@ const homeSeo = addSeo(homeHtml, {
   pathname: "/",
   breadcrumbs: [{ name: "Beranda", path: "/" }],
 });
-await writeFile(path.join(outputDirectory, "index.html"), addTawkWidget(addMobileNavigation(homeSeo)), "utf8");
+const homeWithInlineStyles = homeSeo.replace('<link rel="stylesheet" href="./assets/css/site.css">', `<style>${homeStylesheet}</style>`);
+if (homeWithInlineStyles === homeSeo) throw new Error("Tautan stylesheet beranda tidak ditemukan untuk inline CSS.");
+await writeFile(path.join(outputDirectory, "index.html"), addTawkWidget(addMobileNavigation(homeWithInlineStyles)), "utf8");
 
 const aboutHtml = replaceTokens(aboutTemplate, {
   ROOT_PREFIX: "../",
