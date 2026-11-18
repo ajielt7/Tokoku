@@ -758,3 +758,9 @@ body { color: var(--color-ink); background: var(--color-page); }
 @media (max-width: 700px) {
   .header-cart { gap: 9px; }
 }
+
+@media (max-width: 700px) {
+  .site-header.is-scrolled .main-nav,
+  .site-header.is-scrolled .main-nav a { color: var(--color-ink); }
+  .site-header.is-scrolled .main-nav a:hover { color: var(--color-brand); }
+}
