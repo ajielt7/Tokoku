@@ -80,6 +80,8 @@ async function createOrder() {
       destination_label: "Kelurahan Uji, Kecamatan Uji, Kota Bandung",
       courier_code: "jne",
       service: "REG",
+      latitude: -6.9175,
+      longitude: 107.6191,
     },
     items: [{
       slug: "nomor-rumah-uji",
