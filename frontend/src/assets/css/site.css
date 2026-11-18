@@ -763,4 +763,8 @@ body { color: var(--color-ink); background: var(--color-page); }
   .site-header.is-scrolled .main-nav,
   .site-header.is-scrolled .main-nav a { color: var(--color-ink); }
   .site-header.is-scrolled .main-nav a:hover { color: var(--color-brand); }
+  .site-header.menu-open .main-nav,
+  .site-header.menu-open .main-nav a { color: #202a30; opacity: 1; }
+  .site-header.menu-open .main-nav a:hover { color: #006b3c; }
+  .site-header.menu-open .menu-toggle { display: grid; position: relative; z-index: 40; color: #006b3c; background: #ffffff; border-color: #006b3c; opacity: 1; }
 }
