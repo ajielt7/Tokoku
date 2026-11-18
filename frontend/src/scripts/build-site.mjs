@@ -148,22 +148,27 @@ function addTawkWidget(html) {
   const visitorTracking = `<script>
 (() => {
   const apiBase = ${JSON.stringify(site.apiBaseUrl.replace(/\/$/, ""))};
-  try {
-    let visitorId = localStorage.getItem("ruma_visitor_id");
-    if (!visitorId) {
-      visitorId = crypto.randomUUID();
-      localStorage.setItem("ruma_visitor_id", visitorId);
-    }
-    const eventId = crypto.randomUUID();
-    fetch(apiBase + "/api/analytics/visits", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ event_id: eventId, visitor_id: visitorId }),
-      keepalive: true,
-      cache: "no-store",
-      credentials: "omit",
-    }).catch(() => {});
-  } catch (_) {}
+  const recordVisit = () => {
+    try {
+      let visitorId = localStorage.getItem("ruma_visitor_id");
+      if (!visitorId) {
+        visitorId = crypto.randomUUID();
+        localStorage.setItem("ruma_visitor_id", visitorId);
+      }
+      fetch(apiBase + "/api/analytics/visits", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ event_id: crypto.randomUUID(), visitor_id: visitorId }),
+        keepalive: true,
+        cache: "no-store",
+        credentials: "omit",
+      }).catch(() => {});
+    } catch (_) {}
+  };
+  window.addEventListener("load", () => {
+    if ("requestIdleCallback" in window) window.requestIdleCallback(recordVisit, { timeout: 5000 });
+    else window.setTimeout(recordVisit, 2000);
+  }, { once: true });
 })();
 </script>`;
   const widget = `<!--Start of Tawk.to Script-->
