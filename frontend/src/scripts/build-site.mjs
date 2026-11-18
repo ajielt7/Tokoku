@@ -26,6 +26,7 @@ if (!/^\d{8,15}$/.test(site.whatsappNumber || "")) {
   throw new Error("whatsappNumber harus memakai format internasional berupa angka saja.");
 }
 const whatsappLink = `https://wa.me/${site.whatsappNumber}?${new URLSearchParams({ text: "Halo Toqoku, saya ingin bertanya tentang produk." })}`;
+const whatsappDisplay = `0${site.whatsappNumber.slice(2)}`.replace(/^(\d{4})(\d{4})(\d+)$/, "$1 $2 $3");
 const socialPlatforms = {
   facebook: { label: "Facebook", domain: "facebook.com", icon: "fa-facebook-f" },
   instagram: { label: "Instagram", domain: "instagram.com", icon: "fa-instagram" },
@@ -374,6 +375,7 @@ const homeHtml = replaceTokens(homeTemplate, {
   DEMO_NOTE: demoNote,
   FOOTER_COPY: footerCopy,
   WHATSAPP_LINK: escapeHtml(whatsappLink),
+  WHATSAPP_DISPLAY: escapeHtml(whatsappDisplay),
   SOCIAL_LINKS: socialLinksMarkup,
   API_BASE_URL: escapeHtml(apiBaseUrl),
 });
@@ -394,6 +396,7 @@ const aboutHtml = replaceTokens(aboutTemplate, {
   PREVIEW_BANNER: previewBanner,
   FOOTER_COPY: footerCopy,
   WHATSAPP_LINK: escapeHtml(whatsappLink),
+  WHATSAPP_DISPLAY: escapeHtml(whatsappDisplay),
   SOCIAL_LINKS: socialLinksMarkup,
   API_BASE_URL: escapeHtml(apiBaseUrl),
 });
@@ -427,6 +430,7 @@ for (const category of catalog.categories) {
     DEMO_NOTE: demoNote,
     FOOTER_COPY: footerCopy,
     WHATSAPP_LINK: escapeHtml(whatsappLink),
+  WHATSAPP_DISPLAY: escapeHtml(whatsappDisplay),
     SOCIAL_LINKS: socialLinksMarkup,
     API_BASE_URL: escapeHtml(apiBaseUrl),
   });
@@ -479,6 +483,7 @@ for (const product of catalog.products) {
     DEMO_NOTE: previewMode ? '<p class="demo-note detail-notice">Informasi dan foto ini hanya contoh pratinjau.</p>' : "",
     FOOTER_COPY: footerCopy,
     WHATSAPP_LINK: escapeHtml(whatsappLink),
+  WHATSAPP_DISPLAY: escapeHtml(whatsappDisplay),
     SOCIAL_LINKS: socialLinksMarkup,
     API_BASE_URL: escapeHtml(apiBaseUrl),
     CUSTOM_PREVIEW_SCRIPT: `<script src="${prefix}assets/js/custom-preview.js" defer></script>`,
@@ -527,6 +532,7 @@ for (const [slug, template] of [["keranjang", cartTemplate], ["checkout", checko
       : '<a class="text-link" href="../lacak-pesanan/">Lacak perkembangan pesanan</a>',
     FOOTER_COPY: footerCopy,
     WHATSAPP_LINK: escapeHtml(whatsappLink),
+  WHATSAPP_DISPLAY: escapeHtml(whatsappDisplay),
     SOCIAL_LINKS: socialLinksMarkup,
     API_BASE_URL: escapeHtml(apiBaseUrl),
   });
