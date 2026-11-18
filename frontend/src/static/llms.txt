@@ -1,12 +1,9 @@
-# Toqoku
+# Toqoku by Ajielt7
 
-Toqoku by Ajielt7 offers custom acrylic house numbers and personalized home signage in Indonesia.
+> Situs resmi Toqoku by Ajielt7. Jelajahi produk custom untuk rumah, informasi toko, dan cara menghubungi kami.
 
-## Store
-- Homepage: https://zieus.gt.tc/
-- Product catalog: https://zieus.gt.tc/#produk
-- About and store location: https://zieus.gt.tc/tentang-kami/
-- Product sitemap: https://zieus.gt.tc/sitemap.xml
+## Halaman
 
-## Notes
-Product photos and specifications are shown on each product page. Product availability and prices may change; refer to the live product pages for current information.
+- [Beranda Toqoku](https://zieus.gt.tc/): Katalog dan informasi produk custom.
+- [Tentang Kami](https://zieus.gt.tc/tentang-kami/): Informasi toko dan lokasi.
+- [Sitemap](https://zieus.gt.tc/sitemap.xml): Daftar URL publik yang tersedia, termasuk kategori dan produk.
