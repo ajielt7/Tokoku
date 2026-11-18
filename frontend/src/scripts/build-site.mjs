@@ -274,7 +274,7 @@ const featuredIdeas = [
 ];
 
 function featuredProductCard(idea, index) {
-  const image = idea.image.replace(/w=640&q=60/, index === 0 ? "w=640&q=50" : "w=480&q=40");
+  const image = idea.image.replace(/w=640&q=60/, index === 0 ? "w=640&q=50" : "w=480&q=35");
   const alt = `Foto inspirasi Unsplash untuk ${idea.title}; bukan foto produk Toqoku.`;
   const loading = index === 0 ? "eager" : "lazy";
   const sourceSet = `${image.replace(/w=\d+&q=\d+/, "w=320&q=35")} 320w, ${image} ${index === 0 ? 640 : 480}w`;
@@ -458,9 +458,9 @@ const availableCategorySlugs = new Set(catalog.categories.map((category) => cate
 const categoryTiles = categoryShowcase.map((category, index) => {
   const routeSlug = category.routeSlug || category.slug;
   const href = availableCategorySlugs.has(routeSlug) ? `./kategori/${escapeHtml(routeSlug)}/` : "#produk";
-  const image = `https://images.unsplash.com/${category.image}?auto=format&fit=crop&w=480&q=40`;
-  const sourceSet = `${image.replace("w=480&q=40", "w=320&q=35")} 320w, ${image} 480w`;
-  return `<a class="category-photo-tile category-photo-tile-${index % 3}" href="${href}" aria-label="Lihat katalog ${escapeHtml(category.name)}"><img class="category-photo" src="${image}" srcset="${sourceSet}" sizes="(max-width: 420px) 100vw, (max-width: 720px) 50vw, 33vw" alt="Inspirasi ${escapeHtml(category.name)}. Foto Unsplash, bukan foto produk Toqoku." width="480" height="320" loading="lazy" decoding="async"><span class="category-photo-shade" aria-hidden="true"></span><strong>${escapeHtml(category.name)}</strong>${iconSvg("arrow-right")}</a>`;
+  const image = (width, quality) => `https://images.unsplash.com/${category.image}?auto=format&fit=crop&w=${width}&q=${quality}`;
+  const sourceSet = `${image(320, 30)} 320w, ${image(400, 35)} 400w, ${image(640, 40)} 640w`;
+  return `<a class="category-photo-tile category-photo-tile-${index % 3}" href="${href}" aria-label="Lihat katalog ${escapeHtml(category.name)}"><img class="category-photo" src="${image(400, 35)}" srcset="${sourceSet}" sizes="(max-width: 420px) calc(100vw - 32px), (max-width: 720px) 50vw, (max-width: 1000px) 40vw, 33vw" alt="Inspirasi ${escapeHtml(category.name)}. Foto Unsplash, bukan foto produk Toqoku." width="400" height="267" loading="lazy" decoding="async"><span class="category-photo-shade" aria-hidden="true"></span><strong>${escapeHtml(category.name)}</strong>${iconSvg("arrow-right")}</a>`;
 }).join("");
 const homeHtml = replaceTokens(homeTemplate, {
   PREVIEW_BANNER: previewBanner,
