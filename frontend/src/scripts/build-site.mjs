@@ -166,8 +166,8 @@ function addTawkWidget(html) {
     } catch (_) {}
   };
   window.addEventListener("load", () => {
-    if ("requestIdleCallback" in window) window.requestIdleCallback(recordVisit, { timeout: 5000 });
-    else window.setTimeout(recordVisit, 2000);
+    if ("requestIdleCallback" in window) window.requestIdleCallback(recordVisit, { timeout: 1500 });
+    else window.setTimeout(recordVisit, 1000);
   }, { once: true });
 })();
 </script>`;
