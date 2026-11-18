@@ -120,6 +120,13 @@ s0.parentNode.insertBefore(s1,s0);
   return html.replace("</body>", `  ${widget}\n</body>`);
 }
 
+function addMobileNavigation(html) {
+  if (html.includes('class="menu-toggle"')) return html;
+  const nav = '<nav class="main-nav" aria-label="Navigasi utama">';
+  const menuButton = '<button class="menu-toggle" type="button" aria-label="Buka menu" aria-controls="main-navigation" aria-expanded="false"><i class="fa-solid fa-bars" aria-hidden="true"></i></button>\n';
+  return html.replace(nav, `${menuButton}<nav id="main-navigation" class="main-nav" aria-label="Navigasi utama">`);
+}
+
 function formatPrice(amount) {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -386,7 +393,7 @@ const homeSeo = addSeo(homeHtml, {
   pathname: "/",
   breadcrumbs: [{ name: "Beranda", path: "/" }],
 });
-await writeFile(path.join(outputDirectory, "index.html"), addTawkWidget(homeSeo), "utf8");
+await writeFile(path.join(outputDirectory, "index.html"), addTawkWidget(addMobileNavigation(homeSeo)), "utf8");
 
 const aboutHtml = replaceTokens(aboutTemplate, {
   ROOT_PREFIX: "../",
@@ -408,7 +415,7 @@ const aboutSeo = addSeo(aboutHtml, {
 });
 const aboutDestination = path.join(outputDirectory, "tentang-kami");
 await mkdir(aboutDestination, { recursive: true });
-await writeFile(path.join(aboutDestination, "index.html"), addTawkWidget(aboutSeo), "utf8");
+await writeFile(path.join(aboutDestination, "index.html"), addTawkWidget(addMobileNavigation(aboutSeo)), "utf8");
 
 for (const category of catalog.categories) {
   const categoryProducts = catalog.products.filter((product) => product.category === category.slug);
@@ -441,7 +448,7 @@ for (const category of catalog.categories) {
   });
   const destination = path.join(outputDirectory, "kategori", category.slug);
   await mkdir(destination, { recursive: true });
-  await writeFile(path.join(destination, "index.html"), addTawkWidget(seoHtml), "utf8");
+  await writeFile(path.join(destination, "index.html"), addTawkWidget(addMobileNavigation(seoHtml)), "utf8");
 }
 
 for (const product of catalog.products) {
@@ -509,7 +516,7 @@ for (const product of catalog.products) {
   });
   const destination = path.join(outputDirectory, "produk", product.slug);
   await mkdir(destination, { recursive: true });
-  await writeFile(path.join(destination, "index.html"), addTawkWidget(seoHtml), "utf8");
+  await writeFile(path.join(destination, "index.html"), addTawkWidget(addMobileNavigation(seoHtml)), "utf8");
 }
 
 for (const [slug, template] of [["keranjang", cartTemplate], ["checkout", checkoutTemplate], ["lacak-pesanan", trackingTemplate]]) {
@@ -532,7 +539,7 @@ for (const [slug, template] of [["keranjang", cartTemplate], ["checkout", checko
   });
   const destination = path.join(outputDirectory, slug);
   await mkdir(destination, { recursive: true });
-  await writeFile(path.join(destination, "index.html"), addTawkWidget(addNoIndex(html)), "utf8");
+  await writeFile(path.join(destination, "index.html"), addTawkWidget(addMobileNavigation(addNoIndex(html))), "utf8");
 }
 
 const publicPages = [
