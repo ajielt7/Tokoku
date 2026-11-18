@@ -2,22 +2,30 @@ package id.ruma.admin;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Build;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
 import android.content.pm.PackageManager;
 import android.text.InputType;
 import android.text.method.PasswordTransformationMethod;
+import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -26,6 +34,9 @@ import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -43,12 +54,18 @@ import java.net.URLEncoder;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
+import java.security.KeyStore;
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
 
 public final class MainActivity extends Activity {
     private static final int GREEN = Color.rgb(0, 107, 60);
@@ -60,19 +77,31 @@ public final class MainActivity extends Activity {
     private static final int PAGE = Color.rgb(245, 248, 246);
     private static final long MAX_PROOF_BYTES = 5L * 1024L * 1024L;
     private static final int CREATE_DXF_DOCUMENT = 702;
-    private static final String PREFS = "ruma_admin_settings";
-    private static final String PREF_API_URL = "api_url";
+    private static final int PICK_REFUND_PROOF = 703;
+    private static final String ADMIN_TOKEN_PREFS = "admin_session";
+    private static final String ADMIN_TOKEN_ALIAS = "id.ruma.admin.token";
+    private static final String ADMIN_TOKEN_IV = "token_iv";
+    private static final String ADMIN_TOKEN_VALUE = "token_ciphertext";
+    private static final String ORDER_CACHE_PREFS = "encrypted_order_cache_v1";
+    private static final String ORDER_CACHE_ALIAS = "id.ruma.admin.orders";
+    private static final String ORDER_CACHE_IV = "cache_iv";
+    private static final String ORDER_CACHE_VALUE = "cache_ciphertext";
+    private static final int ORDER_CACHE_MAX_ENTRIES = 12;
+    private static final String DEFAULT_API_BASE_URL = "https://toqoku-api.netlify.app";
     private static AdminApi activeSession;
+    private static volatile MainActivity visibleActivity;
     private static final ExecutorService fcmRegistrationExecutor = Executors.newSingleThreadExecutor();
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private AdminApi api;
     private String apiBaseUrl;
     private String currentOrderCode;
-    private String orderFilter = "";
+    private String orderFilter = "new";
     private String paymentFilter = "";
     private String refundFilter = "";
     private String searchQuery = "";
+    private String orderTransitionNotice = "";
+    private LinearLayout orderTabBar;
     private boolean paymentProofViewed;
     private LinearLayout page;
     private LinearLayout content;
@@ -83,6 +112,21 @@ public final class MainActivity extends Activity {
     private JSONObject loadedOrder;
     private String notificationOrderCode;
     private String pendingDxfContent;
+    private String pendingRefundProofId;
+    private boolean showingVisitorAnalytics;
+    private String visitorAnalyticsPeriod = "day";
+    private LinearLayout visitorAnalyticsContent;
+    private TextView visitorAnalyticsStatus;
+
+    private static final class CachedPayload {
+        final String json;
+        final long savedAt;
+
+        CachedPayload(String json, long savedAt) {
+            this.json = json;
+            this.savedAt = savedAt;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle state) {
@@ -90,19 +134,90 @@ public final class MainActivity extends Activity {
         getWindow().setStatusBarColor(DARK_GREEN);
         getWindow().setNavigationBarColor(Color.WHITE);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-        String productionApiUrl = "https://ruma-api-production.ajielt7.workers.dev";
-        android.content.SharedPreferences settings = getSharedPreferences(PREFS, MODE_PRIVATE);
-        apiBaseUrl = settings.getString(PREF_API_URL, productionApiUrl);
-        if ("http://10.0.2.2:8787".equals(apiBaseUrl)) {
-            apiBaseUrl = productionApiUrl;
-            settings.edit().putString(PREF_API_URL, productionApiUrl).apply();
-        }
+        apiBaseUrl = DEFAULT_API_BASE_URL;
         api = activeSession;
+        if (api == null) {
+            String savedToken = loadAdminToken();
+            if (savedToken != null) {
+                try {
+                    api = new AdminApi(apiBaseUrl, savedToken);
+                    activeSession = api;
+                } catch (IOException error) {
+                    clearAdminToken();
+                }
+            }
+        }
         notificationOrderCode = getIntent().getStringExtra("order_code");
         AdminFirebaseMessagingService.createChannel(this);
+        AdminFirebaseMessagingService.markAllRead(this);
         if (api == null) showLogin("");
-        else if (notificationOrderCode != null && !notificationOrderCode.isEmpty()) showOrderDetail(notificationOrderCode);
-        else showOrderList(true);
+        else {
+            registerForOrderNotifications(api);
+            if (notificationOrderCode != null && !notificationOrderCode.isEmpty()) showOrderDetail(notificationOrderCode);
+            else showOrderList(false);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        visibleActivity = this;
+        AdminFirebaseMessagingService.markAllRead(this);
+        if (api != null) executor.execute(() -> {
+            try { syncVisitorAnalytics(this, api); } catch (Exception ignored) { }
+            runOnUiThread(() -> { if (showingVisitorAnalytics) renderVisitorAnalytics(); });
+        });
+    }
+
+    @Override
+    protected void onPause() {
+        if (visibleActivity == this) visibleActivity = null;
+        super.onPause();
+    }
+
+    static boolean isAppVisible() { return visibleActivity != null; }
+
+    static void syncVisitorStatsFromPush(Context context) {
+        String token = loadAdminToken(context);
+        if (token == null || token.isEmpty()) return;
+        try {
+            syncVisitorAnalytics(context, new AdminApi(DEFAULT_API_BASE_URL, token));
+            MainActivity activity = visibleActivity;
+            if (activity != null) activity.runOnUiThread(() -> {
+                if (activity.showingVisitorAnalytics) activity.renderVisitorAnalytics();
+            });
+        } catch (Exception ignored) {
+            // The server retains unacknowledged events for the next push or app resume.
+        }
+    }
+
+    private static void syncVisitorAnalytics(Context context, AdminApi session) throws Exception {
+        VisitorStatsStore store = new VisitorStatsStore(context);
+        try {
+            for (int batch = 0; batch < 20; batch++) {
+                JSONArray events = session.get("/api/admin/analytics/queue?limit=100").optJSONArray("data");
+                if (events == null || events.length() == 0) return;
+                store.save(events);
+                JSONArray ids = new JSONArray();
+                for (int index = 0; index < events.length(); index++) {
+                    JSONObject event = events.optJSONObject(index);
+                    if (event != null) ids.put(event.optString("event_id", ""));
+                }
+                session.post("/api/admin/analytics/ack", new JSONObject().put("event_ids", ids));
+                if (events.length() < 100) return;
+            }
+        } finally { store.close(); }
+    }
+
+    static void refreshVisibleOrderListFromPush() {
+        MainActivity activity = visibleActivity;
+        if (activity == null) return;
+        activity.runOnUiThread(() -> {
+            if (activity.api != null && activity.currentOrderCode == null
+                    && activity.refundFilter.isEmpty() && "new".equals(activity.orderFilter)) {
+                activity.loadOrders(false);
+            }
+        });
     }
 
     @Override
@@ -111,17 +226,221 @@ public final class MainActivity extends Activity {
         super.onDestroy();
     }
 
+    private void saveAdminToken(String token) throws Exception {
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateEncryptionKey(ADMIN_TOKEN_ALIAS));
+        byte[] encrypted = cipher.doFinal(token.getBytes(StandardCharsets.UTF_8));
+        SharedPreferences preferences = getSharedPreferences(ADMIN_TOKEN_PREFS, MODE_PRIVATE);
+        boolean saved = preferences.edit()
+                .putString(ADMIN_TOKEN_IV, Base64.encodeToString(cipher.getIV(), Base64.NO_WRAP))
+                .putString(ADMIN_TOKEN_VALUE, Base64.encodeToString(encrypted, Base64.NO_WRAP))
+                .commit();
+        if (!saved) throw new IOException("Token tidak berhasil disimpan aman di perangkat.");
+    }
+
+    private String loadAdminToken() { return loadAdminToken(this); }
+
+    static String loadAdminToken(Context context) {
+        SharedPreferences preferences = context.getSharedPreferences(ADMIN_TOKEN_PREFS, MODE_PRIVATE);
+        String encodedIv = preferences.getString(ADMIN_TOKEN_IV, null);
+        String encodedValue = preferences.getString(ADMIN_TOKEN_VALUE, null);
+        if (encodedIv == null || encodedValue == null) return null;
+        try {
+            KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+            keyStore.load(null);
+            SecretKey secretKey = (SecretKey) keyStore.getKey(ADMIN_TOKEN_ALIAS, null);
+            if (secretKey == null) throw new IOException("Kunci penyimpanan token tidak tersedia.");
+            byte[] iv = Base64.decode(encodedIv, Base64.NO_WRAP);
+            byte[] encrypted = Base64.decode(encodedValue, Base64.NO_WRAP);
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(128, iv));
+            return new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
+        } catch (Exception error) {
+            return null;
+        }
+    }
+
+    private void clearAdminToken() {
+        getSharedPreferences(ADMIN_TOKEN_PREFS, MODE_PRIVATE).edit().clear().apply();
+        clearOrderCache();
+        deleteEncryptionKey(ADMIN_TOKEN_ALIAS);
+    }
+
+    static void syncOrdersCacheFromPush(Context context) throws Exception {
+        String token = loadAdminToken(context);
+        if (token == null || token.isEmpty()) return;
+        AdminApi backgroundApi = new AdminApi(DEFAULT_API_BASE_URL, token);
+        JSONArray orders = backgroundApi.get("/api/admin/orders?limit=100&order_status=new").optJSONArray("data");
+        if (orders == null) orders = new JSONArray();
+
+        SharedPreferences preferences = context.getSharedPreferences(ORDER_CACHE_PREFS, MODE_PRIVATE);
+        JSONArray previous = new JSONArray();
+        String encodedIv = preferences.getString(ORDER_CACHE_IV, null);
+        String encodedValue = preferences.getString(ORDER_CACHE_VALUE, null);
+        if (encodedIv != null && encodedValue != null) {
+            try {
+                KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+                keyStore.load(null);
+                SecretKey cacheKey = (SecretKey) keyStore.getKey(ORDER_CACHE_ALIAS, null);
+                if (cacheKey != null) {
+                    Cipher decrypt = Cipher.getInstance("AES/GCM/NoPadding");
+                    decrypt.init(Cipher.DECRYPT_MODE, cacheKey,
+                            new GCMParameterSpec(128, Base64.decode(encodedIv, Base64.NO_WRAP)));
+                    String decoded = new String(decrypt.doFinal(Base64.decode(encodedValue, Base64.NO_WRAP)), StandardCharsets.UTF_8);
+                    JSONArray entries = new JSONObject(decoded).optJSONArray("entries");
+                    if (entries != null) previous = entries;
+                }
+            } catch (Exception ignored) {
+                previous = new JSONArray();
+            }
+        }
+
+        List<JSONObject> entries = new ArrayList<>();
+        for (int index = 0; index < previous.length(); index++) {
+            JSONObject entry = previous.optJSONObject(index);
+            if (entry != null && !"orders|new||".equals(entry.optString("key"))) entries.add(entry);
+        }
+        entries.add(new JSONObject().put("key", "orders|new||")
+                .put("saved_at", System.currentTimeMillis()).put("payload", orders.toString()));
+        entries.sort((left, right) -> Long.compare(right.optLong("saved_at"), left.optLong("saved_at")));
+        JSONArray limited = new JSONArray();
+        for (int index = 0; index < entries.size() && index < ORDER_CACHE_MAX_ENTRIES; index++) {
+            limited.put(entries.get(index));
+        }
+
+        Cipher encrypt = Cipher.getInstance("AES/GCM/NoPadding");
+        encrypt.init(Cipher.ENCRYPT_MODE, getOrCreateEncryptionKey(ORDER_CACHE_ALIAS));
+        byte[] encrypted = encrypt.doFinal(new JSONObject().put("entries", limited).toString().getBytes(StandardCharsets.UTF_8));
+        if (!preferences.edit()
+                .putString(ORDER_CACHE_IV, Base64.encodeToString(encrypt.getIV(), Base64.NO_WRAP))
+                .putString(ORDER_CACHE_VALUE, Base64.encodeToString(encrypted, Base64.NO_WRAP)).commit()) {
+            throw new IOException("Cache pesanan tidak berhasil diperbarui.");
+        }
+    }
+
+    private static SecretKey getOrCreateEncryptionKey(String alias) throws Exception {
+        KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+        keyStore.load(null);
+        if (keyStore.containsAlias(alias)) return (SecretKey) keyStore.getKey(alias, null);
+        KeyGenerator keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
+        keyGenerator.init(new KeyGenParameterSpec.Builder(alias,
+                KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setRandomizedEncryptionRequired(true)
+                .build());
+        return keyGenerator.generateKey();
+    }
+
+    private static void deleteEncryptionKey(String alias) {
+        try {
+            KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+            keyStore.load(null);
+            if (keyStore.containsAlias(alias)) keyStore.deleteEntry(alias);
+        } catch (Exception ignored) { }
+    }
+
+    private CachedPayload readCachedPayload(String cacheKey) {
+        try {
+            SharedPreferences preferences = getSharedPreferences(ORDER_CACHE_PREFS, MODE_PRIVATE);
+            String encodedIv = preferences.getString(ORDER_CACHE_IV, null);
+            String encodedValue = preferences.getString(ORDER_CACHE_VALUE, null);
+            if (encodedIv == null || encodedValue == null) return null;
+            KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+            keyStore.load(null);
+            SecretKey secretKey = (SecretKey) keyStore.getKey(ORDER_CACHE_ALIAS, null);
+            if (secretKey == null) return null;
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, secretKey,
+                    new GCMParameterSpec(128, Base64.decode(encodedIv, Base64.NO_WRAP)));
+            String decoded = new String(cipher.doFinal(Base64.decode(encodedValue, Base64.NO_WRAP)), StandardCharsets.UTF_8);
+            JSONArray entries = new JSONObject(decoded).optJSONArray("entries");
+            if (entries == null) return null;
+            for (int index = 0; index < entries.length(); index++) {
+                JSONObject entry = entries.optJSONObject(index);
+                if (entry != null && cacheKey.equals(entry.optString("key"))) {
+                    return new CachedPayload(entry.optString("payload", ""), entry.optLong("saved_at", 0));
+                }
+            }
+        } catch (Exception error) {
+            clearOrderCache();
+        }
+        return null;
+    }
+
+    private void saveCachedPayload(String cacheKey, String payload) throws Exception {
+        SharedPreferences preferences = getSharedPreferences(ORDER_CACHE_PREFS, MODE_PRIVATE);
+        JSONArray previousEntries = readOrderCacheEntries(preferences);
+        List<JSONObject> entries = new ArrayList<>();
+        for (int index = 0; index < previousEntries.length(); index++) {
+            JSONObject entry = previousEntries.optJSONObject(index);
+            if (entry != null && !cacheKey.equals(entry.optString("key"))) entries.add(entry);
+        }
+        entries.add(new JSONObject()
+                .put("key", cacheKey)
+                .put("saved_at", System.currentTimeMillis())
+                .put("payload", payload));
+        entries.sort((left, right) -> Long.compare(right.optLong("saved_at"), left.optLong("saved_at")));
+        JSONArray boundedEntries = new JSONArray();
+        for (int index = 0; index < entries.size() && index < ORDER_CACHE_MAX_ENTRIES; index++) {
+            boundedEntries.put(entries.get(index));
+        }
+        JSONObject store = new JSONObject().put("entries", boundedEntries);
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateEncryptionKey(ORDER_CACHE_ALIAS));
+        byte[] encrypted = cipher.doFinal(store.toString().getBytes(StandardCharsets.UTF_8));
+        boolean saved = preferences.edit()
+                .putString(ORDER_CACHE_IV, Base64.encodeToString(cipher.getIV(), Base64.NO_WRAP))
+                .putString(ORDER_CACHE_VALUE, Base64.encodeToString(encrypted, Base64.NO_WRAP))
+                .commit();
+        if (!saved) throw new IOException("Cache pesanan tidak berhasil disimpan.");
+    }
+
+    private JSONArray readOrderCacheEntries(SharedPreferences preferences) {
+        try {
+            String encodedIv = preferences.getString(ORDER_CACHE_IV, null);
+            String encodedValue = preferences.getString(ORDER_CACHE_VALUE, null);
+            if (encodedIv == null || encodedValue == null) return new JSONArray();
+            KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+            keyStore.load(null);
+            SecretKey secretKey = (SecretKey) keyStore.getKey(ORDER_CACHE_ALIAS, null);
+            if (secretKey == null) return new JSONArray();
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, secretKey,
+                    new GCMParameterSpec(128, Base64.decode(encodedIv, Base64.NO_WRAP)));
+            String decoded = new String(cipher.doFinal(Base64.decode(encodedValue, Base64.NO_WRAP)), StandardCharsets.UTF_8);
+            JSONArray entries = new JSONObject(decoded).optJSONArray("entries");
+            return entries == null ? new JSONArray() : entries;
+        } catch (Exception error) {
+            preferences.edit().clear().commit();
+            deleteEncryptionKey(ORDER_CACHE_ALIAS);
+            return new JSONArray();
+        }
+    }
+
+    private void clearOrderCache() {
+        getSharedPreferences(ORDER_CACHE_PREFS, MODE_PRIVATE).edit().clear().apply();
+        deleteEncryptionKey(ORDER_CACHE_ALIAS);
+    }
+
+    private String ordersCacheKey(String status, String payment, String query) {
+        return "orders|" + status + "|" + payment + "|" + query.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String detailCacheKey(String orderCode) {
+        return "detail|" + orderCode.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String cacheTimeLabel(long timestamp) {
+        return new SimpleDateFormat("HH:mm", new Locale("id", "ID")).format(new Date(timestamp));
+    }
+
     private void showLogin(String message) {
         api = null;
         newPage();
-        addBrandHeader("Admin Ruma", "Pesanan dan pembayaran");
+        addBrandHeader("Ajielt7", "Pesanan dan pembayaran");
         addText(page, "Masuk admin", 26, INK, true, 18, 0, 0, 0);
-        addText(page, "Alamat API", 14, MUTED, true, 16, 12, 0, 4);
-        EditText urlInput = input(apiBaseUrl, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
-        urlInput.setSingleLine(true);
-        urlInput.setHint("https://api.toko.id atau http://10.0.2.2:8787");
-        page.addView(urlInput, matchWrap());
-        addText(page, "Token admin", 14, MUTED, true, 14, 12, 0, 4);
+        addText(page, "Token admin", 14, MUTED, true, 16, 12, 0, 4);
         EditText tokenInput = input("", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         tokenInput.setSingleLine(true);
         tokenInput.setHint("ADMIN_TOKEN");
@@ -131,27 +450,26 @@ public final class MainActivity extends Activity {
         tokenInput.setTypeface(Typeface.DEFAULT);
         tokenInput.setImeOptions(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
         page.addView(tokenInput, matchWrap());
-        addText(page, "Token hanya disimpan di memori aplikasi. Untuk API publik gunakan HTTPS.", 13, MUTED, false, 8, 0, 0, 0);
+        addText(page, "Login ini tersimpan aman di perangkat. Gunakan HTTPS.", 13, MUTED, false, 8, 0, 0, 0);
         TextView messageView = addText(page, message, 14, Color.rgb(176, 51, 39), false, 14, 0, 0, 0);
         Button login = button("Masuk", true);
         page.addView(login, matchWrapTop(18));
         login.setOnClickListener(view -> {
-            String url = urlInput.getText().toString().trim();
             String token = tokenInput.getText().toString();
             try {
-                url = AdminApi.validateBaseUrl(url);
-                AdminApi candidate = new AdminApi(url, token);
-                String finalUrl = url;
+                AdminApi candidate = new AdminApi(apiBaseUrl, token);
                 login.setEnabled(false);
-                messageView.setText("Memeriksa akses admin…");
+                messageView.setText("Memeriksa akses adminâ€¦");
                 runIo(() -> {
                     candidate.get("/api/admin/orders?limit=1");
+                    saveAdminToken(token.trim());
                     runOnUiThread(() -> {
-                        apiBaseUrl = finalUrl;
-                        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PREF_API_URL, finalUrl).apply();
                         activeSession = candidate;
                         api = candidate;
                         registerForOrderNotifications(candidate);
+                        executor.execute(() -> {
+                            try { syncVisitorAnalytics(this, candidate); } catch (Exception ignored) { }
+                        });
                         if (notificationOrderCode != null && !notificationOrderCode.isEmpty()) showOrderDetail(notificationOrderCode);
                         else showOrderList(true);
                     });
@@ -163,46 +481,68 @@ public final class MainActivity extends Activity {
                 messageView.setText(error.getMessage());
             }
         });
-        addFooterHint("Belum punya token? Minta ADMIN_TOKEN kepada pemilik sistem. Jangan kirim token lewat chat.");
         finishPage();
     }
 
     private void showOrderList(boolean fetch) {
-        newPage();
+        newOrderListPage();
         addToolbar("Pesanan", true, () -> showLogin(""));
-        addText(page, "Kelola pembayaran dan status pesanan", 15, MUTED, false, 0, 0, 0, 12);
+        addText(page, refundFilter.isEmpty() ? "Pesanan terbaru" : "Permintaan refund", 15, MUTED, false, 0, 0, 0, 10);
+        if (refundFilter.isEmpty()) {
+            Button analytics = smallButton("Grafik pengunjung", false);
+            page.addView(analytics, matchWrapBottom(10));
+            analytics.setOnClickListener(view -> showVisitorAnalytics());
+        }
 
-        LinearLayout filters = horizontal();
-        Spinner statusSpinner = new Spinner(this);
-        String[] filterLabels = {"Semua pesanan", "Pesanan baru", "Diterima", "Selesai", "Dibatalkan", "Menunggu pembayaran", "Pembayaran lunas", "Pembayaran gagal", "Pembayaran dikembalikan", "Refund diminta", "Refund disetujui"};
-        String[] filterCodes = {"", "order:new", "order:accepted", "order:completed", "order:cancelled", "payment:pending", "payment:paid", "payment:failed", "payment:refunded", "refund:requested", "refund:approved"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, filterLabels);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        statusSpinner.setAdapter(adapter);
-        String currentFilter = !refundFilter.isEmpty() ? "refund:" + refundFilter
-                : (paymentFilter.isEmpty()
-                    ? (orderFilter.isEmpty() ? "" : "order:" + orderFilter)
-                    : "payment:" + paymentFilter);
-        for (int index = 0; index < filterCodes.length; index++) if (filterCodes[index].equals(currentFilter)) statusSpinner.setSelection(index);
-        filters.addView(statusSpinner, new LinearLayout.LayoutParams(0, dp(50), 1));
+        LinearLayout actions = horizontal();
+        if (refundFilter.isEmpty()) {
+            Button refunds = smallButton("Refund", false);
+            actions.addView(refunds, new LinearLayout.LayoutParams(0, dp(46), 1));
+            refunds.setOnClickListener(view -> {
+                refundFilter = "requested";
+                paymentFilter = "";
+                showOrderList(true);
+            });
+        } else {
+            Button requested = smallButton("Diminta", "requested".equals(refundFilter));
+            Button approved = smallButton("Disetujui", "approved".equals(refundFilter));
+            LinearLayout.LayoutParams toggleParams = new LinearLayout.LayoutParams(0, dp(46), 1);
+            actions.addView(requested, toggleParams);
+            LinearLayout.LayoutParams approvedParams = new LinearLayout.LayoutParams(0, dp(46), 1);
+            approvedParams.leftMargin = dp(6);
+            actions.addView(approved, approvedParams);
+            requested.setOnClickListener(view -> { refundFilter = "requested"; showOrderList(true); });
+            approved.setOnClickListener(view -> { refundFilter = "approved"; showOrderList(true); });
+        }
         Button refresh = smallButton("Muat ulang", false);
-        LinearLayout.LayoutParams refreshParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(50));
+        LinearLayout.LayoutParams refreshParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46));
         refreshParams.leftMargin = dp(8);
-        filters.addView(refresh, refreshParams);
-        page.addView(filters, matchWrap());
+        actions.addView(refresh, refreshParams);
+        page.addView(actions, matchWrap());
+        refresh.setOnClickListener(view -> loadOrders(true));
 
-        LinearLayout searchRow = horizontal();
-        searchInput = input(searchQuery, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        searchInput.setSingleLine(true);
-        searchInput.setHint("Cari kode atau nama");
-        searchInput.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
-        searchRow.addView(searchInput, new LinearLayout.LayoutParams(0, dp(50), 1));
-        Button search = smallButton("Cari", true);
-        LinearLayout.LayoutParams searchButtonParams = new LinearLayout.LayoutParams(dp(84), dp(50));
-        searchButtonParams.leftMargin = dp(8);
-        searchRow.addView(search, searchButtonParams);
-        LinearLayout.LayoutParams searchParams = matchWrapTop(8);
-        page.addView(searchRow, searchParams);
+        if (refundFilter.isEmpty()) {
+            LinearLayout searchRow = horizontal();
+            searchInput = input(searchQuery, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+            searchInput.setSingleLine(true);
+            searchInput.setHint("Cari kode atau nama");
+            searchInput.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+            searchRow.addView(searchInput, new LinearLayout.LayoutParams(0, dp(48), 1));
+            Button search = smallButton("Cari", true);
+            LinearLayout.LayoutParams searchButtonParams = new LinearLayout.LayoutParams(dp(76), dp(48));
+            searchButtonParams.leftMargin = dp(8);
+            searchRow.addView(search, searchButtonParams);
+            page.addView(searchRow, matchWrapTop(8));
+            search.setOnClickListener(view -> { searchQuery = searchInput.getText().toString().trim(); loadOrders(); });
+            searchInput.setOnEditorActionListener((view, actionId, event) -> {
+                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                    searchQuery = searchInput.getText().toString().trim();
+                    loadOrders();
+                    return true;
+                }
+                return false;
+            });
+        }
 
         progress = new ProgressBar(this);
         progress.setVisibility(View.GONE);
@@ -215,64 +555,242 @@ public final class MainActivity extends Activity {
         content.setOrientation(LinearLayout.VERTICAL);
         LinearLayout.LayoutParams listParams = matchWrapTop(8);
         page.addView(content, listParams);
-
-        statusSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            private boolean initialized;
-            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                String selected = filterCodes[position];
-                if (!initialized) { initialized = true; return; }
-                if (selected.startsWith("refund:")) {
-                    String nextRefundFilter = selected.substring("refund:".length());
-                    if (!nextRefundFilter.equals(refundFilter)) { refundFilter = nextRefundFilter; orderFilter = ""; paymentFilter = ""; loadOrders(); }
-                } else if (selected.startsWith("payment:")) {
-                    String nextPaymentFilter = selected.substring("payment:".length());
-                    if (!nextPaymentFilter.equals(paymentFilter) || !refundFilter.isEmpty()) { paymentFilter = nextPaymentFilter; orderFilter = ""; refundFilter = ""; loadOrders(); }
-                } else {
-                    String nextOrderFilter = selected.startsWith("order:") ? selected.substring("order:".length()) : "";
-                    if (!nextOrderFilter.equals(orderFilter) || !paymentFilter.isEmpty() || !refundFilter.isEmpty()) { orderFilter = nextOrderFilter; paymentFilter = ""; refundFilter = ""; loadOrders(); }
-                }
-            }
-            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
-        });
-        refresh.setOnClickListener(view -> loadOrders());
-        search.setOnClickListener(view -> { searchQuery = searchInput.getText().toString().trim(); loadOrders(); });
-        searchInput.setOnEditorActionListener((view, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                searchQuery = searchInput.getText().toString().trim();
-                loadOrders();
-                return true;
-            }
-            return false;
-        });
         finishPage();
-        if (fetch) loadOrders();
+        if (fetch) loadOrders(!orderTransitionNotice.isEmpty());
     }
 
-    private void loadOrders() {
+    private void newOrderListPage() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(PAGE);
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
+        page = new LinearLayout(this);
+        page.setOrientation(LinearLayout.VERTICAL);
+        page.setPadding(dp(20), dp(16), dp(20), dp(20));
+        page.setBackgroundColor(PAGE);
+        scroll.addView(page, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+        orderTabBar = horizontal();
+        orderTabBar.setBackground(rounded(Color.WHITE, 0, LINE));
+        orderTabBar.setElevation(dp(8));
+        addOrderTab("Baru", "new");
+        addOrderTab("Proses", "accepted");
+        addOrderTab("Riwayat", "history");
+        root.addView(orderTabBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(64)));
+        setContentView(root);
+        feedback = null;
+        progress = null;
+        content = null;
+        searchInput = null;
+        adminNoteInput = null;
+    }
+
+    private void addOrderTab(String label, String status) {
+        TextView tab = new TextView(this);
+        boolean selected = refundFilter.isEmpty() && status.equals(orderFilter);
+        tab.setText(label);
+        tab.setTextSize(16);
+        tab.setGravity(Gravity.CENTER);
+        tab.setTypeface(Typeface.DEFAULT, selected ? Typeface.BOLD : Typeface.NORMAL);
+        tab.setTextColor(selected ? GREEN : MUTED);
+        tab.setBackgroundColor(Color.TRANSPARENT);
+        tab.setContentDescription(label + (selected ? ", dipilih" : ""));
+        orderTabBar.addView(tab, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
+        tab.setOnClickListener(view -> {
+            if (status.equals(orderFilter) && refundFilter.isEmpty()) return;
+            orderFilter = status;
+            paymentFilter = "";
+            refundFilter = "";
+            showOrderList(true);
+        });
+    }
+
+    private void showVisitorAnalytics() {
+        visitorAnalyticsPeriod = "day";
+        newPage();
+        showingVisitorAnalytics = true;
+        addToolbar("Pengunjung", false, () -> { showingVisitorAnalytics = false; showOrderList(false); });
+        addText(page, "Riwayat disimpan di perangkat Android. Server hanya menyimpan antrean sampai data tersinkron.", 14, MUTED, false, 0, 0, 0, 12);
+        Spinner periodSpinner = new Spinner(this);
+        String[] labels = {"Per hari Â· 30 hari", "Per minggu Â· 12 minggu", "Per bulan Â· 12 bulan", "Per tahun Â· 5 tahun"};
+        String[] periods = {"day", "week", "month", "year"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, labels);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        periodSpinner.setAdapter(adapter);
+        page.addView(periodSpinner, matchWrapBottom(10));
+        visitorAnalyticsStatus = addText(page, "Sinkronisasi otomatis saat ada push atau aplikasi dibuka.", 13, MUTED, false, 0, 0, 0, 8);
+        visitorAnalyticsContent = new LinearLayout(this);
+        visitorAnalyticsContent.setOrientation(LinearLayout.VERTICAL);
+        page.addView(visitorAnalyticsContent, matchWrap());
+        periodSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                visitorAnalyticsPeriod = periods[Math.max(0, Math.min(position, periods.length - 1))];
+                renderVisitorAnalytics();
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) { }
+        });
+        Button sync = smallButton("Sinkronkan sekarang", true);
+        page.addView(sync, matchWrapTop(12));
+        sync.setOnClickListener(view -> executor.execute(() -> {
+            try {
+                syncVisitorAnalytics(this, api);
+                runOnUiThread(() -> { if (showingVisitorAnalytics) renderVisitorAnalytics(); });
+            } catch (Exception error) {
+                runOnUiThread(() -> { if (visitorAnalyticsStatus != null) visitorAnalyticsStatus.setText("Belum tersinkron. Data akan dicoba lagi saat aplikasi dibuka atau menerima push."); });
+            }
+        }));
+        finishPage();
+        renderVisitorAnalytics();
+    }
+
+    private void renderVisitorAnalytics() {
+        if (visitorAnalyticsContent == null || !showingVisitorAnalytics) return;
+        visitorAnalyticsContent.removeAllViews();
+        VisitorStatsStore store = new VisitorStatsStore(this);
+        try {
+            JSONObject report = store.report(visitorAnalyticsPeriod);
+            LinearLayout summary = card(visitorAnalyticsContent);
+            addText(summary, "Pengunjung unik", 14, MUTED, false, 0, 0, 0, 4);
+            addText(summary, NumberFormat.getIntegerInstance(new Locale("id", "ID")).format(report.optLong("unique_visitors")), 30, GREEN, true, 0, 0, 0, 8);
+            addPair(summary, "Tampilan halaman", NumberFormat.getIntegerInstance(new Locale("id", "ID")).format(report.optLong("pageviews")));
+            String group = "day".equals(visitorAnalyticsPeriod) ? "per hari" : "week".equals(visitorAnalyticsPeriod) ? "per minggu" : "month".equals(visitorAnalyticsPeriod) ? "per bulan" : "per tahun";
+            addText(visitorAnalyticsContent, "Pengunjung " + group, 18, INK, true, 12, 0, 0, 8);
+            JSONArray points = report.optJSONArray("points");
+            if (points == null || points.length() == 0) {
+                LinearLayout empty = card(visitorAnalyticsContent);
+                addText(empty, "Belum ada data pengunjung", 16, INK, true, 0, 0, 0, 4);
+                addText(empty, "Grafik akan terisi setelah ada kunjungan dan aplikasi menyinkronkan antrean.", 14, MUTED, false, 0, 0, 0, 0);
+            } else visitorAnalyticsContent.addView(new VisitorChartView(this, points), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(220)));
+            addText(visitorAnalyticsContent, "Pengunjung unik per negara", 18, INK, true, 18, 0, 0, 8);
+            JSONArray countries = report.optJSONArray("countries");
+            if (countries == null || countries.length() == 0) addText(visitorAnalyticsContent, "Belum ada data negara.", 14, MUTED, false, 0, 0, 0, 0);
+            else for (int index = 0; index < countries.length(); index++) {
+                JSONObject country = countries.optJSONObject(index);
+                if (country != null) addPair(visitorAnalyticsContent, country.optString("name", country.optString("code", "â€”")),
+                        NumberFormat.getIntegerInstance(new Locale("id", "ID")).format(country.optLong("visitors")));
+            }
+            if (visitorAnalyticsStatus != null) visitorAnalyticsStatus.setText("Zona waktu mengikuti pengaturan HP. Data historis ada di penyimpanan aplikasi.");
+        } catch (Exception error) {
+            if (visitorAnalyticsStatus != null) visitorAnalyticsStatus.setText("Data pengunjung belum dapat dibaca di perangkat.");
+        } finally { store.close(); }
+    }
+
+    private final class VisitorChartView extends View {
+        private final JSONArray points;
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        VisitorChartView(Context context, JSONArray points) { super(context); this.points = points; }
+        @Override protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            int count = points.length();
+            if (count == 0) return;
+            float width = getWidth(), height = getHeight(), top = dp(12), bottom = height - dp(34);
+            long maximum = 1;
+            for (int index = 0; index < count; index++) {
+                JSONObject point = points.optJSONObject(index);
+                if (point != null) maximum = Math.max(maximum, point.optLong("visitors"));
+            }
+            float slot = width / count;
+            float barWidth = Math.max(dp(3), Math.min(dp(20), slot * .58f));
+            paint.setColor(LINE);
+            paint.setStrokeWidth(dp(1));
+            canvas.drawLine(0, bottom, width, bottom, paint);
+            paint.setTextSize(dp(count > 14 ? 8 : 10));
+            paint.setTextAlign(Paint.Align.CENTER);
+            for (int index = 0; index < count; index++) {
+                JSONObject point = points.optJSONObject(index);
+                if (point == null) continue;
+                float barHeight = (bottom - top) * point.optLong("visitors") / maximum;
+                float center = (index + .5f) * slot;
+                paint.setColor(GREEN);
+                canvas.drawRoundRect(center - barWidth / 2, bottom - barHeight, center + barWidth / 2, bottom, dp(3), dp(3), paint);
+                paint.setColor(MUTED);
+                if (count <= 12 || index % Math.max(1, count / 6) == 0 || index == count - 1) {
+                    canvas.drawText(point.optString("label", ""), center, height - dp(7), paint);
+                }
+            }
+        }
+    }
+
+    private void loadOrders() { loadOrders(false); }
+
+    private void loadOrders(boolean forceRefresh) {
         if (api == null) { showLogin(""); return; }
         if (!refundFilter.isEmpty()) { loadRefunds(); return; }
         if (searchInput != null) searchQuery = searchInput.getText().toString().trim();
-        setBusy(true, "Memuat pesanan…");
+        String cacheKey = ordersCacheKey(orderFilter, paymentFilter, searchQuery);
+        setBusy(true, "Memeriksa cache pesananâ€¦");
+        runIo(() -> {
+            CachedPayload cached = readCachedPayload(cacheKey);
+            if (cached != null) {
+                JSONArray cachedOrders = new JSONArray(cached.json);
+                runOnUiThread(() -> {
+                    renderOrders(cachedOrders);
+                    setBusy(forceRefresh,
+                            "Cache lokal Â· diperbarui " + cacheTimeLabel(cached.savedAt));
+                });
+                if (!forceRefresh) return;
+            } else {
+                runOnUiThread(() -> setBusy(true, "Memuat pesanan dari serverâ€¦"));
+            }
+            JSONArray orders;
+            if ("history".equals(orderFilter)) {
+                // Older deployed API versions may not recognize the synthetic "history" filter.
+                // Fetch the two terminal statuses separately so the tab still works during rollout.
+                orders = new JSONArray();
+                appendOrders(orders, api.get(buildOrdersPath("completed")).optJSONArray("data"));
+                appendOrders(orders, api.get(buildOrdersPath("cancelled")).optJSONArray("data"));
+            } else {
+                orders = api.get(buildOrdersPath(orderFilter)).optJSONArray("data");
+            }
+            JSONArray latestOrders = orders == null ? new JSONArray() : orders;
+            saveCachedPayload(cacheKey, latestOrders.toString());
+            long syncedAt = System.currentTimeMillis();
+            runOnUiThread(() -> {
+                renderOrders(latestOrders);
+                setBusy(false, latestOrders.length() + " pesanan Â· disinkronkan " + cacheTimeLabel(syncedAt));
+            });
+        }, error -> {
+            if (error instanceof AdminApi.ApiException
+                    && (((AdminApi.ApiException) error).statusCode == 401 || ((AdminApi.ApiException) error).statusCode == 403)) {
+                clearAdminToken();
+                activeSession = null;
+                api = null;
+                showLogin("Sesi berakhir. Masukkan token admin kembali.");
+                return;
+            }
+            if (content != null && content.getChildCount() > 0) {
+                setBusy(false, "Cache lokal ditampilkan Â· server gagal: " + error.getMessage());
+            } else {
+                setBusy(false, error.getMessage());
+                if (content != null) addEmptyState("Pesanan belum dapat dimuat.", "Coba muat ulang setelah koneksi tersedia.");
+            }
+        });
+    }
+
+    private String buildOrdersPath(String status) {
         StringBuilder path = new StringBuilder("/api/admin/orders?limit=100");
-        if (!orderFilter.isEmpty()) path.append("&order_status=").append(orderFilter);
+        if (status != null && !status.isEmpty()) path.append("&order_status=").append(status);
         if (!paymentFilter.isEmpty()) path.append("&payment_status=").append(paymentFilter);
         if (!searchQuery.isEmpty()) {
             try { path.append("&q=").append(URLEncoder.encode(searchQuery, StandardCharsets.UTF_8.name())); }
             catch (Exception ignored) { }
         }
-        runIo(() -> {
-            JSONObject response = api.get(path.toString());
-            JSONArray orders = response.optJSONArray("data");
-            runOnUiThread(() -> renderOrders(orders == null ? new JSONArray() : orders));
-        }, error -> {
-            setBusy(false, error.getMessage());
-            if (content != null && content.getChildCount() == 0) addEmptyState("Pesanan belum dapat dimuat.", "Coba muat ulang setelah koneksi tersedia.");
-        });
+        return path.toString();
+    }
+
+    private void appendOrders(JSONArray target, JSONArray source) {
+        if (source == null) return;
+        for (int index = 0; index < source.length(); index++) {
+            JSONObject order = source.optJSONObject(index);
+            if (order != null) target.put(order);
+        }
     }
 
     private void loadRefunds() {
         if (api == null) { showLogin(""); return; }
-        setBusy(true, "Memuat permintaan refund…");
+        setBusy(true, "Memuat permintaan refundâ€¦");
         String status = refundFilter;
         runIo(() -> {
             JSONObject response = api.get("/api/admin/refunds?status=" + status);
@@ -298,7 +816,7 @@ public final class MainActivity extends Activity {
             addText(card, stringValue(refund, "order_code", "Pesanan"), 16, GREEN, true, 0, 0, 0, 4);
             addText(card, stringValue(refund, "customer_name", "Pelanggan"), 16, INK, true, 0, 0, 0, 4);
             addText(card, "WhatsApp: " + stringValue(refund, "customer_phone", ""), 14, MUTED, false, 0, 0, 0, 4);
-            addText(card, "Refund " + money(refund.optLong("amount")) + " · diminta " + dateText(refund.optString("requested_at")), 14, MUTED, false, 0, 0, 0, 4);
+            addText(card, "Refund " + money(refund.optLong("amount")) + " Â· diminta " + dateText(refund.optString("requested_at")), 14, MUTED, false, 0, 0, 0, 4);
             if ("approved".equals(refund.optString("refund_status"))) {
                 addText(card, "Target: " + dateText(refund.optString("refund_due_at")) + ". Transfer hanya ke rekening asal pembayaran.", 14, ORANGE, true, 0, 0, 0, 8);
             } else if (!refund.optString("customer_note").isEmpty()) {
@@ -326,7 +844,7 @@ public final class MainActivity extends Activity {
         String title = processing ? "Konfirmasi transfer refund?" : "Setujui permintaan refund?";
         String message = processing
                 ? "Pastikan dana sudah ditransfer ke rekening asal yang mengirim pembayaran. Setelah dikonfirmasi, status pesanan berubah menjadi dibatalkan/refund."
-                : "Refund hanya untuk pesanan yang belum mulai diproduksi. Setelah disetujui, target pengiriman dana maksimal 3 × 24 jam.";
+                : "Refund hanya untuk pesanan yang belum mulai diproduksi. Setelah disetujui, target pengiriman dana maksimal 3 Ã— 24 jam.";
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(message)
@@ -337,11 +855,12 @@ public final class MainActivity extends Activity {
 
     private void runRefundAction(JSONObject refund, String action) {
         String refundId = refund.optString("refund_id", "");
-        setBusy(true, "Menyimpan status refund…");
+        setBusy(true, "Menyimpan status refundâ€¦");
         runIo(() -> {
             JSONObject response = api.post("/api/admin/refunds/" + refundId + "/" + action,
                     json("note", action.equals("process") ? "Admin mengonfirmasi transfer ke rekening asal" : "",
                             "transfer_confirmed", action.equals("process")));
+            clearOrderCache();
             runOnUiThread(() -> {
                 feedback.setText(response.optString("message", "Status refund diperbarui."));
                 loadRefunds();
@@ -350,47 +869,54 @@ public final class MainActivity extends Activity {
     }
 
     private void renderOrders(JSONArray orders) {
-        setBusy(false, orders.length() == 0 ? "Belum ada pesanan pada filter ini." : orders.length() + " pesanan terbaru");
+        String notice = orderTransitionNotice;
+        orderTransitionNotice = "";
+        setBusy(false, notice.isEmpty()
+                ? (orders.length() == 0 ? "Belum ada pesanan pada filter ini." : orders.length() + " pesanan terbaru")
+                : notice);
         content.removeAllViews();
         if (orders.length() == 0) {
             addEmptyState("Belum ada pesanan", "Pesanan baru akan muncul di sini.");
             return;
         }
+        LinearLayout row = null;
+        int visibleIndex = 0;
         for (int index = 0; index < orders.length(); index++) {
             JSONObject order = orders.optJSONObject(index);
             if (order == null) continue;
-            LinearLayout card = card(content);
-            addText(card, stringValue(order, "order_code", "Pesanan"), 16, GREEN, true, 0, 0, 0, 4);
-            addText(card, stringValue(order, "customer_name", "Pelanggan"), 16, INK, true, 0, 0, 0, 4);
-            addText(card, money(order.optLong("total_amount")) + "  ·  " + dateText(order.optString("created_at")), 14, MUTED, false, 0, 0, 0, 8);
-            addText(card, "Pesanan: " + statusLabel("order", stringValue(order, "order_status", "new"))
-                    + "   •   Produksi: " + statusLabel("production", stringValue(order, "production_status", "pending")), 14, INK, false, 0, 0, 0, 4);
-            addText(card, "Pembayaran: " + statusLabel("payment", stringValue(order, "payment_status", "pending"))
-                    + (order.optBoolean("has_payment_proof") ? "  ·  Bukti ada" : ""), 14, MUTED, false, 0, 0, 0, 10);
-            String proofUploadedAt = order.optString("proof_uploaded_at", "");
-            if (!proofUploadedAt.isEmpty() && "pending".equals(order.optString("payment_status"))) {
-                try {
-                    java.time.Instant uploaded = java.time.Instant.parse(proofUploadedAt);
-                    String reviewDeadline = java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm", Locale.forLanguageTag("id-ID"))
-                            .withZone(java.time.ZoneId.systemDefault()).format(uploaded.plusSeconds(24 * 60 * 60));
-                    addText(card, "Target periksa bukti sebelum " + reviewDeadline, 14, ORANGE, true, 0, 0, 0, 8);
-                } catch (Exception ignored) { }
+            if (visibleIndex % 2 == 0) {
+                row = horizontal();
+                content.addView(row, matchWrapTop(2));
             }
-            Button open = smallButton("Lihat pesanan", false);
-            card.addView(open, matchWrap());
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dp(12), dp(14), dp(12), dp(14));
+            card.setMinimumHeight(dp(136));
+            card.setBackground(rounded(Color.WHITE, 12, LINE));
+            card.setFocusable(true);
+            LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1);
+            cardParams.setMargins(dp(visibleIndex % 2 == 0 ? 0 : 5), 0, dp(visibleIndex % 2 == 0 ? 5 : 0), dp(10));
+            row.addView(card, cardParams);
+            addText(card, stringValue(order, "order_code", "Pesanan"), 18, GREEN, true, 0, 0, 0, 6);
+            TextView customer = addText(card, stringValue(order, "customer_name", "Pelanggan"), 14, INK, true, 0, 0, 0, 7);
+            customer.setMaxLines(2);
+            addText(card, money(order.optLong("total_amount")), 13, MUTED, false, 0, 0, 0, 5);
+            addText(card, statusLabel("order", stringValue(order, "order_status", "new")), 13, INK, false, 0, 0, 0, 3);
+            addText(card, "Bayar: " + statusLabel("payment", stringValue(order, "payment_status", "pending"))
+                    + " - Bukti: " + (order.optBoolean("has_payment_proof") ? "ada" : "belum ada"), 12, MUTED, false, 0, 0, 0, 0);
             String code = order.optString("order_code", "");
+            card.setContentDescription("Pesanan " + code + ", " + stringValue(order, "customer_name", "Pelanggan"));
             card.setOnClickListener(view -> showOrderDetail(code));
-            open.setOnClickListener(view -> showOrderDetail(code));
+            visibleIndex++;
         }
     }
-
     private void showOrderDetail(String orderCode) {
         if (orderCode == null || orderCode.isEmpty()) return;
         currentOrderCode = orderCode;
         paymentProofViewed = false;
         newPage();
         addToolbar(orderCode, false, () -> showOrderList(true));
-        feedback = addText(page, "Memuat detail…", 14, MUTED, false, 8, 0, 0, 0);
+        feedback = addText(page, "Memuat detailâ€¦", 14, MUTED, false, 8, 0, 0, 0);
         progress = new ProgressBar(this);
         LinearLayout.LayoutParams progressParams = new LinearLayout.LayoutParams(dp(32), dp(32));
         progressParams.gravity = Gravity.CENTER_HORIZONTAL;
@@ -399,25 +925,71 @@ public final class MainActivity extends Activity {
         content.setOrientation(LinearLayout.VERTICAL);
         page.addView(content, matchWrapTop(8));
         finishPage();
-        loadOrderDetail();
+        loadOrderDetail(false);
     }
 
-    private void loadOrderDetail() {
+    private void loadOrderDetail() { loadOrderDetail(false); }
+
+    private void loadOrderDetail(boolean forceRefresh) {
         if (api == null || currentOrderCode == null) { showLogin(""); return; }
         String code = currentOrderCode;
-        setBusy(true, "Memuat detail pesanan…");
+        String cacheKey = detailCacheKey(code);
+        setBusy(true, "Memeriksa cache detailâ€¦");
         runIo(() -> {
+            CachedPayload cached = readCachedPayload(cacheKey);
+            if (cached != null) {
+                JSONObject cachedOrder = new JSONObject(cached.json);
+                runOnUiThread(() -> {
+                    renderOrderDetail(cachedOrder);
+                    setBusy(forceRefresh,
+                            "Cache lokal Â· diperbarui " + cacheTimeLabel(cached.savedAt));
+                });
+                if (!forceRefresh) return;
+            } else {
+                runOnUiThread(() -> setBusy(true, "Memuat detail dari serverâ€¦"));
+            }
             JSONObject response = api.get("/api/admin/orders/" + code);
             JSONObject data = response.optJSONObject("data");
             if (data == null) throw new IOException("Detail pesanan kosong.");
-            runOnUiThread(() -> renderOrderDetail(data));
-        }, error -> setBusy(false, error.getMessage()));
+            saveCachedPayload(cacheKey, data.toString());
+            long syncedAt = System.currentTimeMillis();
+            runOnUiThread(() -> {
+                renderOrderDetail(data);
+                setBusy(false, "Detail disinkronkan " + cacheTimeLabel(syncedAt));
+            });
+        }, error -> {
+            if (error instanceof AdminApi.ApiException
+                    && (((AdminApi.ApiException) error).statusCode == 401 || ((AdminApi.ApiException) error).statusCode == 403)) {
+                clearAdminToken();
+                activeSession = null;
+                api = null;
+                showLogin("Sesi berakhir. Masukkan token admin kembali.");
+            } else if (content != null && content.getChildCount() > 0) {
+                setBusy(false, "Cache lokal ditampilkan Â· server gagal: " + error.getMessage());
+            } else {
+                setBusy(false, error.getMessage());
+            }
+        });
     }
 
     private void renderOrderDetail(JSONObject order) {
         loadedOrder = order;
         content.removeAllViews();
         setBusy(false, "");
+        boolean cancelled = "cancelled".equals(stringValue(order, "order_status", ""));
+        boolean completed = "completed".equals(stringValue(order, "order_status", ""));
+        if ("new".equals(order.optString("order_status", "new"))) {
+            renderNewOrderDetail(order);
+            return;
+        }
+        if ("accepted".equals(order.optString("order_status", ""))) {
+            renderProcessOrderDetail(order);
+            return;
+        }
+        if (cancelled || completed) {
+            renderHistoryOrderDetail(order, cancelled);
+            return;
+        }
         card(content);
         LinearLayout summary = (LinearLayout) content.getChildAt(content.getChildCount() - 1);
         addText(summary, money(order.optLong("total_amount")), 25, GREEN, true, 0, 0, 0, 4);
@@ -434,9 +1006,10 @@ public final class MainActivity extends Activity {
         String customerNote = stringValue(order, "customer_note", "");
         if (!customerNote.isEmpty()) addText(customer, "Catatan: " + customerNote, 14, MUTED, false, 0, 0, 0, 0);
 
+        if (!cancelled && !completed) {
         LinearLayout shipping = section("Pengiriman");
-        addPair(shipping, "Tujuan", stringValue(order, "shipping_destination_label", "—"));
-        addPair(shipping, "Kurir", stringValue(order, "shipping_courier_name", "—") + " " + stringValue(order, "shipping_service", ""));
+        addPair(shipping, "Tujuan", stringValue(order, "shipping_destination_label", "â€”"));
+        addPair(shipping, "Kurir", stringValue(order, "shipping_courier_name", "â€”") + " " + stringValue(order, "shipping_service", ""));
         if (order.has("shipping_distance_km") && !order.isNull("shipping_distance_km")) addPair(shipping, "Jarak", order.optString("shipping_distance_km") + " km");
         addPair(shipping, "Ongkir", money(order.optLong("shipping_amount")));
         String carrier = stringValue(order, "carrier", "");
@@ -452,13 +1025,15 @@ public final class MainActivity extends Activity {
             });
         }
 
+        }
+
         LinearLayout itemsCard = section("Isi pesanan");
         JSONArray items = order.optJSONArray("items");
         if (items != null) for (int index = 0; index < items.length(); index++) {
             JSONObject item = items.optJSONObject(index);
             if (item == null) continue;
-            addText(itemsCard, item.optString("name", "Produk") + "  ×  " + item.optInt("quantity"), 16, INK, true, 0, 0, 0, 3);
-            addText(itemsCard, money(item.optLong("unit_price_amount")) + " per item · " + money(item.optLong("line_total_amount")), 14, MUTED, false, 0, 0, 0, 3);
+            addText(itemsCard, item.optString("name", "Produk") + "  Ã—  " + item.optInt("quantity"), 16, INK, true, 0, 0, 0, 3);
+            addText(itemsCard, money(item.optLong("unit_price_amount")) + " per item Â· " + money(item.optLong("line_total_amount")), 14, MUTED, false, 0, 0, 0, 3);
             String size = item.optString("fixed_size_snapshot", "");
             if (!size.isEmpty() && !"null".equals(size)) addText(itemsCard, "Ukuran: " + size, 14, MUTED, false, 0, 0, 0, 3);
             JSONObject custom = item.optJSONObject("customization");
@@ -485,6 +1060,8 @@ public final class MainActivity extends Activity {
             }
         }
         addText(itemsCard, "Koordinat DXF dihitung dalam mm; saat impor pilih skala 1 unit = 1 mm. File ini gambar 2D, bukan toolpath. Periksa font, bahan, toleransi, dan toolpath di CAD/CAM sebelum produksi mesin.", 13, MUTED, false, 0, 0, 0, 4);
+
+        if (completed) renderCompletedShipment(order);
 
         LinearLayout payment = section("Pembayaran");
         String paymentStatus = stringValue(order, "payment_status", "pending");
@@ -518,6 +1095,7 @@ public final class MainActivity extends Activity {
             reject.setOnClickListener(view -> confirmPaymentReview(order, "reject"));
         }
 
+        if (!cancelled && !completed) {
         EditText noteInput = input("", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         adminNoteInput = noteInput;
         noteInput.setHint("Catatan admin; wajib untuk pembatalan");
@@ -562,6 +1140,7 @@ public final class MainActivity extends Activity {
                 carrierInput.getText().toString().trim(), trackingNumberInput.getText().toString().trim(),
                 trackingUrlInput.getText().toString().trim(), selectedStatusCode(shipmentStatus),
                 noteInput.getText().toString().trim(), saveShipment));
+        }
 
         LinearLayout historyCard = section("Riwayat");
         JSONArray history = order.optJSONArray("history");
@@ -570,16 +1149,476 @@ public final class MainActivity extends Activity {
             if (event == null) continue;
             String type = event.optString("status_type");
             addText(historyCard, statusLabel(type, event.optString("new_status")), 15, INK, true, 0, 0, 0, 2);
-            addText(historyCard, dateText(event.optString("created_at")) + " · " + event.optString("actor_type", "system"), 13, MUTED, false, 0, 0, 0, 2);
+            addText(historyCard, dateText(event.optString("created_at")) + " Â· " + event.optString("actor_type", "system"), 13, MUTED, false, 0, 0, 0, 2);
             String historyNote = event.optString("note", "");
             if (!historyNote.isEmpty() && !"null".equals(historyNote)) addText(historyCard, historyNote, 14, MUTED, false, 0, 0, 0, 8);
         }
     }
 
+    private void renderHistoryOrderDetail(JSONObject order, boolean cancelled) {
+        LinearLayout header = horizontal();
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        content.addView(header, matchWrapBottom(12));
+        LinearLayout identity = new LinearLayout(this);
+        identity.setOrientation(LinearLayout.VERTICAL);
+        header.addView(identity, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        addText(identity, stringValue(order, "order_code", currentOrderCode), 18, INK, true, 0, 0, 0, 4);
+        addText(identity, stringValue(order, "customer_name", "Pelanggan"), 16, INK, true, 0, 0, 0, 0);
+        LinearLayout statusAndPrice = new LinearLayout(this);
+        statusAndPrice.setOrientation(LinearLayout.VERTICAL);
+        statusAndPrice.setGravity(Gravity.END);
+        header.addView(statusAndPrice, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        addText(statusAndPrice, statusLabel("order", cancelled ? "cancelled" : "completed"), 13, MUTED, true, 0, 0, 0, 3);
+        addText(statusAndPrice, money(order.optLong("total_amount")), 20, GREEN, true, 0, 0, 0, 0);
+
+        LinearLayout detail = card(content);
+        addText(detail, "Detail pesanan dan harga", 17, GREEN, true, 0, 0, 0, 8);
+        JSONArray items = order.optJSONArray("items");
+        if (items != null) for (int index = 0; index < items.length(); index++) {
+            JSONObject item = items.optJSONObject(index);
+            if (item == null) continue;
+            addText(detail, item.optString("name", "Produk") + "  Ã—  " + item.optInt("quantity"), 16, INK, true, 0, 0, 0, 3);
+            addText(detail, money(item.optLong("unit_price_amount")) + " per item Â· " + money(item.optLong("line_total_amount")), 14, MUTED, false, 0, 0, 0, 3);
+            String size = stringValue(item, "fixed_size_snapshot", "");
+            if (!size.isEmpty()) addText(detail, "Ukuran: " + size, 14, MUTED, false, 0, 0, 0, 3);
+            JSONObject custom = item.optJSONObject("customization");
+            if (custom != null) {
+                java.util.Iterator<String> customKeys = custom.keys();
+                while (customKeys.hasNext()) {
+                    String key = customKeys.next();
+                    addText(detail, customFieldLabel(item, key) + ": " + custom.optString(key), 14, MUTED, false, 0, 0, 0, 3);
+                }
+            }
+            String itemId = item.optString("id", "");
+            Button createDxf = smallButton("Buat gambar DXF", false);
+            detail.addView(createDxf, matchWrapTop(5));
+            createDxf.setOnClickListener(view -> createProductionDxf(itemId, createDxf));
+            JSONArray files = item.optJSONArray("production_files");
+            if (files != null) for (int fileIndex = 0; fileIndex < files.length(); fileIndex++) {
+                JSONObject file = files.optJSONObject(fileIndex);
+                if (file == null) continue;
+                Button download = smallButton("Simpan DXF v" + file.optInt("version"), false);
+                detail.addView(download, matchWrapTop(4));
+                String fileId = file.optString("id", "");
+                download.setOnClickListener(view -> downloadProductionDxf(fileId, file.optString("file_name"), download));
+            }
+        }
+        if (!cancelled) renderCompletedShipment(order);
+        else renderRefundProof(order);
+    }
+
+    private void renderRefundProof(JSONObject order) {
+        String refundId = stringValue(order, "refund_id", "");
+        if (refundId.isEmpty() || !order.optBoolean("has_payment_proof")) return;
+        LinearLayout refund = section("Bukti pengembalian dana");
+        addText(refund, "Status refund: " + statusLabel("payment", "refunded"), 14, MUTED, false, 0, 0, 0, 6);
+        ImageView proofImage = new ImageView(this);
+        proofImage.setVisibility(View.GONE);
+        proofImage.setAdjustViewBounds(true);
+        proofImage.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        proofImage.setMaxHeight(dp(420));
+        proofImage.setContentDescription("Bukti transfer pengembalian dana");
+        refund.addView(proofImage, matchWrapTop(6));
+        if (order.optBoolean("has_refund_proof")) {
+            Button viewProof = smallButton("Lihat bukti pengembalian", false);
+            refund.addView(viewProof, matchWrapTop(6));
+            viewProof.setOnClickListener(view -> loadRefundProof(refundId, viewProof, proofImage));
+        } else {
+            addText(refund, "Unggah bukti transfer yang telah dikirim ke rekening asal pembayaran.", 14, MUTED, false, 0, 0, 0, 6);
+            Button upload = smallButton("Unggah bukti pengembalian", true);
+            refund.addView(upload, matchWrapTop(4));
+            upload.setOnClickListener(view -> chooseRefundProof(refundId));
+        }
+    }
+
+    private void renderCompletedShipment(JSONObject order) {
+        LinearLayout shipping = section("Pengiriman");
+        addText(shipping, "Kurir / Ojol", 13, MUTED, false, 0, 0, 0, 3);
+        String courier = stringValue(order, "shipping_courier_name", stringValue(order, "carrier", "Kurir"));
+        String service = stringValue(order, "shipping_service", "");
+        addText(shipping, service.isEmpty() ? courier : courier + " Â· " + service, 16, INK, true, 0, 0, 0, 8);
+
+        addText(shipping, "Nomor resi", 13, MUTED, false, 0, 0, 0, 3);
+        TextView trackingNumberLabel = addText(shipping,
+                stringValue(order, "tracking_number", "Nomor resi belum diisi"),
+                15, INK, false, 0, 0, 0, 3);
+        trackingNumberLabel.setPadding(dp(10), dp(10), dp(10), dp(10));
+        trackingNumberLabel.setBackground(rounded(Color.WHITE, 8, LINE));
+        EditText trackingNumber = input(stringValue(order, "tracking_number", ""),
+                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        trackingNumber.setSingleLine(true);
+        trackingNumber.setHint("Nomor resi");
+        trackingNumber.setVisibility(View.GONE);
+        shipping.addView(trackingNumber, matchWrapTop(2));
+
+        addText(shipping, "URL tracking", 13, MUTED, false, 0, 8, 0, 3);
+        TextView trackingUrlLabel = addText(shipping,
+                stringValue(order, "tracking_url", "URL tracking belum diisi"),
+                15, INK, false, 0, 0, 0, 3);
+        trackingUrlLabel.setPadding(dp(10), dp(10), dp(10), dp(10));
+        trackingUrlLabel.setBackground(rounded(Color.WHITE, 8, LINE));
+        EditText trackingUrl = input(stringValue(order, "tracking_url", ""),
+                InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        trackingUrl.setSingleLine(true);
+        trackingUrl.setHint("https:// tautan tracking");
+        trackingUrl.setVisibility(View.GONE);
+        shipping.addView(trackingUrl, matchWrapTop(2));
+
+        Button editSave = smallButton("Edit", true);
+        shipping.addView(editSave, matchWrapTop(8));
+        boolean[] editing = {false};
+        editSave.setOnClickListener(view -> {
+            if (!editing[0]) {
+                editing[0] = true;
+                trackingNumberLabel.setVisibility(View.GONE);
+                trackingUrlLabel.setVisibility(View.GONE);
+                trackingNumber.setVisibility(View.VISIBLE);
+                trackingUrl.setVisibility(View.VISIBLE);
+                editSave.setText("Simpan");
+                trackingNumber.requestFocus();
+                return;
+            }
+            String resi = trackingNumber.getText().toString().trim();
+            if (resi.length() < 4) {
+                trackingNumber.setError("Isi nomor resi minimal 4 karakter.");
+                return;
+            }
+            String carrier = stringValue(order, "carrier", courier);
+            saveShipment(carrier, resi, trackingUrl.getText().toString().trim(),
+                    "delivered", "Perbarui data pengiriman", editSave);
+        });
+    }
+
+    private void renderNewOrderDetail(JSONObject order) {
+        LinearLayout header = horizontal();
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        content.addView(header, matchWrapBottom(12));
+        LinearLayout identity = new LinearLayout(this);
+        identity.setOrientation(LinearLayout.VERTICAL);
+        header.addView(identity, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        addText(identity, stringValue(order, "order_code", currentOrderCode), 18, INK, true, 0, 0, 0, 5);
+        addText(identity, stringValue(order, "customer_name", "Pelanggan"), 16, INK, true, 0, 0, 0, 0);
+        TextView total = new TextView(this);
+        total.setText(money(order.optLong("total_amount")));
+        total.setTextSize(21);
+        total.setTextColor(GREEN);
+        total.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        total.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams totalParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        totalParams.leftMargin = dp(8);
+        header.addView(total, totalParams);
+
+        LinearLayout proofCard = card(content);
+        ImageView proofImage = new ImageView(this);
+        proofImage.setBackground(rounded(PAGE, 8, LINE));
+        proofImage.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        proofImage.setAdjustViewBounds(false);
+        proofImage.setContentDescription("Foto bukti pembayaran pesanan");
+        proofCard.addView(proofImage, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(300)));
+        Button proofAction = smallButton(order.optBoolean("has_payment_proof") ? "Memuat buktiâ€¦" : "Bukti transfer belum diunggah", false);
+        proofCard.addView(proofAction, matchWrapTop(8));
+        if (order.optBoolean("has_payment_proof")) {
+            proofAction.setOnClickListener(view -> loadProof(order, proofAction, proofImage));
+            loadProof(order, proofAction, proofImage);
+        } else {
+            proofAction.setEnabled(false);
+        }
+
+        LinearLayout detailCard = card(content);
+        addText(detailCard, "Detail pesanan", 17, GREEN, true, 0, 0, 0, 8);
+        JSONArray items = order.optJSONArray("items");
+        if (items != null) for (int index = 0; index < items.length(); index++) {
+            JSONObject item = items.optJSONObject(index);
+            if (item == null) continue;
+            addText(detailCard, item.optString("name", "Produk") + "  Ã—  " + item.optInt("quantity"), 16, INK, true, 0, 0, 0, index + 1 < items.length() ? 8 : 0);
+        }
+        if (items == null || items.length() == 0) addText(detailCard, "Rincian produk belum tersedia.", 14, MUTED, false, 0, 0, 0, 0);
+
+        LinearLayout actions = horizontal();
+        Button cancel = smallButton("Batalkan", false);
+        Button process = smallButton("Proses", true);
+        LinearLayout.LayoutParams actionParams = new LinearLayout.LayoutParams(0, dp(52), 1);
+        actions.addView(cancel, actionParams);
+        LinearLayout.LayoutParams processParams = new LinearLayout.LayoutParams(0, dp(52), 1);
+        processParams.leftMargin = dp(10);
+        actions.addView(process, processParams);
+        content.addView(actions, matchWrapTop(2));
+        cancel.setOnClickListener(view -> cancelNewOrder(order, cancel));
+        process.setOnClickListener(view -> processNewOrder(order, process));
+    }
+
+    private void processNewOrder(JSONObject order, Button processButton) {
+        String paymentStatus = order.optString("payment_status", "pending");
+        if ("pending".equals(paymentStatus)) {
+            if (!order.optBoolean("has_payment_proof")) {
+                setBusy(false, "Bukti transfer belum diunggah. Pesanan belum dapat diproses.");
+                return;
+            }
+            confirmPaymentReview(order, "approve");
+            return;
+        }
+        if (!"paid".equals(paymentStatus)) {
+            setBusy(false, "Pembayaran belum berstatus lunas. Periksa status pembayaran terlebih dahulu.");
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Terima pesanan?")
+                .setMessage("Pesanan akan diterima. Produksi masih perlu dimulai dari detail pesanan setelah pembayaran dikonfirmasi.")
+                .setNegativeButton("Kembali", null)
+                .setPositiveButton("Proses", (dialog, which) -> updateOrderStatus("order", "accepted", "Pesanan diterima admin", processButton))
+                .show();
+    }
+
+    private void cancelNewOrder(JSONObject order, Button cancelButton) {
+        if ("paid".equals(order.optString("payment_status", "pending"))) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Pembatalan pesanan lunas")
+                    .setMessage("Pesanan yang sudah lunas harus melalui alur permintaan refund. Gunakan tab Refund setelah pelanggan mengajukan pembatalan.")
+                    .setPositiveButton("Mengerti", null)
+                    .show();
+            return;
+        }
+        EditText reason = input("", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        reason.setHint("Alasan pembatalan");
+        reason.setMinLines(2);
+        new AlertDialog.Builder(this)
+                .setTitle("Batalkan pesanan?")
+                .setMessage("Pesanan yang belum lunas akan ditandai dibatalkan.")
+                .setView(reason)
+                .setNegativeButton("Kembali", null)
+                .setPositiveButton("Batalkan", (dialog, which) -> {
+                    String note = reason.getText().toString().trim();
+                    if (note.isEmpty()) {
+                        setBusy(false, "Tulis alasan pembatalan terlebih dahulu.");
+                        return;
+                    }
+                    updateOrderStatus("order", "cancelled", note, cancelButton);
+                })
+                .show();
+    }
+
+    private void renderProcessOrderDetail(JSONObject order) {
+        LinearLayout header = horizontal();
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        content.addView(header, matchWrapBottom(12));
+        LinearLayout identity = new LinearLayout(this);
+        identity.setOrientation(LinearLayout.VERTICAL);
+        header.addView(identity, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        addText(identity, stringValue(order, "order_code", currentOrderCode), 18, INK, true, 0, 0, 0, 5);
+        addText(identity, stringValue(order, "customer_name", "Pelanggan"), 16, INK, true, 0, 0, 0, 0);
+        TextView total = new TextView(this);
+        total.setText(money(order.optLong("total_amount")));
+        total.setTextSize(21);
+        total.setTextColor(GREEN);
+        total.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        total.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams totalParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        totalParams.leftMargin = dp(8);
+        header.addView(total, totalParams);
+
+        LinearLayout details = card(content);
+        addText(details, "Detail pesanan", 17, GREEN, true, 0, 0, 0, 8);
+        JSONArray items = order.optJSONArray("items");
+        if (items != null) for (int index = 0; index < items.length(); index++) {
+            JSONObject item = items.optJSONObject(index);
+            if (item == null) continue;
+            addText(details, item.optString("name", "Produk") + "  Ã—  " + item.optInt("quantity"), 15, INK, true, 0, 0, 0, 3);
+            String size = item.optString("fixed_size_snapshot", "");
+            if (!size.isEmpty() && !"null".equals(size)) addText(details, "Ukuran: " + size, 13, MUTED, false, 0, 0, 0, 5);
+            Button createDxf = smallButton("Buat gambar DXF", false);
+            details.addView(createDxf, matchWrapTop(3));
+            String itemId = item.optString("id", "");
+            createDxf.setOnClickListener(view -> createProductionDxf(itemId, createDxf));
+            JSONArray files = item.optJSONArray("production_files");
+            if (files != null) for (int fileIndex = 0; fileIndex < files.length(); fileIndex++) {
+                JSONObject file = files.optJSONObject(fileIndex);
+                if (file == null) continue;
+                Button download = smallButton("Simpan DXF v" + file.optInt("version"), false);
+                details.addView(download, matchWrapTop(3));
+                String fileId = file.optString("id", "");
+                download.setOnClickListener(view -> downloadProductionDxf(fileId, file.optString("file_name"), download));
+            }
+        }
+
+        LinearLayout address = card(content);
+        addText(address, "Alamat", 16, GREEN, true, 0, 0, 0, 6);
+        addText(address, stringValue(order, "shipping_address", "Alamat belum tersedia"), 15, INK, false, 0, 0, 0, 3);
+        String destination = stringValue(order, "shipping_destination_label", "");
+        if (!destination.isEmpty()) addText(address, destination, 13, MUTED, false, 0, 0, 0, 0);
+
+        String checkoutCourier = stringValue(order, "shipping_courier_name", stringValue(order, "carrier", "Kurir belum tersedia"));
+        String checkoutService = stringValue(order, "shipping_service", "");
+        String oldTracking = stringValue(order, "tracking_number", "");
+        String oldUrl = stringValue(order, "tracking_url", "");
+        EditText trackingInput = input(oldTracking, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        trackingInput.setSingleLine(true);
+        trackingInput.setHint("Input resi");
+        EditText trackingUrlInput = input(oldUrl, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        trackingUrlInput.setSingleLine(true);
+        trackingUrlInput.setHint("URL jasa kirim atau URL tracking Ojol");
+
+        LinearLayout shippingRow = horizontal();
+        LinearLayout shippingInputs = new LinearLayout(this);
+        shippingInputs.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams inputsParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1);
+        inputsParams.rightMargin = dp(8);
+        shippingRow.addView(shippingInputs, inputsParams);
+        TextView courierInfo = new TextView(this);
+        courierInfo.setText(checkoutService.isEmpty() ? checkoutCourier : checkoutCourier + "\n" + checkoutService);
+        courierInfo.setTextSize(15);
+        courierInfo.setTextColor(INK);
+        courierInfo.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        courierInfo.setGravity(Gravity.CENTER_VERTICAL);
+        courierInfo.setPadding(dp(12), dp(8), dp(12), dp(8));
+        courierInfo.setBackground(rounded(Color.WHITE, 8, LINE));
+        shippingInputs.addView(courierInfo, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)));
+        shippingInputs.addView(trackingInput, matchWrapTop(6));
+        WebView mapView = new WebView(this);
+        mapView.setBackground(rounded(Color.WHITE, 8, LINE));
+        WebSettings mapSettings = mapView.getSettings();
+        mapSettings.setJavaScriptEnabled(true);
+        mapSettings.setDomStorageEnabled(true);
+        mapView.setWebViewClient(new WebViewClient());
+        shippingRow.addView(mapView, new LinearLayout.LayoutParams(0, dp(156), 1));
+        address.addView(shippingRow, matchWrapTop(10));
+        double latitude = order.optDouble("shipping_latitude", Double.NaN);
+        double longitude = order.optDouble("shipping_longitude", Double.NaN);
+        if (validCoordinates(latitude, longitude)) {
+            String bbox = String.format(Locale.US, "%.6f,%.6f,%.6f,%.6f",
+                    longitude - 0.004, latitude - 0.003, longitude + 0.004, latitude + 0.003);
+            String marker = String.format(Locale.US, "%.6f,%.6f", latitude, longitude);
+            mapView.loadUrl("https://www.openstreetmap.org/export/embed.html?bbox=" + bbox
+                    + "&layer=mapnik&marker=" + marker);
+        } else {
+            mapView.loadData("<html><body style='font-family:sans-serif;padding:16px'>Pin lokasi tidak tersimpan pada pesanan lama.</body></html>", "text/html", "UTF-8");
+            addText(address, "Pesanan lama belum memiliki pin. Tombol Google Maps akan mencari alamat tertulis.", 12, MUTED, false, 6, 0, 0, 0);
+        }
+        Button openMap = smallButton("Buka di Google Maps", false);
+        address.addView(openMap, matchWrapTop(6));
+        openMap.setOnClickListener(view -> openOrderLocation(order));
+        address.addView(trackingUrlInput, matchWrapTop(8));
+
+        String production = stringValue(order, "production_status", "pending");
+        String shipment = stringValue(order, "shipment_status", "pending");
+        Button cancel = smallButton("Batalkan", false);
+        String actionLabel;
+        if ("pending".equals(production)) actionLabel = "Mulai produksi";
+        else if ("in_progress".equals(production)) actionLabel = "Selesai";
+        else if ("shipped".equals(shipment)) actionLabel = "Selesai";
+        else if ("delivered".equals(shipment)) actionLabel = "Tuntaskan pesanan";
+        else actionLabel = "Kirim pesanan";
+        Button finish = smallButton(actionLabel, true);
+        LinearLayout actions = horizontal();
+        LinearLayout.LayoutParams actionParams = new LinearLayout.LayoutParams(0, dp(52), 1);
+        actions.addView(cancel, actionParams);
+        LinearLayout.LayoutParams finishParams = new LinearLayout.LayoutParams(0, dp(52), 1);
+        finishParams.leftMargin = dp(8);
+        actions.addView(finish, finishParams);
+        content.addView(actions, matchWrapTop(4));
+        cancel.setOnClickListener(view -> explainProcessCancellation());
+        finish.setOnClickListener(view -> finishProcessStep(order, production, shipment,
+                checkoutCourier, trackingInput, trackingUrlInput, finish));
+    }
+
+    private void openOrderLocation(JSONObject order) {
+        double latitude = order.optDouble("shipping_latitude", Double.NaN);
+        double longitude = order.optDouble("shipping_longitude", Double.NaN);
+        String query = validCoordinates(latitude, longitude)
+                ? String.format(Locale.US, "%.6f,%.6f", latitude, longitude)
+                : stringValue(order, "shipping_address", "") + " " + stringValue(order, "shipping_destination_label", "");
+        try {
+            String encoded = URLEncoder.encode(query.trim(), StandardCharsets.UTF_8.name());
+            startActivity(new Intent(Intent.ACTION_VIEW,
+                    android.net.Uri.parse("https://www.google.com/maps/search/?api=1&query=" + encoded)));
+        } catch (Exception error) {
+            setBusy(false, "Lokasi tidak dapat dibuka.");
+        }
+    }
+
+    private static boolean validCoordinates(double latitude, double longitude) {
+        return !Double.isNaN(latitude) && !Double.isInfinite(latitude) && latitude >= -90 && latitude <= 90
+                && !Double.isNaN(longitude) && !Double.isInfinite(longitude) && longitude >= -180 && longitude <= 180;
+    }
+
+    private void explainProcessCancellation() {
+        new AlertDialog.Builder(this)
+                .setTitle("Batalkan pesanan?")
+                .setMessage("Pesanan ini sudah lunas. Pembatalan harus melalui permintaan refund pelanggan agar dana dan status pesanan tercatat dengan benar.")
+                .setNegativeButton("Kembali", null)
+                .setPositiveButton("Buka Refund", (dialog, which) -> {
+                    refundFilter = "requested";
+                    showOrderList(true);
+                })
+                .show();
+    }
+
+    private void finishProcessStep(JSONObject order, String production, String shipment,
+                                   String checkoutCourier, EditText trackingInput,
+                                   EditText trackingUrlInput, Button actionButton) {
+        String orderCode = stringValue(order, "order_code", currentOrderCode);
+        String note = "Pembaruan melalui aplikasi admin";
+        if ("pending".equals(production)) {
+            updateOrderStatus("production", "in_progress", "Produksi dimulai", actionButton);
+            return;
+        }
+        if ("in_progress".equals(production)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Tandai produksi selesai?")
+                    .setMessage("Pastikan produk sudah selesai dibuat sebelum melanjutkan ke pengiriman.")
+                    .setNegativeButton("Kembali", null)
+                    .setPositiveButton("Selesai", (dialog, which) -> updateOrderStatus("production", "completed", note, actionButton))
+                    .show();
+            return;
+        }
+        if ("shipped".equals(shipment)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Pesanan sudah diterima?")
+                    .setMessage("Status akan diubah menjadi diterima dan pesanan ditandai selesai.")
+                    .setNegativeButton("Belum", null)
+                    .setPositiveButton("Ya, selesai", (dialog, which) -> {
+                        String carrier = stringValue(order, "carrier", "");
+                        String tracking = stringValue(order, "tracking_number", "");
+                        String url = stringValue(order, "tracking_url", "");
+                        setBusy(true, "Menyelesaikan pesananâ€¦");
+                        runIo(() -> {
+                            api.post("/api/admin/orders/" + orderCode + "/shipment",
+                                    json("carrier", carrier, "tracking_number", tracking, "tracking_url", url,
+                                            "status", "delivered", "note", "Dikonfirmasi diterima admin"));
+                            api.post("/api/admin/orders/" + orderCode + "/status",
+                                    json("status_type", "order", "status", "completed", "note", "Pesanan diterima pelanggan"));
+                            clearOrderCache();
+                            runOnUiThread(() -> returnToCurrentOrderTab(
+                                    "Pesanan selesai. Kembali ke daftar Proses."));
+                        }, error -> setBusy(false, error.getMessage()));
+                    })
+                    .show();
+            return;
+        }
+        if ("delivered".equals(shipment)) {
+            updateOrderStatus("order", "completed", "Pesanan diterima pelanggan", actionButton);
+            return;
+        }
+
+        String carrier = checkoutCourier == null ? "" : checkoutCourier.trim();
+        String tracking = trackingInput.getText().toString().trim();
+        String trackingUrl = trackingUrlInput.getText().toString().trim();
+        if (carrier.length() < 2 || tracking.length() < 4) {
+            setBusy(false, "Pilih kurir dan isi nomor resi sebelum mengirim pesanan.");
+            return;
+        }
+        if (!"pending".equals(shipment) && !"failed".equals(shipment) && !"returned".equals(shipment)) {
+            setBusy(false, "Status pengiriman belum dapat dilanjutkan: " + shipment + ". Muat ulang detail pesanan.");
+            return;
+        }
+        saveShipment(carrier, tracking, trackingUrl, "shipped", note, actionButton);
+    }
+
     private void loadProof(JSONObject order, Button button, ImageView imageView) {
         String reference = stringValue(order, "payment_reference", stringValue(order, "order_code", ""));
         button.setEnabled(false);
-        button.setText("Memuat bukti…");
+        button.setText("Memuat buktiâ€¦");
         runIo(() -> {
             String signedUrl = api.getPaymentProofUrl(reference);
             Bitmap bitmap = downloadProof(signedUrl);
@@ -587,14 +1626,69 @@ public final class MainActivity extends Activity {
                 imageView.setImageBitmap(bitmap);
                 imageView.setVisibility(View.VISIBLE);
                 paymentProofViewed = true;
-                button.setText("Bukti pembayaran");
-                button.setEnabled(true);
+                button.setVisibility(View.GONE);
             });
         }, error -> {
             button.setEnabled(true);
             button.setText("Coba buka bukti lagi");
             setBusy(false, error.getMessage());
         });
+    }
+
+    private void loadRefundProof(String refundId, Button button, ImageView imageView) {
+        button.setEnabled(false);
+        button.setText("Memuat buktiâ€¦");
+        runIo(() -> {
+            String signedUrl = api.getRefundProofUrl(refundId);
+            Bitmap bitmap = downloadProof(signedUrl);
+            runOnUiThread(() -> {
+                imageView.setImageBitmap(bitmap);
+                imageView.setVisibility(View.VISIBLE);
+                button.setVisibility(View.GONE);
+            });
+        }, error -> {
+            button.setEnabled(true);
+            button.setText("Coba buka bukti lagi");
+            setBusy(false, error.getMessage());
+        });
+    }
+
+    private void chooseRefundProof(String refundId) {
+        pendingRefundProofId = refundId;
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/jpeg", "image/png", "image/webp"});
+        startActivityForResult(intent, PICK_REFUND_PROOF);
+    }
+
+    private void uploadRefundProof(android.net.Uri uri) {
+        String refundId = pendingRefundProofId;
+        pendingRefundProofId = null;
+        if (refundId == null || refundId.isEmpty()) return;
+        try {
+            String mimeType = getContentResolver().getType(uri);
+            if (mimeType == null || !(mimeType.equals("image/jpeg") || mimeType.equals("image/png") || mimeType.equals("image/webp"))) {
+                setBusy(false, "Pilih gambar JPG, PNG, atau WebP.");
+                return;
+            }
+            byte[] bytes;
+            try (InputStream input = getContentResolver().openInputStream(uri)) {
+                if (input == null) throw new IOException("File gambar tidak dapat dibuka.");
+                bytes = readImageLimited(input);
+            }
+            setBusy(true, "Mengunggah bukti pengembalian danaâ€¦");
+            runIo(() -> {
+                JSONObject response = api.postRefundProof(refundId, mimeType, bytes);
+                clearOrderCache();
+                runOnUiThread(() -> {
+                    feedback.setText(response.optString("message", "Bukti refund tersimpan."));
+                    showOrderDetail(currentOrderCode);
+                });
+            }, error -> setBusy(false, error.getMessage()));
+        } catch (IOException error) {
+            setBusy(false, error.getMessage());
+        }
     }
 
     private Bitmap downloadProof(String signedUrl) throws IOException {
@@ -658,25 +1752,45 @@ public final class MainActivity extends Activity {
     private void reviewPayment(JSONObject order, String decision) {
         String reference = stringValue(order, "payment_reference", stringValue(order, "order_code", ""));
         String note = adminNoteInput == null ? "" : adminNoteInput.getText().toString().trim();
-        setBusy(true, "Memperbarui pembayaran…");
+        setBusy(true, "Memperbarui pembayaranâ€¦");
         runIo(() -> {
             api.post("/api/admin/payments/" + reference + "/review", json("decision", decision, "note", note));
-            runOnUiThread(() -> loadOrderDetail());
+            clearOrderCache();
+            runOnUiThread(() -> loadOrderDetail(true));
         }, error -> setBusy(false, error.getMessage()));
     }
 
     private void updateOrderStatus(String type, String status, String note, Button button) {
         if (api == null || currentOrderCode == null) return;
+        String code = currentOrderCode;
+        String tabLabel = currentOrderTabLabel();
         button.setEnabled(false);
-        setBusy(true, "Menyimpan status…");
+        setBusy(true, "Menyimpan statusâ€¦");
         runIo(() -> {
             JSONObject body = json("status_type", type, "status", status, "note", note);
-            api.post("/api/admin/orders/" + currentOrderCode + "/status", body);
-            runOnUiThread(() -> loadOrderDetail());
+            api.post("/api/admin/orders/" + code + "/status", body);
+            String notice = "production".equals(type)
+                    ? "Status produksi diperbarui. Kembali ke daftar Proses."
+                    : "Status pesanan diperbarui. Kembali ke daftar " + tabLabel + ".";
+            clearOrderCache();
+            runOnUiThread(() -> returnToCurrentOrderTab(notice));
         }, error -> {
             button.setEnabled(true);
             setBusy(false, error.getMessage());
         });
+    }
+
+    private String currentOrderTabLabel() {
+        if ("accepted".equals(orderFilter)) return "Proses";
+        if ("history".equals(orderFilter)) return "Riwayat";
+        return "Baru";
+    }
+
+    private void returnToCurrentOrderTab(String notice) {
+        currentOrderCode = null;
+        loadedOrder = null;
+        orderTransitionNotice = notice;
+        showOrderList(true);
     }
 
     private void saveStatus(String type, String selected, String current, String note, Button button) {
@@ -689,13 +1803,22 @@ public final class MainActivity extends Activity {
 
     private void saveShipment(String carrier, String trackingNumber, String trackingUrl, String status, String note, Button button) {
         if (api == null || currentOrderCode == null) return;
+        String code = currentOrderCode;
+        String tabLabel = currentOrderTabLabel();
+        boolean editingCompletedOrder = loadedOrder != null
+                && "completed".equals(stringValue(loadedOrder, "order_status", ""))
+                && "delivered".equals(status);
         button.setEnabled(false);
-        setBusy(true, "Menyimpan pengiriman…");
+        setBusy(true, "Menyimpan pengirimanâ€¦");
         runIo(() -> {
             JSONObject body = json("carrier", carrier, "tracking_number", trackingNumber,
                     "tracking_url", trackingUrl, "status", status, "note", note);
-            api.post("/api/admin/orders/" + currentOrderCode + "/shipment", body);
-            runOnUiThread(() -> loadOrderDetail());
+            api.post("/api/admin/orders/" + code + "/shipment", body);
+            clearOrderCache();
+            runOnUiThread(() -> {
+                if (editingCompletedOrder) loadOrderDetail(true);
+                else returnToCurrentOrderTab("Data pengiriman tersimpan. Kembali ke daftar " + tabLabel + ".");
+            });
         }, error -> {
             button.setEnabled(true);
             setBusy(false, error.getMessage());
@@ -705,16 +1828,17 @@ public final class MainActivity extends Activity {
     private void createProductionDxf(String itemId, Button button) {
         if (api == null || currentOrderCode == null || itemId.isEmpty()) return;
         button.setEnabled(false);
-        setBusy(true, "Membuat gambar DXF…");
+        setBusy(true, "Membuat gambar DXFâ€¦");
         runIo(() -> {
             JSONObject response = api.post("/api/admin/orders/" + currentOrderCode + "/items/" + itemId + "/production-files/dxf", new JSONObject());
             JSONObject file = response.optJSONObject("data");
             if (file == null || file.optString("content").isEmpty()) throw new IOException("Isi gambar DXF tidak tersedia.");
+            clearOrderCache();
             runOnUiThread(() -> {
                 button.setEnabled(true);
                 setBusy(false, response.optString("message", "Gambar DXF dibuat."));
                 showSaveDxfDialog(file.optString("content"), file.optString("file_name"), file.optInt("version"));
-                loadOrderDetail();
+                loadOrderDetail(true);
             });
         }, error -> { button.setEnabled(true); setBusy(false, error.getMessage()); });
     }
@@ -746,6 +1870,11 @@ public final class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == PICK_REFUND_PROOF) {
+            if (resultCode == RESULT_OK && data != null && data.getData() != null) uploadRefundProof(data.getData());
+            else pendingRefundProofId = null;
+            return;
+        }
         if (requestCode != CREATE_DXF_DOCUMENT) return;
         if (resultCode != RESULT_OK || data == null || data.getData() == null || pendingDxfContent == null) {
             pendingDxfContent = null;
@@ -796,7 +1925,7 @@ public final class MainActivity extends Activity {
 
     private void addToolbar(String title, boolean logout, Runnable back) {
         LinearLayout bar = horizontal();
-        Button backButton = smallButton("‹", false);
+        Button backButton = smallButton("â€¹", false);
         backButton.setContentDescription("Kembali");
         bar.addView(backButton, new LinearLayout.LayoutParams(dp(48), dp(48)));
         backButton.setOnClickListener(view -> back.run());
@@ -816,6 +1945,7 @@ public final class MainActivity extends Activity {
                 unregisterNotificationDevice(api);
                 activeSession = null;
                 api = null;
+                clearAdminToken();
                 showLogin("");
             });
         }
@@ -824,7 +1954,7 @@ public final class MainActivity extends Activity {
 
     private void addBrandHeader(String title, String subtitle) {
         LinearLayout brand = card(page);
-        TextView mark = addText(brand, "R", 25, Color.WHITE, true, 0, 0, 0, 4);
+        TextView mark = addText(brand, "A", 25, Color.WHITE, true, 0, 0, 0, 4);
         mark.setGravity(Gravity.CENTER);
         mark.setBackground(rounded(GREEN, 12, Color.TRANSPARENT));
         brand.addView(new View(this), new LinearLayout.LayoutParams(1, dp(10)));
@@ -851,7 +1981,7 @@ public final class MainActivity extends Activity {
         left.setTextSize(14);
         row.addView(left, new LinearLayout.LayoutParams(dp(102), ViewGroup.LayoutParams.WRAP_CONTENT));
         TextView right = new TextView(this);
-        right.setText(value == null || value.isEmpty() ? "—" : value);
+        right.setText(value == null || value.isEmpty() ? "â€”" : value);
         right.setTextColor(INK);
         right.setTextSize(15);
         right.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
@@ -880,12 +2010,18 @@ public final class MainActivity extends Activity {
             try { action.run(); }
             catch (Exception exception) {
                 String message = exception.getMessage();
-                runOnUiThread(() -> onError.accept(new IOException(message == null ? "Terjadi kendala jaringan." : message)));
+                IOException error = exception instanceof IOException
+                        ? (IOException) exception
+                        : new IOException(message == null ? "Terjadi kendala jaringan." : message);
+                runOnUiThread(() -> onError.accept(error));
             }
         });
     }
 
     private ScrollView newPage() {
+        showingVisitorAnalytics = false;
+        visitorAnalyticsContent = null;
+        visitorAnalyticsStatus = null;
         page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
         page.setPadding(dp(20), dp(20), dp(20), dp(32));
@@ -1013,7 +2149,7 @@ public final class MainActivity extends Activity {
     private String stringValue(JSONObject object, String key, String fallback) {
         if (object == null || object.isNull(key)) return fallback;
         String value = object.optString(key, fallback);
-        return value == null || "null".equalsIgnoreCase(value) ? fallback : value;
+        return value == null || "null".equalsIgnoreCase(value) || value.trim().isEmpty() ? fallback : value;
     }
 
     private String customFieldLabel(JSONObject item, String key) {
@@ -1089,7 +2225,7 @@ public final class MainActivity extends Activity {
         if (session == null) return;
         fcmRegistrationExecutor.execute(() -> {
             try {
-                JSONObject body = new JSONObject().put("registration_token", token).put("label", "Ruma Admin Android");
+                JSONObject body = new JSONObject().put("registration_token", token).put("label", "Ajielt7 Android");
                 session.post("/api/admin/devices", body);
             } catch (Exception ignored) {
                 // The next successful admin login retries the latest FCM token.

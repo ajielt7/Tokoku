@@ -145,8 +145,29 @@ function addNoIndex(html) {
 }
 
 function addTawkWidget(html) {
-  if (html.includes("embed.tawk.to/6afc63a231f8653cc3bb52ac/1k7kuad8o")) return html;
-  const widget = `<script type="text/javascript">
+  const visitorTracking = `<script>
+(() => {
+  const apiBase = ${JSON.stringify(site.apiBaseUrl.replace(/\/$/, ""))};
+  try {
+    let visitorId = localStorage.getItem("ruma_visitor_id");
+    if (!visitorId) {
+      visitorId = crypto.randomUUID();
+      localStorage.setItem("ruma_visitor_id", visitorId);
+    }
+    const eventId = crypto.randomUUID();
+    fetch(apiBase + "/api/analytics/visits", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ event_id: eventId, visitor_id: visitorId }),
+      keepalive: true,
+      cache: "no-store",
+      credentials: "omit",
+    }).catch(() => {});
+  } catch (_) {}
+})();
+</script>`;
+  const widget = `<!--Start of Tawk.to Script-->
+<script type="text/javascript">
 var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
 (function(){
 var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
@@ -156,8 +177,10 @@ s1.charset='UTF-8';
 s1.setAttribute('crossorigin','*');
 s0.parentNode.insertBefore(s1,s0);
 })();
-</script>`;
-  return html.replace("</body>", `  ${widget}\n</body>`);
+</script>
+<!--End of Tawk.to Script-->`;
+  if (!html.includes("</body>")) throw new Error("Tidak dapat memasang widget Tawk.to: tag </body> tidak ditemukan.");
+  return html.replace("</body>", `${visitorTracking}\n${widget}\n  </body>`);
 }
 
 function addMobileNavigation(html) {

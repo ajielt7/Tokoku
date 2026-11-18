@@ -32,5 +32,11 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: platform-tools platforms;android-36 build-tools;36.0.0
-      - run: bash ./gradlew --no-daemon :app:compileDebugJavaWithJavac
+      - run: bash ./gradlew --no-daemon :app:assembleDebug
         working-directory: android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ruma-admin-android-0.1.11
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
