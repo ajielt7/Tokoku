@@ -152,9 +152,9 @@ function displayFixedSize(value) {
 function productMedia(product, className = "") {
   const remoteImage = imageUrl(product);
   const fallbackImages = [
-    "https://images.unsplash.com/photo-1747862934428-899f5beb821e?auto=format&fit=crop&w=900&q=80",
-    "https://images.unsplash.com/photo-1770394644126-4a17c000c122?auto=format&fit=crop&w=900&q=80",
-    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80",
+    "https://images.unsplash.com/photo-1747862934428-899f5beb821e?auto=format&fit=crop&w=640&q=60",
+    "https://images.unsplash.com/photo-1770394644126-4a17c000c122?auto=format&fit=crop&w=640&q=60",
+    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=640&q=60",
   ];
   const imageIndex = [...String(product.slug || product.name || "")].reduce((sum, char) => sum + char.charCodeAt(0), 0) % fallbackImages.length;
   const image = remoteImage || fallbackImages[imageIndex];
@@ -180,19 +180,21 @@ function productCard(product, prefix) {
 }
 
 const featuredIdeas = [
-  { title: "Nomor rumah", detail: "Angka sesuai pilihanmu", image: "https://images.unsplash.com/photo-1747862934428-899f5beb821e?auto=format&fit=crop&w=900&q=80" },
-  { title: "Angka + huruf", detail: "Contoh: A01", image: "https://images.unsplash.com/photo-1770394644126-4a17c000c122?auto=format&fit=crop&w=900&q=80" },
-  { title: "Nama area", detail: "Hingga 14 karakter", image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80" },
-  { title: "Akrilik 3 mm", detail: "Potong laser CO₂", image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=80" },
-  { title: "Tempel praktis", detail: "Pakai double tape", image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=900&q=80" },
+  { title: "Nomor rumah", detail: "Angka sesuai pilihanmu", image: "https://images.unsplash.com/photo-1747862934428-899f5beb821e?auto=format&fit=crop&w=640&q=60" },
+  { title: "Angka + huruf", detail: "Contoh: A01", image: "https://images.unsplash.com/photo-1770394644126-4a17c000c122?auto=format&fit=crop&w=640&q=60" },
+  { title: "Nama area", detail: "Hingga 14 karakter", image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=640&q=60" },
+  { title: "Akrilik 3 mm", detail: "Potong laser CO₂", image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=640&q=60" },
+  { title: "Tempel praktis", detail: "Pakai double tape", image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=640&q=60" },
 ];
 
 function featuredProductCard(idea, index) {
-  const image = idea.image;
+  const image = idea.image.replace(/w=640&q=60/, index === 0 ? "w=720&q=65" : "w=640&q=60");
   const alt = `Foto inspirasi Unsplash untuk ${idea.title}; bukan foto produk Toqoku.`;
+  const loading = index === 0 ? "eager" : "lazy";
+  const priority = index === 0 ? ' fetchpriority="high"' : "";
   return `<article class="featured-tile featured-tile-${index % 2 === 0 ? "green" : "orange"}">
     <a class="featured-tile-link" href="#produk" aria-label="Lihat katalog: ${escapeHtml(idea.title)}">
-      <img class="featured-tile-photo" src="${escapeHtml(image)}" alt="${escapeHtml(alt)}" width="900" height="1100" loading="lazy">
+      <img class="featured-tile-photo" src="${escapeHtml(image)}" alt="${escapeHtml(alt)}" width="${index === 0 ? 720 : 640}" height="${index === 0 ? 880 : 782}" loading="${loading}" decoding="async"${priority}>
       <span class="featured-tile-shade" aria-hidden="true"></span>
       <span class="featured-tile-copy"><span class="featured-tile-kicker">Inspirasi custom</span><strong>${escapeHtml(idea.title)}</strong><span class="featured-tile-detail">${escapeHtml(idea.detail)}</span></span>
       <span class="featured-tile-arrow" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span>
@@ -346,7 +348,7 @@ const previewProductIdeas = [
   { name: "Papan Arah Rumah", category: "Papan petunjuk", detail: "Custom arah", image: "photo-1666032186804-e14dfe920222" },
 ];
 function previewIdeaCard(idea, index) {
-  const image = `https://images.unsplash.com/${idea.image}?auto=format&fit=crop&w=900&q=80`;
+  const image = `https://images.unsplash.com/${idea.image}?auto=format&fit=crop&w=640&q=60`;
   return `<article class="product-card product-card-preview">
     <div class="product-visual ${index % 2 ? "visual-sand" : "visual-sage"}"><img class="product-photo" src="${image}" alt="Ide ${escapeHtml(idea.name)}. Foto Unsplash, bukan foto produk Toqoku." width="800" height="600" loading="lazy"><span class="product-tag">${escapeHtml(idea.category)}</span><span class="visual-caption">${escapeHtml(idea.detail)}</span></div>
     <div class="product-info"><div><h3>${escapeHtml(idea.name)}</h3><p>Ide produk</p></div></div>
@@ -368,7 +370,7 @@ const availableCategorySlugs = new Set(catalog.categories.map((category) => cate
 const categoryTiles = categoryShowcase.map((category, index) => {
   const routeSlug = category.routeSlug || category.slug;
   const href = availableCategorySlugs.has(routeSlug) ? `./kategori/${escapeHtml(routeSlug)}/` : "#produk";
-  const image = `https://images.unsplash.com/${category.image}?auto=format&fit=crop&w=900&q=80`;
+  const image = `https://images.unsplash.com/${category.image}?auto=format&fit=crop&w=640&q=60`;
   return `<a class="category-photo-tile category-photo-tile-${index % 3}" href="${href}" aria-label="Lihat katalog ${escapeHtml(category.name)}"><img class="category-photo" src="${image}" alt="Inspirasi ${escapeHtml(category.name)}. Foto Unsplash, bukan foto produk Toqoku." width="900" height="600" loading="lazy"><span class="category-photo-shade" aria-hidden="true"></span><strong>${escapeHtml(category.name)}</strong><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>`;
 }).join("");
 const homeHtml = replaceTokens(homeTemplate, {

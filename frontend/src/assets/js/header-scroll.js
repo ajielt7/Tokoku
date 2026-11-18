@@ -48,8 +48,13 @@
     syncMenuToViewport();
   }
 
+  let scrollFrame = 0;
   const updateHeader = () => {
-    header.classList.toggle("is-scrolled", window.scrollY > 12);
+    if (scrollFrame) return;
+    scrollFrame = window.requestAnimationFrame(() => {
+      scrollFrame = 0;
+      header.classList.toggle("is-scrolled", window.scrollY > 12);
+    });
   };
 
   updateHeader();

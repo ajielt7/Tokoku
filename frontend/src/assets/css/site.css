@@ -14,7 +14,7 @@
   --color-tertiary: #735500;
   --color-tertiary-container: #fff0bd;
   --color-line: #b8c9bf;
-  --font-body: Roboto, Arial, Helvetica, sans-serif;
+  --font-body: Arial, Helvetica, sans-serif;
   --content-width: 1200px;
   --radius-card: 16px;
   --shadow-card: 0 1px 3px rgb(24 40 34 / 12%), 0 4px 8px rgb(24 40 34 / 5%);
@@ -444,7 +444,8 @@ body { color: var(--color-ink); background: var(--color-page); }
 /* Unsplash image at 30% with a separate, subtle dark tint over it. */
 .intro-background { position: relative; isolation: isolate; color: #ffffff;}
 .intro-background::before, .intro-background::after { position: absolute; z-index: -1; inset: 0; content: ""; pointer-events: none; }
-.intro-background::before { background: url("https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=80") center 52% / cover no-repeat; opacity: .3; }
+.intro-background::before { background: url("https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=60") center 52% / cover no-repeat; opacity: .3; }
+@media (max-width: 620px) { .intro-background::before { background-image: url("https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=640&q=55"); } }
 .intro-background::after { background: rgba(8, 25, 17, .38); }
 .intro-background > .top-offers, .intro-background > .store-search, .intro-background > .hero { background: transparent; }
 .intro-background .store-search-heading h2, .intro-background .search-quick-links, .intro-background .search-status { color: #ffffff; }
