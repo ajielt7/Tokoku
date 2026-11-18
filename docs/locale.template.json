@@ -1,0 +1,12 @@
+{
+  "locale": "en-US",
+  "language": "en",
+  "region": "US",
+  "direction": "ltr",
+  "messages": {
+    "navigation.products": "Products",
+    "navigation.about": "About us",
+    "cart.itemCount": "{count} items",
+    "checkout.submit": "Continue to checkout"
+  }
+}
