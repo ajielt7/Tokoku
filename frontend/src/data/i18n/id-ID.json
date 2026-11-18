@@ -1,0 +1,16 @@
+{
+  "locale": "id-ID",
+  "language": "id",
+  "direction": "ltr",
+  "messages": {
+    "market.selectorLabel": "Negara dan mata uang",
+    "market.indonesia": "Indonesia · Rupiah (IDR)",
+    "market.international": "International · US Dollar (USD)",
+    "market.usdEstimate": "Perkiraan harga dalam USD. Harga final dan pengiriman internasional dikonfirmasi sebelum pemesanan.",
+    "market.contactForQuote": "Tanya harga dan pengiriman internasional",
+    "navigation.products": "Produk",
+    "navigation.about": "Tentang Kami",
+    "navigation.cart": "Keranjang",
+    "navigation.home": "Beranda"
+  }
+}
