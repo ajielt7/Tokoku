@@ -1,8 +1,32 @@
 {
   "specVersion": "1.0",
   "host": {
-    "displayName": "Toqoku",
+    "displayName": "Toqoku by Ajielt7",
     "documentationUrl": "https://zieus.gt.tc/tentang-kami/"
   },
-  "entries": []
+  "entries": [
+    {
+      "identifier": "urn:air:zieus.gt.tc:commerce:product-catalog",
+      "displayName": "Katalog Produk Custom Rumah Toqoku",
+      "type": "text/html",
+      "url": "https://zieus.gt.tc/",
+      "description": "Katalog produk custom untuk rumah dari Toqoku, mencakup nomor rumah akrilik, plang nama, dan produk penanda rumah.",
+      "tags": [
+        "nomor rumah",
+        "plang nama",
+        "akrilik",
+        "produk rumah custom"
+      ],
+      "capabilities": [
+        "browse-product-catalog",
+        "custom-home-signage"
+      ],
+      "representativeQueries": [
+        "Lihat katalog nomor rumah akrilik custom",
+        "Cari plang nama dan penanda rumah custom"
+      ],
+      "version": "1.0",
+      "updatedAt": "2026-11-18T00:00:00Z"
+    }
+  ]
 }
