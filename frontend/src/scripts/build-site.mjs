@@ -70,14 +70,16 @@ function iconSvg(name, extraClass = "") {
     "pen-to-square": '<path d="M13 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m11 13 9-9 3 3-9 9-4 1 1-4Z"/>',
     "ruler-combined": '<path d="M3 7V3h18v18h-4V7H3Z"/><path d="M7 3v4M11 3v4M15 3v4M17 11h4M17 15h4M17 19h4"/>',
     whatsapp: '<path d="M20.5 11.6a8.6 8.6 0 0 1-12.7 7.6L3 20.5l1.3-4.6a8.6 8.6 0 1 1 16.2-4.3Z"/><path d="M8.2 7.6c-.5.2-.9.8-.9 1.5 0 2.1 3.4 5.8 5.5 6.5.7.2 1.4-.1 1.8-.6l.7-1-2.5-1.3-.9 1c-1.1-.5-2-1.4-2.5-2.5l.8-.9-1.2-2.7-.8 0Z"/>',
-    facebook: '<path d="M13.8 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.5 1.6-1.5H17V4a17 17 0 0 0-2.3-.1c-2.3 0-3.8 1.4-3.8 4V10H8.4v3h2.5v8a10 10 0 1 1 2.9 0Z"/>',
+    facebook: '<path d="M15.12 24v-8.7h2.9l.44-3.4h-3.34V9.73c0-.99.27-1.66 1.68-1.66h1.79V5.02c-.31-.04-1.38-.13-2.62-.13-2.6 0-4.38 1.58-4.38 4.48v2.5H8.65v3.4h2.94V24h3.53Z"/>',
     instagram: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/>',
     tiktok: '<path d="M14 3h3c.2 2 1.4 3.4 4 3.7v3.1a9 9 0 0 1-4-1.3v6.8a6.3 6.3 0 1 1-6.3-6.3c.4 0 .8 0 1.2.1v3.3a3.1 3.1 0 1 0 1.9 2.9V3Z"/>',
     youtube: '<path d="M22 8a3 3 0 0 0-2.1-2.1C18 5.4 12 5.4 12 5.4s-6 0-7.9.5A3 3 0 0 0 2 8a31 31 0 0 0-.5 4 31 31 0 0 0 .5 4 3 3 0 0 0 2.1 2.1c1.9.5 7.9.5 7.9.5s6 0 7.9-.5A3 3 0 0 0 22 16a31 31 0 0 0 .5-4 31 31 0 0 0-.5-4Z"/><path d="m10 15 5-3-5-3v6Z"/>',
   };
   const strokeIcons = new Set(["arrow-right", "arrow-up-right-from-square", "circle-info", "magnifying-glass", "pen-to-square", "ruler-combined", "whatsapp", "instagram"]);
-  const stroke = strokeIcons.has(name) ? ' fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"' : ' fill="currentColor"';
-  return `<svg class="icon${extraClass ? ` ${extraClass}` : ""}" viewBox="0 0 24 24"${stroke} aria-hidden="true" focusable="false">${icons[name] || ""}</svg>`;
+  const isStroke = strokeIcons.has(name);
+  const stroke = isStroke ? ' fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"' : ' fill="currentColor"';
+  const iconClass = `icon${isStroke ? "" : " icon-filled"}${extraClass ? ` ${extraClass}` : ""}`;
+  return `<svg class="${iconClass}" viewBox="0 0 24 24"${stroke} aria-hidden="true" focusable="false">${icons[name] || ""}</svg>`;
 }
 
 const iconTokens = {
