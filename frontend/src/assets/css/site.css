@@ -754,3 +754,7 @@ body { color: var(--color-ink); background: var(--color-page); }
   .home-page > .site-header:not(.is-scrolled) .menu-toggle { color: var(--color-brand); }
   .site-header.is-scrolled .menu-toggle { color: #ffffff; background: transparent; border-color: rgb(255 255 255 / 45%); }
 }
+
+@media (max-width: 700px) {
+  .header-cart { gap: 9px; }
+}
