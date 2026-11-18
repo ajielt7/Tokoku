@@ -310,6 +310,7 @@ const productTemplate = await readFile(path.join(templateDirectory, "product.htm
 const cartTemplate = await readFile(path.join(templateDirectory, "cart.html"), "utf8");
 const checkoutTemplate = await readFile(path.join(templateDirectory, "checkout.html"), "utf8");
 const trackingTemplate = await readFile(path.join(templateDirectory, "lacak-pesanan.html"), "utf8");
+const aboutTemplate = await readFile(path.join(templateDirectory, "about.html"), "utf8");
 const previewMode = !site.contentReady;
 const previewBanner = previewMode ? '<p class="preview-banner">DEMO · Produk, harga, dan foto contoh</p>' : "";
 const demoNote = previewMode ? '<p class="demo-note">Harga dan foto ilustrasi. Toko belum menerima pesanan.</p>' : "";
@@ -386,6 +387,28 @@ const homeSeo = addSeo(homeHtml, {
   breadcrumbs: [{ name: "Beranda", path: "/" }],
 });
 await writeFile(path.join(outputDirectory, "index.html"), addTawkWidget(homeSeo), "utf8");
+
+const aboutHtml = replaceTokens(aboutTemplate, {
+  ROOT_PREFIX: "../",
+  ABOUT_DESCRIPTION: "Toqoku by Ajielt7 menghadirkan nomor rumah akrilik dan produk custom. Lihat informasi toko dan lokasi kami di peta.",
+  PREVIEW_BANNER: previewBanner,
+  FOOTER_COPY: footerCopy,
+  WHATSAPP_LINK: escapeHtml(whatsappLink),
+  SOCIAL_LINKS: socialLinksMarkup,
+  API_BASE_URL: escapeHtml(apiBaseUrl),
+});
+const aboutSeo = addSeo(aboutHtml, {
+  title: `Tentang Kami | ${site.name}`,
+  description: "Kenali Toqoku by Ajielt7, jelajahi produk nomor rumah akrilik dan produk custom, serta temukan lokasi kami di peta.",
+  pathname: "/tentang-kami/",
+  breadcrumbs: [
+    { name: "Beranda", path: "/" },
+    { name: "Tentang Kami", path: "/tentang-kami/" },
+  ],
+});
+const aboutDestination = path.join(outputDirectory, "tentang-kami");
+await mkdir(aboutDestination, { recursive: true });
+await writeFile(path.join(aboutDestination, "index.html"), addTawkWidget(aboutSeo), "utf8");
 
 for (const category of catalog.categories) {
   const categoryProducts = catalog.products.filter((product) => product.category === category.slug);
@@ -514,6 +537,7 @@ for (const [slug, template] of [["keranjang", cartTemplate], ["checkout", checko
 
 const publicPages = [
   { path: "/", priority: "1.0" },
+  { path: "/tentang-kami/", priority: "0.6" },
   ...catalog.categories.filter((category) => catalog.products.some((product) => product.category === category.slug))
     .map((category) => ({ path: `/kategori/${category.slug}/`, priority: "0.8" })),
   ...catalog.products.map((product) => ({ path: `/produk/${product.slug}/`, priority: "0.7" })),
