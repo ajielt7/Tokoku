@@ -193,7 +193,7 @@ s0.parentNode.insertBefore(s1,s0);
 function addMobileNavigation(html) {
   if (html.includes('class="menu-toggle"')) return html;
   const nav = '<nav class="main-nav" aria-label="Navigasi utama">';
-  const menuButton = '<button class="menu-toggle" type="button" aria-label="Buka menu" aria-controls="main-navigation" aria-expanded="false"><span class="menu-icon" aria-hidden="true"><span></span></span></button>\n';
+  const menuButton = `<button class="menu-toggle" type="button" aria-label="Buka menu" aria-controls="main-navigation" aria-expanded="false" onclick="event.stopImmediatePropagation(); const header=this.closest('.site-header'); const nav=header.querySelector('.main-nav'); const open=this.getAttribute('aria-expanded')!=='true'; header.classList.toggle('menu-open',open); nav.hidden=!open; this.setAttribute('aria-expanded',String(open)); this.setAttribute('aria-label',open?'Tutup menu':'Buka menu');"><span class="menu-icon" aria-hidden="true"><span></span></span></button>\n`;
   return html.replace(nav, `${menuButton}<nav id="main-navigation" class="main-nav" aria-label="Navigasi utama">`);
 }
 
