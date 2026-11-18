@@ -445,12 +445,18 @@ body { color: var(--color-ink); background: var(--color-page); }
 .intro-background { position: relative; isolation: isolate; color: #ffffff;}
 .intro-background::before, .intro-background::after { position: absolute; z-index: -1; inset: 0; content: ""; pointer-events: none; }
 .intro-background::before { background: url("https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=80") center 52% / cover no-repeat; opacity: .3; }
-/* .intro-background::after { background: rgba(5, 5, 5, 0.1); } */
+.intro-background::after { background: rgba(8, 25, 17, .38); }
 .intro-background > .top-offers, .intro-background > .store-search, .intro-background > .hero { background: transparent; }
 .intro-background .store-search-heading h2, .intro-background .search-quick-links, .intro-background .search-status { color: #ffffff; }
 /* .intro-background .search-quick-links button { color: #123b2b; background: #ffffff; border-color: #c6dfd0; } */
+.intro-background .store-search-heading h2,
+.intro-background .search-quick-links,
+.intro-background .search-status,
+.intro-background .hero h1,
+.intro-background .hero-description,
+.intro-background .hero-note { text-shadow: 0 1px 5px rgb(0 0 0 / 58%); }
 .intro-background .hero h1 { color: #ffffff; }
-.intro-background .hero-description, .intro-background .hero-note { color: #e3eee7; }
+.intro-background .hero-description, .intro-background .hero-note { color: #ffffff; }
 .home-page > .site-header:not(.is-scrolled) { color: #123b2b; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .home-page > .site-header:not(.is-scrolled) .brand { color: #123b2b; }
 .home-page > .site-header:not(.is-scrolled) .brand-period { color: #a83d00; }
