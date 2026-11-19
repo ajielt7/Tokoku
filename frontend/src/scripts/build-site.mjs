@@ -27,6 +27,11 @@ const site = {
   indexable: environmentBoolean("SEO_INDEXABLE", siteConfig.indexable),
   contentReady: environmentBoolean("CONTENT_READY", siteConfig.contentReady),
 };
+const googleTagSnippet = `<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+      new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+      j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+      'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+      })(window,document,'script','dataLayer','GTM-MDC43DMV');</script>`;
 if (!/^\d{8,15}$/.test(site.whatsappNumber || "")) {
   throw new Error("whatsappNumber harus memakai format internasional berupa angka saja.");
 }
@@ -48,7 +53,6 @@ const socialLinks = Object.entries(socialPlatforms).flatMap(([key, platform]) =>
   return [`<a href="${escapeHtml(url.href)}" aria-label="${platform.label} Toqoku" target="_blank" rel="noopener noreferrer">${iconSvg(platform.icon)}</a>`];
 }).join("");
 const socialLinksMarkup = socialLinks ? `<nav class="footer-social" aria-label="Media sosial Toqoku">${socialLinks}</nav>` : "";
-const catalogApiUrl = process.env.CATALOG_API_URL || "http://127.0.0.1:8787/api/catalog";
 const apiBaseUrl = (site.apiBaseUrl || "http://127.0.0.1:8787").replace(/\/$/, "");
 const parsedApiBaseUrl = new URL(apiBaseUrl);
 if (!["http:", "https:"].includes(parsedApiBaseUrl.protocol)) throw new Error("apiBaseUrl harus memakai HTTP atau HTTPS.");
@@ -65,6 +69,9 @@ if (apiFallbackUrl) {
   }
   if (apiFallbackUrl === apiBaseUrl) throw new Error("apiFallbackUrl harus berbeda dari apiBaseUrl utama.");
 }
+const catalogApiUrls = process.env.CATALOG_API_URL
+  ? [process.env.CATALOG_API_URL]
+  : [apiBaseUrl, apiFallbackUrl].filter(Boolean).map((baseUrl) => `${baseUrl}/api/catalog`);
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
@@ -113,11 +120,12 @@ const iconTokens = {
 
 function replaceTokens(template, values) {
   const templateValues = { ...values, ASSET_VERSION: assetVersion };
-  const rendered = template.replace(/{{([A-Z_]+)}}/g, (_, key) => {
+  const renderedTemplate = template.replace(/{{([A-Z_]+)}}/g, (_, key) => {
     if (key in iconTokens) return iconTokens[key];
     if (!(key in templateValues)) throw new Error(`Data template tidak tersedia: ${key}`);
     return templateValues[key];
   });
+  const rendered = renderedTemplate.replace(/<head>/i, (openingHead) => `${openingHead}\n    ${googleTagSnippet}`);
   if (/{{[A-Z_]+}}/.test(rendered)) throw new Error("Masih ada token template yang belum terisi.");
   return rendered;
 }
@@ -362,19 +370,27 @@ async function copyAssetFiles(fromDirectory, toDirectory) {
 }
 
 async function loadCatalog() {
-  let response;
-  try {
-    response = await fetch(catalogApiUrl, { signal: AbortSignal.timeout(15000) });
-  } catch (error) {
-    throw new Error(`API katalog tidak dapat dijangkau (${catalogApiUrl}). Jalankan Worker lokal atau isi CATALOG_API_URL. ${error.message}`);
-  }
-  if (!response.ok) throw new Error(`API katalog mengembalikan HTTP ${response.status}.`);
+  const errors = [];
+  for (const url of catalogApiUrls) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-  const payload = await response.json();
-  const catalog = payload?.data;
-  if (!Array.isArray(catalog?.categories) || !Array.isArray(catalog?.products)) {
-    throw new Error("Format API katalog tidak valid; perlu data.categories dan data.products.");
+      const payload = await response.json();
+      const catalog = payload?.data;
+      if (!Array.isArray(catalog?.categories) || !Array.isArray(catalog?.products)) {
+        throw new Error("format data katalog tidak valid");
+      }
+      return catalog;
+    } catch (error) {
+      errors.push(`${url}: ${error.message}`);
+    }
   }
+
+  throw new Error(`Semua API katalog gagal. Urutan dicoba: ${errors.join("; ")}`);
+}
+
+function validateCatalog(catalog) {
 
   const categorySlugs = new Set(catalog.categories.map((category) => category.slug));
   const categories = catalog.categories.map((category) => {
@@ -402,7 +418,7 @@ if (site.contentReady && parsedApiBaseUrl.protocol !== "https:") {
   throw new Error("apiBaseUrl publik harus memakai HTTPS saat contentReady: true.");
 }
 
-const catalog = await loadCatalog();
+const catalog = validateCatalog(await loadCatalog());
 if (site.contentReady && (!catalog.categories.length || !catalog.products.length)) {
   throw new Error("Katalog production harus memiliki minimal satu kategori dan satu produk sebelum contentReady diaktifkan.");
 }
@@ -679,3 +695,4 @@ if (site.indexable) {
 await copyAssetFiles(path.join(sourceDirectory, "assets"), path.join(outputDirectory, "assets"));
 await copyAssetFiles(path.join(sourceDirectory, "static"), outputDirectory);
 console.log(`Situs statis dibuat dari API (${catalog.categories.length} kategori, ${catalog.products.length} produk).`);
+
