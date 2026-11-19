@@ -127,7 +127,8 @@ function replaceTokens(template, values) {
     if (!(key in templateValues)) throw new Error(`Data template tidak tersedia: ${key}`);
     return templateValues[key];
   });
-  const rendered = renderedTemplate.replace(/<head>/i, (openingHead) => `${openingHead}\n    ${googleTagSnippet}`);
+  const cloudflareAnalyticsSnippet = "<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{\"token\": \"5cca7485ee754628b5eacd5029f16afd\"}'></script><!-- End Cloudflare Web Analytics -->";
+  const rendered = renderedTemplate.replace(/<head>/i, (openingHead) => `${openingHead}\n    ${googleTagSnippet}\n    ${cloudflareAnalyticsSnippet}`);
   if (/{{[A-Z_]+}}/.test(rendered)) throw new Error("Masih ada token template yang belum terisi.");
   return rendered;
 }
