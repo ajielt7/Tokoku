@@ -22,7 +22,6 @@ jobs:
       SITE_URL: https://zieus.gt.tc
       PUBLIC_API_BASE_URL: https://ruma-api-production.ajielt7.workers.dev
       PUBLIC_API_FALLBACK_URL: https://toqoku-api.netlify.app
-      CATALOG_API_URL: https://ruma-api-production.ajielt7.workers.dev/api/catalog
       SEO_INDEXABLE: "true"
       CONTENT_READY: "true"
     steps:
@@ -65,3 +64,4 @@ jobs:
           local-dir: frontend/dist/
           server-dir: zieus.gt.tc/htdocs/
           log-level: minimal
+
