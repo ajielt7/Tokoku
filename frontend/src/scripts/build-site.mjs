@@ -1,4 +1,5 @@
 import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,6 +8,9 @@ const frontendDirectory = path.resolve(scriptDirectory, "../..");
 const sourceDirectory = path.join(frontendDirectory, "src");
 const outputDirectory = path.join(frontendDirectory, "dist");
 const templateDirectory = path.join(sourceDirectory, "templates");
+const homeStylesheet = await readFile(path.join(sourceDirectory, "assets", "css", "site.css"), "utf8");
+const headerScript = await readFile(path.join(sourceDirectory, "assets", "js", "header-scroll.js"), "utf8");
+const assetVersion = createHash("sha256").update(homeStylesheet).update(headerScript).digest("hex").slice(0, 12);
 const siteConfig = JSON.parse(await readFile(path.join(sourceDirectory, "data", "site.json"), "utf8"));
 function environmentBoolean(name, fallback) {
   const value = process.env[name];
@@ -97,10 +101,11 @@ const iconTokens = {
 };
 
 function replaceTokens(template, values) {
+  const templateValues = { ...values, ASSET_VERSION: assetVersion };
   const rendered = template.replace(/{{([A-Z_]+)}}/g, (_, key) => {
     if (key in iconTokens) return iconTokens[key];
-    if (!(key in values)) throw new Error(`Data template tidak tersedia: ${key}`);
-    return values[key];
+    if (!(key in templateValues)) throw new Error(`Data template tidak tersedia: ${key}`);
+    return templateValues[key];
   });
   if (/{{[A-Z_]+}}/.test(rendered)) throw new Error("Masih ada token template yang belum terisi.");
   return rendered;
@@ -403,7 +408,6 @@ if (site.contentReady) {
   }
 }
 const homeTemplate = await readFile(path.join(templateDirectory, "home.html"), "utf8");
-const homeStylesheet = await readFile(path.join(sourceDirectory, "assets", "css", "site.css"), "utf8");
 const categoryTemplate = await readFile(path.join(templateDirectory, "category.html"), "utf8");
 const productTemplate = await readFile(path.join(templateDirectory, "product.html"), "utf8");
 const cartTemplate = await readFile(path.join(templateDirectory, "cart.html"), "utf8");
@@ -486,7 +490,8 @@ const homeSeo = addSeo(homeHtml, {
   pathname: "/",
   breadcrumbs: [{ name: "Beranda", path: "/" }],
 });
-const homeWithInlineStyles = homeSeo.replace('<link rel="stylesheet" href="./assets/css/site.css">', `<style>${homeStylesheet}</style>`);
+const homeStylesheetLink = `<link rel="stylesheet" href="./assets/css/site.css?v=${assetVersion}">`;
+const homeWithInlineStyles = homeSeo.replace(homeStylesheetLink, `<style>${homeStylesheet}</style>`);
 if (homeWithInlineStyles === homeSeo) throw new Error("Tautan stylesheet beranda tidak ditemukan untuk inline CSS.");
 await writeFile(path.join(outputDirectory, "index.html"), addTawkWidget(addMobileNavigation(homeWithInlineStyles)), "utf8");
 
