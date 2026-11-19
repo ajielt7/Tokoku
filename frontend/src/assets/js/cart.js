@@ -1,7 +1,7 @@
 const cartStorageKey = "ruma-cart-v1";
 const cartItemsNode = document.querySelector("[data-cart-items]");
 const checkoutItemsNode = document.querySelector("[data-checkout-items]");
-const apiBaseUrl = document.currentScript?.dataset.apiBase?.replace(/\/$/, "") || "http://127.0.0.1:8787";
+const apiRequest = window.RumaApi?.request || ((path, options) => fetch(`http://127.0.0.1:8787${path}`, options));
 const previewMode = document.currentScript?.dataset.previewMode === "true";
 
 function readCart() {
@@ -121,7 +121,7 @@ function renderCheckoutSummary() {
   for (const item of items) {
     const price = Number.isSafeInteger(item.priceAmount) ? item.priceAmount : 0;
     subtotal += price * item.quantity;
-    checkoutItemsNode.append(createTextElement("p", "summary-row", `${item.name || item.slug} Ã— ${item.quantity}`));
+    checkoutItemsNode.append(createTextElement("p", "summary-row", `${item.name || item.slug} × ${item.quantity}`));
   }
   if (subtotalNode) subtotalNode.textContent = money(subtotal);
   updateShippingSummary();
@@ -181,7 +181,7 @@ function updateDeliveryPin(latitude, longitude) {
     });
   }
   const status = document.querySelector("[data-delivery-map-status]");
-  if (status) status.textContent = `Pin tujuan dipilih: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}. Tarif Gojek sedang dihitung.`;
+  if (status) status.textContent = `Pin alamat dipilih: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}.`;
   scheduleShippingQuote();
 }
 
@@ -204,7 +204,7 @@ function showDeliveryMap() {
     setTimeout(() => deliveryMap.resize(), 0);
   } else {
     const status = document.querySelector("[data-delivery-map-status]");
-    if (status) status.textContent = "Peta gagal dimuat. Muat ulang halaman untuk memilih titik Gojek.";
+    if (status) status.textContent = "Peta gagal dimuat. Muat ulang halaman untuk memilih titik alamat.";
   }
 }
 
@@ -224,7 +224,7 @@ function scheduleShippingQuote() {
     optionsNode.replaceChildren(createTextElement("p", "form-hint", "Tarif muncul setelah tujuan dan keranjang dipilih."));
     return;
   }
-  optionsNode.replaceChildren(createTextElement("p", "form-hint", "Menghitung pilihan kurirâ€¦"));
+  optionsNode.replaceChildren(createTextElement("p", "form-hint", "Menghitung pilihan kurir…"));
   quoteTimer = setTimeout(() => loadShippingQuotes(items), 450);
 }
 
@@ -242,7 +242,7 @@ function renderShippingRates(rates, optionsNode, requestSequence) {
 }
 
 function shippingRateDetail(rate) {
-  return [rate.description, rate.etd ? `Estimasi ${rate.etd}` : ""].filter(Boolean).join(" Â· ");
+  return [rate.description, rate.etd ? `Estimasi ${rate.etd}` : ""].filter(Boolean).join(" · ");
 }
 
 function shippingRateButton(rate, { selected = false, compact = false } = {}) {
@@ -319,8 +319,8 @@ function renderShippingPicker(rates, optionsNode) {
         button.type = "button";
         button.className = "shipping-courier-option";
         const serviceLabel = group.services.length > 1
-          ? `Mulai ${money(cheapest.cost)} Â· ${group.services.length} pilihan paket`
-          : `${cheapest.service} Â· ${money(cheapest.cost)}`;
+          ? `Mulai ${money(cheapest.cost)} · ${group.services.length} pilihan paket`
+          : `${cheapest.service} · ${money(cheapest.cost)}`;
         button.append(
           createTextElement("strong", "shipping-courier-name", group.name),
           createTextElement("span", "shipping-courier-price", money(cheapest.cost)),
@@ -366,7 +366,7 @@ async function loadShippingQuotes(items) {
   const optionsNode = document.querySelector("[data-shipping-options]");
   quoteController = new AbortController();
   try {
-    const response = await fetch(`${apiBaseUrl}/api/shipping/quotes`, {
+    const response = await apiRequest("/api/shipping/quotes", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -399,7 +399,7 @@ if (destinationInput && destinationResults) {
     if (destinationController) destinationController.abort();
     destinationController = new AbortController();
     try {
-      const response = await fetch(`${apiBaseUrl}/api/shipping/destinations?search=${encodeURIComponent(query)}`, { signal: destinationController.signal });
+      const response = await apiRequest(`/api/shipping/destinations?search=${encodeURIComponent(query)}`, { signal: destinationController.signal });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Pencarian tujuan belum berhasil.");
       const locations = Array.isArray(result.data) ? result.data : [];
@@ -544,6 +544,12 @@ if (checkoutForm) {
       document.querySelector("[data-shipping-options]")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
+    if (!deliveryCoordinates) {
+      showMessage(messageNode, "Tandai titik alamat penerima di peta sebelum membuat pesanan.", true);
+      showDeliveryMap();
+      document.querySelector("[data-delivery-map-panel]")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     const items = readCart();
     if (!items.length) {
       showMessage(messageNode, "Keranjang masih kosong. Tambahkan produk terlebih dahulu.", true);
@@ -563,18 +569,17 @@ if (checkoutForm) {
         destination_label: selectedDestination.label,
         courier_code: selectedShipping.code,
         service: selectedShipping.service,
-        ...(selectedShipping.code === "gojek" && deliveryCoordinates
-          ? { latitude: deliveryCoordinates.latitude, longitude: deliveryCoordinates.longitude }
-          : {}),
+        latitude: deliveryCoordinates.latitude,
+        longitude: deliveryCoordinates.longitude,
       },
       items: items.map(({ slug, quantity, customization }) => ({ slug, quantity, customization: customization || {} })),
     };
 
     if (!idempotencyKey) idempotencyKey = crypto.randomUUID();
     submitButton.disabled = true;
-    showMessage(messageNode, "Menyimpan pesananâ€¦");
+    showMessage(messageNode, "Menyimpan pesanan…");
     try {
-      const response = await fetch(`${apiBaseUrl}/api/orders`, {
+      const response = await apiRequest("/api/orders", {
         method: "POST",
         headers: { "content-type": "application/json", "Idempotency-Key": idempotencyKey },
         body: JSON.stringify(payload),
@@ -616,7 +621,7 @@ if (checkoutForm) {
       saveCart([]);
     } catch (error) {
       showMessage(messageNode, error instanceof TypeError
-        ? "API tidak dapat dijangkau. Pastikan Worker lokal sedang berjalan."
+        ? "API utama dan jalur cadangan tidak dapat dijangkau. Coba lagi sebentar."
         : error.message, true);
       submitButton.disabled = false;
     }
@@ -644,21 +649,21 @@ if (proofForm) {
       return;
     }
     submitProofButton.disabled = true;
-    showMessage(proofMessage, "Mengirim bukti pembayaranâ€¦");
+    showMessage(proofMessage, "Mengirim bukti pembayaran…");
     try {
-      const response = await fetch(`${apiBaseUrl}/api/orders/proof`, {
+      const response = await apiRequest("/api/orders/proof", {
         method: "POST",
         body: new FormData(proofForm),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Bukti belum berhasil dikirim.");
       paymentProofSubmitted = true;
-      showMessage(proofMessage, `${result.message || "Bukti transfer tersimpan."} Admin menargetkan pemeriksaan maksimal 1 Ã— 24 jam. Jika bukti ditolak, hubungi admin melalui WhatsApp.`);
+      showMessage(proofMessage, `${result.message || "Bukti transfer tersimpan."} Admin menargetkan pemeriksaan maksimal 1 × 24 jam. Jika bukti ditolak, hubungi admin melalui WhatsApp.`);
       submitProofButton.textContent = "Bukti terkirim";
       submitProofButton.disabled = true;
       proofForm.elements.proof.disabled = true;
     } catch (error) {
-      showMessage(proofMessage, error instanceof TypeError ? "API tidak dapat dijangkau. Coba lagi nanti." : error.message, true);
+      showMessage(proofMessage, error instanceof TypeError ? "API utama tidak dapat dijangkau. Coba lagi nanti." : error.message, true);
       submitProofButton.disabled = false;
     }
   });
@@ -667,4 +672,3 @@ if (proofForm) {
 updateCartCounts();
 renderCart();
 renderCheckoutSummary();
-

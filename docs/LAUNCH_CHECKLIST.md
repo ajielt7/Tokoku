@@ -138,13 +138,14 @@ Kuota dan harga dapat berubah. Periksa kembali halaman resmi sebelum mengaktifka
 Ruang lingkup rilis awal: satu model katalog bernama **Nomor Rumah Akrilik**, dibuat dari akrilik 3 mm hasil potong laser CO₂, ukuran 20 × 12 cm posisi landscape, alas hitam dengan angka dan huruf putih dari stiker; tanpa ornamen. Nomor wajib diisi, maksimal 3 karakter, hanya huruf/angka, dan huruf dinormalisasi kapital (contoh A01). Nama area opsional, maksimal 14 karakter termasuk spasi, dengan kapitalisasi mengikuti input konsumen; nama area boleh memakai tanda baca `-`, `/`, dan `.`. Batas nama area adalah keputusan awal dan tata letaknya perlu diperiksa pada desain fisik 20 × 12 cm. Papan sementara direncanakan dipasang dengan double tape dan dibuat setelah pesanan masuk. Waktu produksi: bisa kurang dari satu jam saat antrean sepi dan maksimal dua hari kerja saat ramai, dihitung setelah detail custom dan pembayaran dikonfirmasi. Harga jual sementara ditetapkan Rp50.000 (IDR), berat paket disepakati 650 g. Deskripsi disetujui: “Nomor rumah akrilik hitam 3 mm, ukuran 20 × 12 cm. Kustom nomor hingga 3 karakter dan nama area hingga 14 karakter. Tulisan putih memakai stiker; pemasangan menggunakan double tape.” Pemilik akan memeriksa model satu per satu sebelum katalog ditambah. CNC router dan 3D printing direncanakan untuk tahap berikutnya. Foto produk asli disiapkan menjelang rilis; berat paket tetap ditimbang saat contoh kemasan final siap.
 
 - Pemilik menyetujui konsep visual digital awal di [konsep-nomor-rumah-akrilik.svg](produk/konsep-nomor-rumah-akrilik.svg) sebagai acuan desain. Mockup memakai teks contoh `A01` dan `KAMPUNG A`; ini bukan foto produk asli atau berkas produksi laser.
+- Dua gambar yang ditemukan di root repo dipindahkan ke [referensi-konsep](produk/referensi-konsep/README.md). Keduanya menunjukkan bahan/finishing yang berbeda dari produk yang disepakati, sehingga hanya untuk referensi internal dan tidak dipakai di halaman produk, structured data, sitemap, atau feed Merchant Center.
 
 - [ ] Tetapkan daftar produk yang benar dan hapus produk demo dari katalog yang akan diterbitkan.
 - [ ] Isi nama, deskripsi singkat, dan kategori setiap produk.
 - [ ] Tetapkan harga, mata uang, dan status stok/ketersediaan.
 - [ ] Isi ukuran produk dan batas personalisasi yang benar.
 - [x] Berat paket ditetapkan 650 g untuk perhitungan ongkir; timbang kembali paket contoh sebelum menerima pesanan agar angka sesuai kemasan final.
-- [ ] Siapkan foto milik toko yang dapat diterbitkan dengan URL HTTPS.
+- [ ] Siapkan foto milik toko yang sesuai dengan produk aktual (akrilik 3 mm, dasar hitam, tulisan putih, tanpa ornamen, double tape) dan dapat diterbitkan dengan URL HTTPS. Gambar referensi internal bukan pengganti foto produk.
 - [ ] Tulis alt text yang menjelaskan foto untuk setiap produk.
 
 ### C.2 Ongkir dan pembayaran — Berjalan (4/10)

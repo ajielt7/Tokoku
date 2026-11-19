@@ -35,14 +35,10 @@
     syncMenuToViewport();
   }
 
-  const scrollSentinel = document.createElement("span");
-  scrollSentinel.setAttribute("aria-hidden", "true");
-  scrollSentinel.className = "header-scroll-sentinel";
-  scrollSentinel.style.cssText = "display:block;height:1px;margin-bottom:-1px;pointer-events:none";
-  header.before(scrollSentinel);
+  const updateHeader = () => {
+    header.classList.toggle("is-scrolled", window.scrollY > 12);
+  };
 
-  const observer = new IntersectionObserver(([entry]) => {
-    header.classList.toggle("is-scrolled", !entry.isIntersecting);
-  }, { threshold: 0 });
-  observer.observe(scrollSentinel);
+  updateHeader();
+  window.addEventListener("scroll", updateHeader, { passive: true });
 })();

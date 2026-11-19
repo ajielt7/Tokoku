@@ -1,6 +1,7 @@
 {
-  "locale": "en",
+  "locale": "en-US",
   "language": "en",
+  "region": "US",
   "direction": "ltr",
   "messages": {
     "navigation.products": "Products",

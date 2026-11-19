@@ -18,6 +18,10 @@ const valhallaRouteUrl = "https://valhalla1.openstreetmap.de/route";
 const localCourierMaxDistanceKm = 30;
 const fcmTokenUrl = "https://oauth2.googleapis.com/token";
 const fcmMessagingScope = "https://www.googleapis.com/auth/firebase.messaging";
+const ga4TokenUrl = "https://oauth2.googleapis.com/token";
+const ga4Scope = "https://www.googleapis.com/auth/analytics.readonly";
+let cachedGa4AccessToken = null;
+let cachedGa4TokenExpiresAt = 0;
 let cachedFcmAccessToken = "";
 let cachedFcmTokenExpiresAt = 0;
 
@@ -129,7 +133,7 @@ function localCourierRate(route) {
     code: "gojek",
     name: "Gojek",
     service: "Same Day",
-    description: `${route.distanceKm} km Â· 4 km pertama Rp10.000, selanjutnya Rp2.500/km`,
+    description: `${route.distanceKm} km · 4 km pertama Rp10.000, selanjutnya Rp2.500/km`,
     cost: calculateLocalShipping(route.distanceMeters),
     etd: "Hari yang sama",
     route_distance_km: route.distanceKm,
@@ -941,7 +945,7 @@ async function updateAdminShipment(request, env, headers, orderCode) {
          WHERE EXISTS (SELECT 1 FROM shipments WHERE id = ?6 AND shipment_status = ?4 AND updated_at = ?7)`,
     ).bind(
       crypto.randomUUID(), order.id, previousStatus, nextStatus,
-      note || `${carrier} Â· resi ${trackingNumber}`, shipmentId, changedAt,
+      note || `${carrier} · resi ${trackingNumber}`, shipmentId, changedAt,
     );
     const result = await env.DB.batch([shipmentStatement, historyStatement]);
     if (result[0]?.meta?.changes !== 1 || result[1]?.meta?.changes !== 1) {
@@ -1113,6 +1117,166 @@ async function acknowledgeVisitorAnalytics(request, env, headers) {
     logDatabaseError("ack_visitor_analytics_queue", error);
     return jsonResponse({ error: "visitor_analytics_unavailable" }, 500, headers);
   }
+}
+
+function analyticsDate(daysAgo) {
+  const jakartaNow = new Date(Date.now() + 7 * 60 * 60 * 1000);
+  jakartaNow.setUTCDate(jakartaNow.getUTCDate() - daysAgo);
+  return jakartaNow.toISOString().slice(0, 10);
+}
+
+function analyticsRange(period) {
+  const days = { day: 30, week: 84, month: 365, year: 1825 }[period];
+  const today = analyticsDate(0);
+  const start = analyticsDate(days - 1);
+  return { days, start, today };
+}
+
+async function getGa4AccessToken(env) {
+  if (cachedGa4AccessToken && Date.now() < cachedGa4TokenExpiresAt - 60_000) return cachedGa4AccessToken;
+  const email = env.GA4_SERVICE_ACCOUNT_EMAIL;
+  const privateKeyPem = env.GA4_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  if (!email || !privateKeyPem || !env.GA4_PROPERTY_ID) throw new Error("GA4 credentials are not configured");
+  const keyBytes = Uint8Array.from(atob(privateKeyPem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, "")), (char) => char.charCodeAt(0));
+  const key = await crypto.subtle.importKey("pkcs8", keyBytes, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const now = Math.floor(Date.now() / 1000);
+  const claim = { iss: email, scope: ga4Scope, aud: ga4TokenUrl, iat: now, exp: now + 3600 };
+  const unsigned = `${base64Url(JSON.stringify({ alg: "RS256", typ: "JWT" }))}.${base64Url(JSON.stringify(claim))}`;
+  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(unsigned));
+  const assertion = `${unsigned}.${base64Url(new Uint8Array(signature))}`;
+  const response = await fetch(ga4TokenUrl, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok || typeof result?.access_token !== "string") throw new Error(`GA4 OAuth failed (${response.status})`);
+  cachedGa4AccessToken = result.access_token;
+  cachedGa4TokenExpiresAt = Date.now() + Math.min(Number(result.expires_in) || 3600, 3600) * 1000;
+  return cachedGa4AccessToken;
+}
+
+async function ga4RunReport(env, token, startDate, endDate, dimensions, metrics, limit = 1000) {
+  const response = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${encodeURIComponent(env.GA4_PROPERTY_ID)}:runReport`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      dateRanges: [{ startDate, endDate }],
+      dimensions: dimensions.map((name) => ({ name })),
+      metrics: metrics.map((name) => ({ name })),
+      limit,
+      keepEmptyRows: true,
+    }),
+    signal: AbortSignal.timeout(12_000),
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(`GA4 report failed (${response.status})`);
+  return result?.rows ?? [];
+}
+
+function ga4Number(row, index) {
+  return Number(row?.metricValues?.[index]?.value) || 0;
+}
+
+async function getGa4Analytics(env, period) {
+  if (!env.GA4_PROPERTY_ID || !env.GA4_SERVICE_ACCOUNT_EMAIL || !env.GA4_SERVICE_ACCOUNT_PRIVATE_KEY) {
+    return { available: false, error: "GA4 belum dikonfigurasi di Cloudflare Worker." };
+  }
+  const range = analyticsRange(period);
+  const token = await getGa4AccessToken(env);
+  const timeDimension = { day: "date", week: "yearWeek", month: "yearMonth", year: "year" }[period];
+  const [dailyRows, countryRows, totalRows] = await Promise.all([
+    ga4RunReport(env, token, range.start, range.today, [timeDimension], ["activeUsers", "sessions", "screenPageViews"], Math.min(range.days + 2, 2000)),
+    ga4RunReport(env, token, range.start, range.today, ["country"], ["activeUsers", "sessions"], 250),
+    ga4RunReport(env, token, range.start, range.today, [], ["activeUsers", "sessions", "screenPageViews"], 1),
+  ]);
+  const totals = totalRows[0];
+  return {
+    available: true,
+    updated_at: new Date().toISOString(),
+    timezone: "Asia/Jakarta",
+    summary: {
+      active_users: ga4Number(totals, 0),
+      sessions: ga4Number(totals, 1),
+      page_views: ga4Number(totals, 2),
+    },
+    points: dailyRows.map((row) => ({
+      date: row.dimensionValues?.[0]?.value ?? "",
+      active_users: ga4Number(row, 0),
+      sessions: ga4Number(row, 1),
+      page_views: ga4Number(row, 2),
+    })),
+    countries: countryRows.map((row) => ({
+      country: row.dimensionValues?.[0]?.value ?? "(not set)",
+      active_users: ga4Number(row, 0),
+      sessions: ga4Number(row, 1),
+    })).sort((a, b) => b.active_users - a.active_users),
+  };
+}
+
+async function getCloudflareWorkerAnalytics(env) {
+  if (!env.CLOUDFLARE_ANALYTICS_API_TOKEN || !env.CLOUDFLARE_ACCOUNT_ID) {
+    return { available: false, error: "Statistik Cloudflare Worker belum dikonfigurasi." };
+  }
+  const end = new Date();
+  const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const query = `query WorkerVisits($accountTag: string, $start: string, $end: string, $scriptName: string) {
+    viewer { accounts(filter: { accountTag: $accountTag }) {
+      workersInvocationsAdaptive(limit: 1, filter: { scriptName: $scriptName, datetime_geq: $start, datetime_leq: $end }) {
+        sum { requests errors }
+      }
+    } }
+  }`;
+  const response = await fetch("https://api.cloudflare.com/client/v4/graphql", {
+    method: "POST",
+    headers: { authorization: `Bearer ${env.CLOUDFLARE_ANALYTICS_API_TOKEN}`, "content-type": "application/json" },
+    body: JSON.stringify({ query, variables: {
+      accountTag: env.CLOUDFLARE_ACCOUNT_ID,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      scriptName: env.CLOUDFLARE_WORKER_NAME || "ruma-api-production",
+    } }),
+    signal: AbortSignal.timeout(12_000),
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok || result?.errors?.length) throw new Error(`Cloudflare Analytics query failed (${response.status})`);
+  const row = result?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive?.[0];
+  return {
+    available: true,
+    updated_at: new Date().toISOString(),
+    window_days: 30,
+    summary: {
+      requests: Number(row?.sum?.requests) || 0,
+      errors: Number(row?.sum?.errors) || 0,
+    },
+    points: [],
+    countries: [],
+    note: "Ini jumlah request ke Worker API, bukan jumlah pengunjung website. Trafik zieus.gt.tc tidak melewati Cloudflare zone.",
+  };
+}
+
+async function getAdminAnalyticsReport(request, env, headers) {
+  const authError = adminAuthError(request, env, headers);
+  if (authError) return authError;
+  const period = new URL(request.url).searchParams.get("period") || "day";
+  if (!["day", "week", "month", "year"].includes(period)) {
+    return jsonResponse({ error: "invalid_period", message: "Pilih rentang day, week, month, atau year." }, 400, headers);
+  }
+  const [ga4, cloudflare] = await Promise.allSettled([getGa4Analytics(env, period), getCloudflareWorkerAnalytics(env)]);
+  const providerResult = (result, name) => result.status === "fulfilled"
+    ? result.value
+    : { available: false, error: `${name} belum dapat mengambil laporan. Periksa konfigurasi dan izin API.` };
+  return jsonResponse({
+    data: {
+      period,
+      generated_at: new Date().toISOString(),
+      sources: {
+        ga4: providerResult(ga4, "GA4"),
+        cloudflare: providerResult(cloudflare, "Cloudflare"),
+      },
+    },
+  }, 200, { ...headers, "cache-control": "no-store" });
 }
 
 function base64Url(value) {
@@ -2016,6 +2180,11 @@ export default {
       if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
       return recordVisitorEvent(request, env, corsHeaders(origin), executionContext);
     }
+    if (pathname === "/api/admin/analytics/report" && request.method === "GET") {
+      const origin = getAllowedOrigin(request, env);
+      if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
+      return getAdminAnalyticsReport(request, env, corsHeaders(origin));
+    }
     if (pathname === "/api/admin/analytics/queue" && request.method === "GET") {
       const origin = getAllowedOrigin(request, env);
       if (origin === false) return jsonResponse({ error: "origin_not_allowed" }, 403);
@@ -2261,4 +2430,3 @@ export default {
     return jsonResponse({ error: "not_found" }, 404);
   },
 };
-
