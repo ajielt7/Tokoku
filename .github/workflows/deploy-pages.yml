@@ -33,7 +33,6 @@ jobs:
       SITE_URL: ${{ vars.SITE_URL || 'https://ajielt7.github.io/Tokoku' }}
       PUBLIC_API_BASE_URL: https://ruma-api-production.ajielt7.workers.dev
       PUBLIC_API_FALLBACK_URL: https://toqoku-api.netlify.app
-      CATALOG_API_URL: https://ruma-api-production.ajielt7.workers.dev/api/catalog
       SEO_INDEXABLE: "false"
       CONTENT_READY: "true"
       DEMO_SITE_URL: https://ajielt7.github.io/Tokoku
@@ -119,3 +118,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
