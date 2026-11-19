@@ -7,9 +7,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -21,6 +19,7 @@ import android.text.InputType;
 import android.text.method.PasswordTransformationMethod;
 import android.util.Base64;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
@@ -28,6 +27,7 @@ import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -87,7 +87,8 @@ public final class MainActivity extends Activity {
     private static final String ORDER_CACHE_IV = "cache_iv";
     private static final String ORDER_CACHE_VALUE = "cache_ciphertext";
     private static final int ORDER_CACHE_MAX_ENTRIES = 12;
-    private static final String DEFAULT_API_BASE_URL = "https://toqoku-api.netlify.app";
+    private static final String DEFAULT_API_BASE_URL = "https://ruma-api-production.ajielt7.workers.dev";
+    private static final String FALLBACK_API_BASE_URL = "https://toqoku-api.netlify.app";
     private static AdminApi activeSession;
     private static volatile MainActivity visibleActivity;
     private static final ExecutorService fcmRegistrationExecutor = Executors.newSingleThreadExecutor();
@@ -104,6 +105,7 @@ public final class MainActivity extends Activity {
     private LinearLayout orderTabBar;
     private boolean paymentProofViewed;
     private LinearLayout page;
+    private FrameLayout screenRoot;
     private LinearLayout content;
     private TextView feedback;
     private ProgressBar progress;
@@ -114,9 +116,8 @@ public final class MainActivity extends Activity {
     private String pendingDxfContent;
     private String pendingRefundProofId;
     private boolean showingVisitorAnalytics;
-    private String visitorAnalyticsPeriod = "day";
-    private LinearLayout visitorAnalyticsContent;
-    private TextView visitorAnalyticsStatus;
+    private String analyticsPeriod = "day";
+    private LinearLayout analyticsBody;
 
     private static final class CachedPayload {
         final String json;
@@ -131,6 +132,8 @@ public final class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        // Drop analytics history created by older versions; reports will be fetched on demand.
+        deleteDatabase("visitor_stats.db");
         getWindow().setStatusBarColor(DARK_GREEN);
         getWindow().setNavigationBarColor(Color.WHITE);
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
@@ -140,7 +143,7 @@ public final class MainActivity extends Activity {
             String savedToken = loadAdminToken();
             if (savedToken != null) {
                 try {
-                    api = new AdminApi(apiBaseUrl, savedToken);
+                    api = new AdminApi(apiBaseUrl, FALLBACK_API_BASE_URL, savedToken);
                     activeSession = api;
                 } catch (IOException error) {
                     clearAdminToken();
@@ -163,10 +166,6 @@ public final class MainActivity extends Activity {
         super.onResume();
         visibleActivity = this;
         AdminFirebaseMessagingService.markAllRead(this);
-        if (api != null) executor.execute(() -> {
-            try { syncVisitorAnalytics(this, api); } catch (Exception ignored) { }
-            runOnUiThread(() -> { if (showingVisitorAnalytics) renderVisitorAnalytics(); });
-        });
     }
 
     @Override
@@ -175,39 +174,31 @@ public final class MainActivity extends Activity {
         super.onPause();
     }
 
-    static boolean isAppVisible() { return visibleActivity != null; }
-
-    static void syncVisitorStatsFromPush(Context context) {
-        String token = loadAdminToken(context);
-        if (token == null || token.isEmpty()) return;
-        try {
-            syncVisitorAnalytics(context, new AdminApi(DEFAULT_API_BASE_URL, token));
-            MainActivity activity = visibleActivity;
-            if (activity != null) activity.runOnUiThread(() -> {
-                if (activity.showingVisitorAnalytics) activity.renderVisitorAnalytics();
-            });
-        } catch (Exception ignored) {
-            // The server retains unacknowledged events for the next push or app resume.
+    @Override
+    public void onBackPressed() {
+        // Back navigation must never expose the admin login while a session is active.
+        if (api == null) return;
+        if (currentOrderCode != null) {
+            currentOrderCode = null;
+            showOrderList(false);
+            return;
         }
+        if (showingVisitorAnalytics) {
+            showingVisitorAnalytics = false;
+            showOrderList(false);
+            return;
+        }
+        if (!refundFilter.isEmpty()) {
+            refundFilter = "";
+            showOrderList(true);
+            return;
+        }
+        // The order list is the root of the signed-in area. Let Android leave the
+        // activity; reopening it restores the session instead of showing login.
+        super.onBackPressed();
     }
 
-    private static void syncVisitorAnalytics(Context context, AdminApi session) throws Exception {
-        VisitorStatsStore store = new VisitorStatsStore(context);
-        try {
-            for (int batch = 0; batch < 20; batch++) {
-                JSONArray events = session.get("/api/admin/analytics/queue?limit=100").optJSONArray("data");
-                if (events == null || events.length() == 0) return;
-                store.save(events);
-                JSONArray ids = new JSONArray();
-                for (int index = 0; index < events.length(); index++) {
-                    JSONObject event = events.optJSONObject(index);
-                    if (event != null) ids.put(event.optString("event_id", ""));
-                }
-                session.post("/api/admin/analytics/ack", new JSONObject().put("event_ids", ids));
-                if (events.length() < 100) return;
-            }
-        } finally { store.close(); }
-    }
+    static boolean isAppVisible() { return visibleActivity != null; }
 
     static void refreshVisibleOrderListFromPush() {
         MainActivity activity = visibleActivity;
@@ -269,7 +260,7 @@ public final class MainActivity extends Activity {
     static void syncOrdersCacheFromPush(Context context) throws Exception {
         String token = loadAdminToken(context);
         if (token == null || token.isEmpty()) return;
-        AdminApi backgroundApi = new AdminApi(DEFAULT_API_BASE_URL, token);
+        AdminApi backgroundApi = new AdminApi(DEFAULT_API_BASE_URL, FALLBACK_API_BASE_URL, token);
         JSONArray orders = backgroundApi.get("/api/admin/orders?limit=100&order_status=new").optJSONArray("data");
         if (orders == null) orders = new JSONArray();
 
@@ -457,9 +448,9 @@ public final class MainActivity extends Activity {
         login.setOnClickListener(view -> {
             String token = tokenInput.getText().toString();
             try {
-                AdminApi candidate = new AdminApi(apiBaseUrl, token);
+                AdminApi candidate = new AdminApi(apiBaseUrl, FALLBACK_API_BASE_URL, token);
                 login.setEnabled(false);
-                messageView.setText("Memeriksa akses adminâ€¦");
+                messageView.setText("Memeriksa akses admin…");
                 runIo(() -> {
                     candidate.get("/api/admin/orders?limit=1");
                     saveAdminToken(token.trim());
@@ -467,9 +458,8 @@ public final class MainActivity extends Activity {
                         activeSession = candidate;
                         api = candidate;
                         registerForOrderNotifications(candidate);
-                        executor.execute(() -> {
-                            try { syncVisitorAnalytics(this, candidate); } catch (Exception ignored) { }
-                        });
+
+
                         if (notificationOrderCode != null && !notificationOrderCode.isEmpty()) showOrderDetail(notificationOrderCode);
                         else showOrderList(true);
                     });
@@ -485,25 +475,14 @@ public final class MainActivity extends Activity {
     }
 
     private void showOrderList(boolean fetch) {
+        currentOrderCode = null;
+        showingVisitorAnalytics = false;
         newOrderListPage();
-        addToolbar("Pesanan", true, () -> showLogin(""));
+        addToolbar("Pesanan", false, this::onBackPressed);
         addText(page, refundFilter.isEmpty() ? "Pesanan terbaru" : "Permintaan refund", 15, MUTED, false, 0, 0, 0, 10);
-        if (refundFilter.isEmpty()) {
-            Button analytics = smallButton("Grafik pengunjung", false);
-            page.addView(analytics, matchWrapBottom(10));
-            analytics.setOnClickListener(view -> showVisitorAnalytics());
-        }
 
-        LinearLayout actions = horizontal();
-        if (refundFilter.isEmpty()) {
-            Button refunds = smallButton("Refund", false);
-            actions.addView(refunds, new LinearLayout.LayoutParams(0, dp(46), 1));
-            refunds.setOnClickListener(view -> {
-                refundFilter = "requested";
-                paymentFilter = "";
-                showOrderList(true);
-            });
-        } else {
+        if (!refundFilter.isEmpty()) {
+            LinearLayout actions = horizontal();
             Button requested = smallButton("Diminta", "requested".equals(refundFilter));
             Button approved = smallButton("Disetujui", "approved".equals(refundFilter));
             LinearLayout.LayoutParams toggleParams = new LinearLayout.LayoutParams(0, dp(46), 1);
@@ -513,13 +492,13 @@ public final class MainActivity extends Activity {
             actions.addView(approved, approvedParams);
             requested.setOnClickListener(view -> { refundFilter = "requested"; showOrderList(true); });
             approved.setOnClickListener(view -> { refundFilter = "approved"; showOrderList(true); });
+            Button refresh = smallButton("Muat ulang", false);
+            LinearLayout.LayoutParams refreshParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46));
+            refreshParams.leftMargin = dp(8);
+            actions.addView(refresh, refreshParams);
+            page.addView(actions, matchWrap());
+            refresh.setOnClickListener(view -> loadOrders(true));
         }
-        Button refresh = smallButton("Muat ulang", false);
-        LinearLayout.LayoutParams refreshParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46));
-        refreshParams.leftMargin = dp(8);
-        actions.addView(refresh, refreshParams);
-        page.addView(actions, matchWrap());
-        refresh.setOnClickListener(view -> loadOrders(true));
 
         if (refundFilter.isEmpty()) {
             LinearLayout searchRow = horizontal();
@@ -532,8 +511,13 @@ public final class MainActivity extends Activity {
             LinearLayout.LayoutParams searchButtonParams = new LinearLayout.LayoutParams(dp(76), dp(48));
             searchButtonParams.leftMargin = dp(8);
             searchRow.addView(search, searchButtonParams);
+            Button refresh = smallButton("Muat ulang", false);
+            LinearLayout.LayoutParams refreshParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48));
+            refreshParams.leftMargin = dp(8);
+            searchRow.addView(refresh, refreshParams);
             page.addView(searchRow, matchWrapTop(8));
             search.setOnClickListener(view -> { searchQuery = searchInput.getText().toString().trim(); loadOrders(); });
+            refresh.setOnClickListener(view -> loadOrders(true));
             searchInput.setOnEditorActionListener((view, actionId, event) -> {
                 if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                     searchQuery = searchInput.getText().toString().trim();
@@ -579,7 +563,10 @@ public final class MainActivity extends Activity {
         addOrderTab("Proses", "accepted");
         addOrderTab("Riwayat", "history");
         root.addView(orderTabBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(64)));
-        setContentView(root);
+        screenRoot = new FrameLayout(this);
+        screenRoot.addView(root, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        addSideNavigation(screenRoot);
+        setContentView(screenRoot);
         feedback = null;
         progress = null;
         content = null;
@@ -607,112 +594,127 @@ public final class MainActivity extends Activity {
         });
     }
 
-    private void showVisitorAnalytics() {
-        visitorAnalyticsPeriod = "day";
+    private void showVisitorAnalytics() { showVisitorAnalytics(analyticsPeriod); }
+
+    private void showVisitorAnalytics(String period) {
+        if (api == null) { showLogin(""); return; }
+        analyticsPeriod = period;
         newPage();
         showingVisitorAnalytics = true;
         addToolbar("Pengunjung", false, () -> { showingVisitorAnalytics = false; showOrderList(false); });
-        addText(page, "Riwayat disimpan di perangkat Android. Server hanya menyimpan antrean sampai data tersinkron.", 14, MUTED, false, 0, 0, 0, 12);
-        Spinner periodSpinner = new Spinner(this);
-        String[] labels = {"Per hari Â· 30 hari", "Per minggu Â· 12 minggu", "Per bulan Â· 12 bulan", "Per tahun Â· 5 tahun"};
+        addText(page, "Data diambil langsung dari server. Laporan tidak disimpan di HP.", 14, MUTED, false, 0, 0, 0, 12);
+        LinearLayout controls = horizontal();
         String[] periods = {"day", "week", "month", "year"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, labels);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        periodSpinner.setAdapter(adapter);
-        page.addView(periodSpinner, matchWrapBottom(10));
-        visitorAnalyticsStatus = addText(page, "Sinkronisasi otomatis saat ada push atau aplikasi dibuka.", 13, MUTED, false, 0, 0, 0, 8);
-        visitorAnalyticsContent = new LinearLayout(this);
-        visitorAnalyticsContent.setOrientation(LinearLayout.VERTICAL);
-        page.addView(visitorAnalyticsContent, matchWrap());
-        periodSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                visitorAnalyticsPeriod = periods[Math.max(0, Math.min(position, periods.length - 1))];
-                renderVisitorAnalytics();
-            }
-            @Override public void onNothingSelected(AdapterView<?> parent) { }
-        });
-        Button sync = smallButton("Sinkronkan sekarang", true);
-        page.addView(sync, matchWrapTop(12));
-        sync.setOnClickListener(view -> executor.execute(() -> {
-            try {
-                syncVisitorAnalytics(this, api);
-                runOnUiThread(() -> { if (showingVisitorAnalytics) renderVisitorAnalytics(); });
-            } catch (Exception error) {
-                runOnUiThread(() -> { if (visitorAnalyticsStatus != null) visitorAnalyticsStatus.setText("Belum tersinkron. Data akan dicoba lagi saat aplikasi dibuka atau menerima push."); });
-            }
-        }));
+        String[] labels = {"30 hari", "12 minggu", "12 bulan", "5 tahun"};
+        for (int i = 0; i < periods.length; i++) {
+            final String selected = periods[i];
+            Button button = smallButton(labels[i], period.equals(selected));
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(42), 1);
+            params.rightMargin = dp(4);
+            controls.addView(button, params);
+            button.setOnClickListener(view -> showVisitorAnalytics(selected));
+        }
+        page.addView(controls, matchWrapBottom(10));
+        Button refresh = smallButton("Muat ulang", false);
+        page.addView(refresh, matchWrapBottom(10));
+        refresh.setOnClickListener(view -> showVisitorAnalytics(period));
+        TextView status = addText(page, "Mengambil laporan dari GA4 dan Cloudflare…", 13, MUTED, false, 0, 0, 0, 8);
+        analyticsBody = new LinearLayout(this);
+        analyticsBody.setOrientation(LinearLayout.VERTICAL);
+        page.addView(analyticsBody, matchWrapBottom(0));
         finishPage();
-        renderVisitorAnalytics();
+        runIo(() -> {
+            JSONObject response = api.getAnalyticsReport(period);
+            JSONObject data = response.optJSONObject("data");
+            JSONObject sources = data == null ? null : data.optJSONObject("sources");
+            JSONObject ga4 = sources == null ? null : sources.optJSONObject("ga4");
+            JSONObject cloudflare = sources == null ? null : sources.optJSONObject("cloudflare");
+            runOnUiThread(() -> {
+                if (!showingVisitorAnalytics || !period.equals(analyticsPeriod) || analyticsBody == null) return;
+                status.setText("Diperbarui " + analyticsTimeLabel(data == null ? "" : data.optString("generated_at")));
+                renderAnalyticsSource(analyticsBody, "Google Analytics 4", ga4, true);
+                renderAnalyticsSource(analyticsBody, "Cloudflare Worker", cloudflare, false);
+            });
+        }, error -> {
+            if (showingVisitorAnalytics && period.equals(analyticsPeriod)) status.setText("Laporan belum dapat dimuat: " + error.getMessage());
+        });
     }
 
-    private void renderVisitorAnalytics() {
-        if (visitorAnalyticsContent == null || !showingVisitorAnalytics) return;
-        visitorAnalyticsContent.removeAllViews();
-        VisitorStatsStore store = new VisitorStatsStore(this);
-        try {
-            JSONObject report = store.report(visitorAnalyticsPeriod);
-            LinearLayout summary = card(visitorAnalyticsContent);
-            addText(summary, "Pengunjung unik", 14, MUTED, false, 0, 0, 0, 4);
-            addText(summary, NumberFormat.getIntegerInstance(new Locale("id", "ID")).format(report.optLong("unique_visitors")), 30, GREEN, true, 0, 0, 0, 8);
-            addPair(summary, "Tampilan halaman", NumberFormat.getIntegerInstance(new Locale("id", "ID")).format(report.optLong("pageviews")));
-            String group = "day".equals(visitorAnalyticsPeriod) ? "per hari" : "week".equals(visitorAnalyticsPeriod) ? "per minggu" : "month".equals(visitorAnalyticsPeriod) ? "per bulan" : "per tahun";
-            addText(visitorAnalyticsContent, "Pengunjung " + group, 18, INK, true, 12, 0, 0, 8);
-            JSONArray points = report.optJSONArray("points");
-            if (points == null || points.length() == 0) {
-                LinearLayout empty = card(visitorAnalyticsContent);
-                addText(empty, "Belum ada data pengunjung", 16, INK, true, 0, 0, 0, 4);
-                addText(empty, "Grafik akan terisi setelah ada kunjungan dan aplikasi menyinkronkan antrean.", 14, MUTED, false, 0, 0, 0, 0);
-            } else visitorAnalyticsContent.addView(new VisitorChartView(this, points), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(220)));
-            addText(visitorAnalyticsContent, "Pengunjung unik per negara", 18, INK, true, 18, 0, 0, 8);
-            JSONArray countries = report.optJSONArray("countries");
-            if (countries == null || countries.length() == 0) addText(visitorAnalyticsContent, "Belum ada data negara.", 14, MUTED, false, 0, 0, 0, 0);
-            else for (int index = 0; index < countries.length(); index++) {
-                JSONObject country = countries.optJSONObject(index);
-                if (country != null) addPair(visitorAnalyticsContent, country.optString("name", country.optString("code", "â€”")),
-                        NumberFormat.getIntegerInstance(new Locale("id", "ID")).format(country.optLong("visitors")));
+    private void renderAnalyticsSource(LinearLayout parent, String title, JSONObject source, boolean isGa4) {
+        LinearLayout box = card(parent);
+        addText(box, title, 18, GREEN, true, 0, 0, 0, 5);
+        if (source == null || !source.optBoolean("available", false)) {
+            addText(box, source == null ? "Sumber tidak mengembalikan data." : source.optString("error", "Sumber belum tersedia."), 14, MUTED, false, 0, 0, 0, 0);
+            return;
+        }
+        JSONObject summary = source.optJSONObject("summary");
+        if (isGa4) {
+            addPair(box, "Pengguna aktif", formatAnalyticsNumber(summary == null ? 0 : summary.optLong("active_users")));
+            addPair(box, "Sesi", formatAnalyticsNumber(summary == null ? 0 : summary.optLong("sessions")));
+            addPair(box, "Tampilan", formatAnalyticsNumber(summary == null ? 0 : summary.optLong("page_views")));
+            JSONArray points = source.optJSONArray("points");
+            addText(box, "Tren pengguna aktif", 15, INK, true, 0, 10, 0, 5);
+            addAnalyticsBars(box, points, "active_users", 14);
+            JSONArray countries = source.optJSONArray("countries");
+            addText(box, "Pengguna menurut negara", 15, INK, true, 0, 10, 0, 5);
+            if (countries == null || countries.length() == 0) addText(box, "Belum ada data negara.", 14, MUTED, false, 0, 0, 0, 0);
+            else for (int i = 0; i < Math.min(countries.length(), 20); i++) {
+                JSONObject country = countries.optJSONObject(i);
+                if (country != null) addPair(box, country.optString("country", "(tidak diketahui)"), formatAnalyticsNumber(country.optLong("active_users")));
             }
-            if (visitorAnalyticsStatus != null) visitorAnalyticsStatus.setText("Zona waktu mengikuti pengaturan HP. Data historis ada di penyimpanan aplikasi.");
-        } catch (Exception error) {
-            if (visitorAnalyticsStatus != null) visitorAnalyticsStatus.setText("Data pengunjung belum dapat dibaca di perangkat.");
-        } finally { store.close(); }
-    }
-
-    private final class VisitorChartView extends View {
-        private final JSONArray points;
-        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        VisitorChartView(Context context, JSONArray points) { super(context); this.points = points; }
-        @Override protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            int count = points.length();
-            if (count == 0) return;
-            float width = getWidth(), height = getHeight(), top = dp(12), bottom = height - dp(34);
-            long maximum = 1;
-            for (int index = 0; index < count; index++) {
-                JSONObject point = points.optJSONObject(index);
-                if (point != null) maximum = Math.max(maximum, point.optLong("visitors"));
-            }
-            float slot = width / count;
-            float barWidth = Math.max(dp(3), Math.min(dp(20), slot * .58f));
-            paint.setColor(LINE);
-            paint.setStrokeWidth(dp(1));
-            canvas.drawLine(0, bottom, width, bottom, paint);
-            paint.setTextSize(dp(count > 14 ? 8 : 10));
-            paint.setTextAlign(Paint.Align.CENTER);
-            for (int index = 0; index < count; index++) {
-                JSONObject point = points.optJSONObject(index);
-                if (point == null) continue;
-                float barHeight = (bottom - top) * point.optLong("visitors") / maximum;
-                float center = (index + .5f) * slot;
-                paint.setColor(GREEN);
-                canvas.drawRoundRect(center - barWidth / 2, bottom - barHeight, center + barWidth / 2, bottom, dp(3), dp(3), paint);
-                paint.setColor(MUTED);
-                if (count <= 12 || index % Math.max(1, count / 6) == 0 || index == count - 1) {
-                    canvas.drawText(point.optString("label", ""), center, height - dp(7), paint);
-                }
-            }
+        } else {
+            addPair(box, "Request API (30 hari)", formatAnalyticsNumber(summary == null ? 0 : summary.optLong("requests")));
+            addPair(box, "Error Worker", formatAnalyticsNumber(summary == null ? 0 : summary.optLong("errors")));
+            addText(box, source.optString("note", "Metrik ini mengukur request API, bukan pengunjung unik."), 13, MUTED, false, 0, 4, 0, 0);
         }
     }
 
+    private void addAnalyticsBars(LinearLayout parent, JSONArray points, String metric, int maxRows) {
+        if (points == null || points.length() == 0) {
+            addText(parent, "Belum ada data untuk rentang ini.", 14, MUTED, false, 0, 0, 0, 0);
+            return;
+        }
+        long max = 1;
+        int start = Math.max(0, points.length() - maxRows);
+        for (int i = start; i < points.length(); i++) {
+            JSONObject point = points.optJSONObject(i);
+            if (point != null) max = Math.max(max, point.optLong(metric));
+        }
+        for (int i = start; i < points.length(); i++) {
+            JSONObject point = points.optJSONObject(i);
+            if (point == null) continue;
+            LinearLayout row = horizontal();
+            String date = analyticsDateLabel(point.optString("date", ""));
+            TextView label = addText(row, date, 12, MUTED, false, 0, 0, 5, 0);
+            row.addView(label, new LinearLayout.LayoutParams(dp(46), ViewGroup.LayoutParams.WRAP_CONTENT));
+            ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+            bar.setMax(100);
+            bar.setProgress((int) Math.min(100, point.optLong(metric) * 100 / max));
+            bar.setProgressTintList(android.content.res.ColorStateList.valueOf(GREEN));
+            row.addView(bar, new LinearLayout.LayoutParams(0, dp(12), 1));
+            addText(row, formatAnalyticsNumber(point.optLong(metric)), 12, INK, true, 5, 0, 0, 0);
+            parent.addView(row, matchWrapBottom(5));
+        }
+    }
+
+    private String formatAnalyticsNumber(long value) {
+        return NumberFormat.getIntegerInstance(new Locale("id", "ID")).format(Math.max(0, value));
+    }
+
+    private String analyticsDateLabel(String value) {
+        if (value.length() == 8) return value.substring(4, 6) + "/" + value.substring(6, 8);
+        if (value.length() == 6 && "week".equals(analyticsPeriod)) return "M" + value.substring(4);
+        if (value.length() == 6 && "month".equals(analyticsPeriod)) return value.substring(4, 6) + "/" + value.substring(0, 4);
+        return value;
+    }
+
+    private String analyticsTimeLabel(String value) {
+        if (value == null || value.isEmpty()) return "server";
+        try {
+            Date parsed = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(value.substring(0, Math.min(value.length(), 19)));
+            return new SimpleDateFormat("dd MMM, HH:mm", new Locale("id", "ID")).format(parsed);
+        } catch (Exception ignored) { return "server"; }
+    }
     private void loadOrders() { loadOrders(false); }
 
     private void loadOrders(boolean forceRefresh) {
@@ -720,7 +722,7 @@ public final class MainActivity extends Activity {
         if (!refundFilter.isEmpty()) { loadRefunds(); return; }
         if (searchInput != null) searchQuery = searchInput.getText().toString().trim();
         String cacheKey = ordersCacheKey(orderFilter, paymentFilter, searchQuery);
-        setBusy(true, "Memeriksa cache pesananâ€¦");
+        setBusy(true, "Memeriksa cache pesanan…");
         runIo(() -> {
             CachedPayload cached = readCachedPayload(cacheKey);
             if (cached != null) {
@@ -728,11 +730,11 @@ public final class MainActivity extends Activity {
                 runOnUiThread(() -> {
                     renderOrders(cachedOrders);
                     setBusy(forceRefresh,
-                            "Cache lokal Â· diperbarui " + cacheTimeLabel(cached.savedAt));
+                            "Cache lokal · diperbarui " + cacheTimeLabel(cached.savedAt));
                 });
                 if (!forceRefresh) return;
             } else {
-                runOnUiThread(() -> setBusy(true, "Memuat pesanan dari serverâ€¦"));
+                runOnUiThread(() -> setBusy(true, "Memuat pesanan dari server…"));
             }
             JSONArray orders;
             if ("history".equals(orderFilter)) {
@@ -749,7 +751,7 @@ public final class MainActivity extends Activity {
             long syncedAt = System.currentTimeMillis();
             runOnUiThread(() -> {
                 renderOrders(latestOrders);
-                setBusy(false, latestOrders.length() + " pesanan Â· disinkronkan " + cacheTimeLabel(syncedAt));
+                setBusy(false, latestOrders.length() + " pesanan · disinkronkan " + cacheTimeLabel(syncedAt));
             });
         }, error -> {
             if (error instanceof AdminApi.ApiException
@@ -761,7 +763,7 @@ public final class MainActivity extends Activity {
                 return;
             }
             if (content != null && content.getChildCount() > 0) {
-                setBusy(false, "Cache lokal ditampilkan Â· server gagal: " + error.getMessage());
+                setBusy(false, "Cache lokal ditampilkan · server gagal: " + error.getMessage());
             } else {
                 setBusy(false, error.getMessage());
                 if (content != null) addEmptyState("Pesanan belum dapat dimuat.", "Coba muat ulang setelah koneksi tersedia.");
@@ -790,7 +792,7 @@ public final class MainActivity extends Activity {
 
     private void loadRefunds() {
         if (api == null) { showLogin(""); return; }
-        setBusy(true, "Memuat permintaan refundâ€¦");
+        setBusy(true, "Memuat permintaan refund…");
         String status = refundFilter;
         runIo(() -> {
             JSONObject response = api.get("/api/admin/refunds?status=" + status);
@@ -816,7 +818,7 @@ public final class MainActivity extends Activity {
             addText(card, stringValue(refund, "order_code", "Pesanan"), 16, GREEN, true, 0, 0, 0, 4);
             addText(card, stringValue(refund, "customer_name", "Pelanggan"), 16, INK, true, 0, 0, 0, 4);
             addText(card, "WhatsApp: " + stringValue(refund, "customer_phone", ""), 14, MUTED, false, 0, 0, 0, 4);
-            addText(card, "Refund " + money(refund.optLong("amount")) + " Â· diminta " + dateText(refund.optString("requested_at")), 14, MUTED, false, 0, 0, 0, 4);
+            addText(card, "Refund " + money(refund.optLong("amount")) + " · diminta " + dateText(refund.optString("requested_at")), 14, MUTED, false, 0, 0, 0, 4);
             if ("approved".equals(refund.optString("refund_status"))) {
                 addText(card, "Target: " + dateText(refund.optString("refund_due_at")) + ". Transfer hanya ke rekening asal pembayaran.", 14, ORANGE, true, 0, 0, 0, 8);
             } else if (!refund.optString("customer_note").isEmpty()) {
@@ -844,7 +846,7 @@ public final class MainActivity extends Activity {
         String title = processing ? "Konfirmasi transfer refund?" : "Setujui permintaan refund?";
         String message = processing
                 ? "Pastikan dana sudah ditransfer ke rekening asal yang mengirim pembayaran. Setelah dikonfirmasi, status pesanan berubah menjadi dibatalkan/refund."
-                : "Refund hanya untuk pesanan yang belum mulai diproduksi. Setelah disetujui, target pengiriman dana maksimal 3 Ã— 24 jam.";
+                : "Refund hanya untuk pesanan yang belum mulai diproduksi. Setelah disetujui, target pengiriman dana maksimal 3 × 24 jam.";
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(message)
@@ -855,7 +857,7 @@ public final class MainActivity extends Activity {
 
     private void runRefundAction(JSONObject refund, String action) {
         String refundId = refund.optString("refund_id", "");
-        setBusy(true, "Menyimpan status refundâ€¦");
+        setBusy(true, "Menyimpan status refund…");
         runIo(() -> {
             JSONObject response = api.post("/api/admin/refunds/" + refundId + "/" + action,
                     json("note", action.equals("process") ? "Admin mengonfirmasi transfer ke rekening asal" : "",
@@ -915,8 +917,11 @@ public final class MainActivity extends Activity {
         currentOrderCode = orderCode;
         paymentProofViewed = false;
         newPage();
-        addToolbar(orderCode, false, () -> showOrderList(true));
-        feedback = addText(page, "Memuat detailâ€¦", 14, MUTED, false, 8, 0, 0, 0);
+        addToolbar(orderCode, false, () -> {
+            currentOrderCode = null;
+            showOrderList(true);
+        });
+        feedback = addText(page, "Memuat detail…", 14, MUTED, false, 8, 0, 0, 0);
         progress = new ProgressBar(this);
         LinearLayout.LayoutParams progressParams = new LinearLayout.LayoutParams(dp(32), dp(32));
         progressParams.gravity = Gravity.CENTER_HORIZONTAL;
@@ -934,7 +939,7 @@ public final class MainActivity extends Activity {
         if (api == null || currentOrderCode == null) { showLogin(""); return; }
         String code = currentOrderCode;
         String cacheKey = detailCacheKey(code);
-        setBusy(true, "Memeriksa cache detailâ€¦");
+        setBusy(true, "Memeriksa cache detail…");
         runIo(() -> {
             CachedPayload cached = readCachedPayload(cacheKey);
             if (cached != null) {
@@ -942,11 +947,11 @@ public final class MainActivity extends Activity {
                 runOnUiThread(() -> {
                     renderOrderDetail(cachedOrder);
                     setBusy(forceRefresh,
-                            "Cache lokal Â· diperbarui " + cacheTimeLabel(cached.savedAt));
+                            "Cache lokal · diperbarui " + cacheTimeLabel(cached.savedAt));
                 });
                 if (!forceRefresh) return;
             } else {
-                runOnUiThread(() -> setBusy(true, "Memuat detail dari serverâ€¦"));
+                runOnUiThread(() -> setBusy(true, "Memuat detail dari server…"));
             }
             JSONObject response = api.get("/api/admin/orders/" + code);
             JSONObject data = response.optJSONObject("data");
@@ -965,7 +970,7 @@ public final class MainActivity extends Activity {
                 api = null;
                 showLogin("Sesi berakhir. Masukkan token admin kembali.");
             } else if (content != null && content.getChildCount() > 0) {
-                setBusy(false, "Cache lokal ditampilkan Â· server gagal: " + error.getMessage());
+                setBusy(false, "Cache lokal ditampilkan · server gagal: " + error.getMessage());
             } else {
                 setBusy(false, error.getMessage());
             }
@@ -1008,8 +1013,8 @@ public final class MainActivity extends Activity {
 
         if (!cancelled && !completed) {
         LinearLayout shipping = section("Pengiriman");
-        addPair(shipping, "Tujuan", stringValue(order, "shipping_destination_label", "â€”"));
-        addPair(shipping, "Kurir", stringValue(order, "shipping_courier_name", "â€”") + " " + stringValue(order, "shipping_service", ""));
+        addPair(shipping, "Tujuan", stringValue(order, "shipping_destination_label", "—"));
+        addPair(shipping, "Kurir", stringValue(order, "shipping_courier_name", "—") + " " + stringValue(order, "shipping_service", ""));
         if (order.has("shipping_distance_km") && !order.isNull("shipping_distance_km")) addPair(shipping, "Jarak", order.optString("shipping_distance_km") + " km");
         addPair(shipping, "Ongkir", money(order.optLong("shipping_amount")));
         String carrier = stringValue(order, "carrier", "");
@@ -1032,8 +1037,8 @@ public final class MainActivity extends Activity {
         if (items != null) for (int index = 0; index < items.length(); index++) {
             JSONObject item = items.optJSONObject(index);
             if (item == null) continue;
-            addText(itemsCard, item.optString("name", "Produk") + "  Ã—  " + item.optInt("quantity"), 16, INK, true, 0, 0, 0, 3);
-            addText(itemsCard, money(item.optLong("unit_price_amount")) + " per item Â· " + money(item.optLong("line_total_amount")), 14, MUTED, false, 0, 0, 0, 3);
+            addText(itemsCard, item.optString("name", "Produk") + "  ×  " + item.optInt("quantity"), 16, INK, true, 0, 0, 0, 3);
+            addText(itemsCard, money(item.optLong("unit_price_amount")) + " per item · " + money(item.optLong("line_total_amount")), 14, MUTED, false, 0, 0, 0, 3);
             String size = item.optString("fixed_size_snapshot", "");
             if (!size.isEmpty() && !"null".equals(size)) addText(itemsCard, "Ukuran: " + size, 14, MUTED, false, 0, 0, 0, 3);
             JSONObject custom = item.optJSONObject("customization");
@@ -1149,7 +1154,7 @@ public final class MainActivity extends Activity {
             if (event == null) continue;
             String type = event.optString("status_type");
             addText(historyCard, statusLabel(type, event.optString("new_status")), 15, INK, true, 0, 0, 0, 2);
-            addText(historyCard, dateText(event.optString("created_at")) + " Â· " + event.optString("actor_type", "system"), 13, MUTED, false, 0, 0, 0, 2);
+            addText(historyCard, dateText(event.optString("created_at")) + " · " + event.optString("actor_type", "system"), 13, MUTED, false, 0, 0, 0, 2);
             String historyNote = event.optString("note", "");
             if (!historyNote.isEmpty() && !"null".equals(historyNote)) addText(historyCard, historyNote, 14, MUTED, false, 0, 0, 0, 8);
         }
@@ -1177,8 +1182,8 @@ public final class MainActivity extends Activity {
         if (items != null) for (int index = 0; index < items.length(); index++) {
             JSONObject item = items.optJSONObject(index);
             if (item == null) continue;
-            addText(detail, item.optString("name", "Produk") + "  Ã—  " + item.optInt("quantity"), 16, INK, true, 0, 0, 0, 3);
-            addText(detail, money(item.optLong("unit_price_amount")) + " per item Â· " + money(item.optLong("line_total_amount")), 14, MUTED, false, 0, 0, 0, 3);
+            addText(detail, item.optString("name", "Produk") + "  ×  " + item.optInt("quantity"), 16, INK, true, 0, 0, 0, 3);
+            addText(detail, money(item.optLong("unit_price_amount")) + " per item · " + money(item.optLong("line_total_amount")), 14, MUTED, false, 0, 0, 0, 3);
             String size = stringValue(item, "fixed_size_snapshot", "");
             if (!size.isEmpty()) addText(detail, "Ukuran: " + size, 14, MUTED, false, 0, 0, 0, 3);
             JSONObject custom = item.optJSONObject("customization");
@@ -1236,7 +1241,7 @@ public final class MainActivity extends Activity {
         addText(shipping, "Kurir / Ojol", 13, MUTED, false, 0, 0, 0, 3);
         String courier = stringValue(order, "shipping_courier_name", stringValue(order, "carrier", "Kurir"));
         String service = stringValue(order, "shipping_service", "");
-        addText(shipping, service.isEmpty() ? courier : courier + " Â· " + service, 16, INK, true, 0, 0, 0, 8);
+        addText(shipping, service.isEmpty() ? courier : courier + " · " + service, 16, INK, true, 0, 0, 0, 8);
 
         addText(shipping, "Nomor resi", 13, MUTED, false, 0, 0, 0, 3);
         TextView trackingNumberLabel = addText(shipping,
@@ -1316,7 +1321,7 @@ public final class MainActivity extends Activity {
         proofImage.setAdjustViewBounds(false);
         proofImage.setContentDescription("Foto bukti pembayaran pesanan");
         proofCard.addView(proofImage, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(300)));
-        Button proofAction = smallButton(order.optBoolean("has_payment_proof") ? "Memuat buktiâ€¦" : "Bukti transfer belum diunggah", false);
+        Button proofAction = smallButton(order.optBoolean("has_payment_proof") ? "Memuat bukti…" : "Bukti transfer belum diunggah", false);
         proofCard.addView(proofAction, matchWrapTop(8));
         if (order.optBoolean("has_payment_proof")) {
             proofAction.setOnClickListener(view -> loadProof(order, proofAction, proofImage));
@@ -1331,7 +1336,7 @@ public final class MainActivity extends Activity {
         if (items != null) for (int index = 0; index < items.length(); index++) {
             JSONObject item = items.optJSONObject(index);
             if (item == null) continue;
-            addText(detailCard, item.optString("name", "Produk") + "  Ã—  " + item.optInt("quantity"), 16, INK, true, 0, 0, 0, index + 1 < items.length() ? 8 : 0);
+            addText(detailCard, item.optString("name", "Produk") + "  ×  " + item.optInt("quantity"), 16, INK, true, 0, 0, 0, index + 1 < items.length() ? 8 : 0);
         }
         if (items == null || items.length() == 0) addText(detailCard, "Rincian produk belum tersedia.", 14, MUTED, false, 0, 0, 0, 0);
 
@@ -1424,7 +1429,7 @@ public final class MainActivity extends Activity {
         if (items != null) for (int index = 0; index < items.length(); index++) {
             JSONObject item = items.optJSONObject(index);
             if (item == null) continue;
-            addText(details, item.optString("name", "Produk") + "  Ã—  " + item.optInt("quantity"), 15, INK, true, 0, 0, 0, 3);
+            addText(details, item.optString("name", "Produk") + "  ×  " + item.optInt("quantity"), 15, INK, true, 0, 0, 0, 3);
             String size = item.optString("fixed_size_snapshot", "");
             if (!size.isEmpty() && !"null".equals(size)) addText(details, "Ukuran: " + size, 13, MUTED, false, 0, 0, 0, 5);
             Button createDxf = smallButton("Buat gambar DXF", false);
@@ -1581,7 +1586,7 @@ public final class MainActivity extends Activity {
                         String carrier = stringValue(order, "carrier", "");
                         String tracking = stringValue(order, "tracking_number", "");
                         String url = stringValue(order, "tracking_url", "");
-                        setBusy(true, "Menyelesaikan pesananâ€¦");
+                        setBusy(true, "Menyelesaikan pesanan…");
                         runIo(() -> {
                             api.post("/api/admin/orders/" + orderCode + "/shipment",
                                     json("carrier", carrier, "tracking_number", tracking, "tracking_url", url,
@@ -1618,7 +1623,7 @@ public final class MainActivity extends Activity {
     private void loadProof(JSONObject order, Button button, ImageView imageView) {
         String reference = stringValue(order, "payment_reference", stringValue(order, "order_code", ""));
         button.setEnabled(false);
-        button.setText("Memuat buktiâ€¦");
+        button.setText("Memuat bukti…");
         runIo(() -> {
             String signedUrl = api.getPaymentProofUrl(reference);
             Bitmap bitmap = downloadProof(signedUrl);
@@ -1637,7 +1642,7 @@ public final class MainActivity extends Activity {
 
     private void loadRefundProof(String refundId, Button button, ImageView imageView) {
         button.setEnabled(false);
-        button.setText("Memuat buktiâ€¦");
+        button.setText("Memuat bukti…");
         runIo(() -> {
             String signedUrl = api.getRefundProofUrl(refundId);
             Bitmap bitmap = downloadProof(signedUrl);
@@ -1677,7 +1682,7 @@ public final class MainActivity extends Activity {
                 if (input == null) throw new IOException("File gambar tidak dapat dibuka.");
                 bytes = readImageLimited(input);
             }
-            setBusy(true, "Mengunggah bukti pengembalian danaâ€¦");
+            setBusy(true, "Mengunggah bukti pengembalian dana…");
             runIo(() -> {
                 JSONObject response = api.postRefundProof(refundId, mimeType, bytes);
                 clearOrderCache();
@@ -1752,7 +1757,7 @@ public final class MainActivity extends Activity {
     private void reviewPayment(JSONObject order, String decision) {
         String reference = stringValue(order, "payment_reference", stringValue(order, "order_code", ""));
         String note = adminNoteInput == null ? "" : adminNoteInput.getText().toString().trim();
-        setBusy(true, "Memperbarui pembayaranâ€¦");
+        setBusy(true, "Memperbarui pembayaran…");
         runIo(() -> {
             api.post("/api/admin/payments/" + reference + "/review", json("decision", decision, "note", note));
             clearOrderCache();
@@ -1765,7 +1770,7 @@ public final class MainActivity extends Activity {
         String code = currentOrderCode;
         String tabLabel = currentOrderTabLabel();
         button.setEnabled(false);
-        setBusy(true, "Menyimpan statusâ€¦");
+        setBusy(true, "Menyimpan status…");
         runIo(() -> {
             JSONObject body = json("status_type", type, "status", status, "note", note);
             api.post("/api/admin/orders/" + code + "/status", body);
@@ -1809,7 +1814,7 @@ public final class MainActivity extends Activity {
                 && "completed".equals(stringValue(loadedOrder, "order_status", ""))
                 && "delivered".equals(status);
         button.setEnabled(false);
-        setBusy(true, "Menyimpan pengirimanâ€¦");
+        setBusy(true, "Menyimpan pengiriman…");
         runIo(() -> {
             JSONObject body = json("carrier", carrier, "tracking_number", trackingNumber,
                     "tracking_url", trackingUrl, "status", status, "note", note);
@@ -1828,7 +1833,7 @@ public final class MainActivity extends Activity {
     private void createProductionDxf(String itemId, Button button) {
         if (api == null || currentOrderCode == null || itemId.isEmpty()) return;
         button.setEnabled(false);
-        setBusy(true, "Membuat gambar DXFâ€¦");
+        setBusy(true, "Membuat gambar DXF…");
         runIo(() -> {
             JSONObject response = api.post("/api/admin/orders/" + currentOrderCode + "/items/" + itemId + "/production-files/dxf", new JSONObject());
             JSONObject file = response.optJSONObject("data");
@@ -1925,7 +1930,7 @@ public final class MainActivity extends Activity {
 
     private void addToolbar(String title, boolean logout, Runnable back) {
         LinearLayout bar = horizontal();
-        Button backButton = smallButton("â€¹", false);
+        Button backButton = smallButton("‹", false);
         backButton.setContentDescription("Kembali");
         bar.addView(backButton, new LinearLayout.LayoutParams(dp(48), dp(48)));
         backButton.setOnClickListener(view -> back.run());
@@ -1941,15 +1946,17 @@ public final class MainActivity extends Activity {
         if (logout) {
             Button logoutButton = smallButton("Keluar", false);
             bar.addView(logoutButton, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)));
-            logoutButton.setOnClickListener(view -> {
-                unregisterNotificationDevice(api);
-                activeSession = null;
-                api = null;
-                clearAdminToken();
-                showLogin("");
-            });
+            logoutButton.setOnClickListener(view -> logoutAdmin());
         }
         page.addView(bar, matchWrapBottom(8));
+    }
+
+    private void logoutAdmin() {
+        unregisterNotificationDevice(api);
+        activeSession = null;
+        api = null;
+        clearAdminToken();
+        showLogin("");
     }
 
     private void addBrandHeader(String title, String subtitle) {
@@ -1981,7 +1988,7 @@ public final class MainActivity extends Activity {
         left.setTextSize(14);
         row.addView(left, new LinearLayout.LayoutParams(dp(102), ViewGroup.LayoutParams.WRAP_CONTENT));
         TextView right = new TextView(this);
-        right.setText(value == null || value.isEmpty() ? "â€”" : value);
+        right.setText(value == null || value.isEmpty() ? "—" : value);
         right.setTextColor(INK);
         right.setTextSize(15);
         right.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
@@ -2020,8 +2027,6 @@ public final class MainActivity extends Activity {
 
     private ScrollView newPage() {
         showingVisitorAnalytics = false;
-        visitorAnalyticsContent = null;
-        visitorAnalyticsStatus = null;
         page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
         page.setPadding(dp(20), dp(20), dp(20), dp(32));
@@ -2030,7 +2035,10 @@ public final class MainActivity extends Activity {
         scroll.setFillViewport(true);
         scroll.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
         scroll.addView(page, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        setContentView(scroll);
+        screenRoot = new FrameLayout(this);
+        screenRoot.addView(scroll, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        addSideNavigation(screenRoot);
+        setContentView(screenRoot);
         feedback = null;
         progress = null;
         content = null;
@@ -2041,6 +2049,103 @@ public final class MainActivity extends Activity {
 
     private void finishPage() { page.requestLayout(); }
 
+    private void addSideNavigation(FrameLayout root) {
+        root.setClipChildren(false);
+        root.setClipToPadding(false);
+        FrameLayout rail = new FrameLayout(this);
+        rail.setBackground(rounded(Color.WHITE, 0, LINE));
+        rail.setElevation(dp(10));
+        rail.setVisibility(View.GONE);
+        rail.setClipChildren(false);
+        rail.setClipToPadding(false);
+        FrameLayout.LayoutParams railParams = new FrameLayout.LayoutParams(dp(38), ViewGroup.LayoutParams.MATCH_PARENT, Gravity.RIGHT | Gravity.TOP);
+        root.addView(rail, railParams);
+
+        TextView visitors = verticalRailLabel("Grafik", "Buka grafik pengunjung");
+        TextView refunds = verticalRailLabel("Refund", "Buka refund");
+        TextView logout = verticalRailLabel("Keluar", "Keluar dari aplikasi admin");
+        FrameLayout.LayoutParams visitorsParams = new FrameLayout.LayoutParams(dp(100), dp(34), Gravity.LEFT | Gravity.TOP);
+        visitorsParams.leftMargin = -dp(31);
+        visitorsParams.topMargin = dp(104);
+        visitors.setRotation(90f);
+        rail.addView(visitors, visitorsParams);
+        FrameLayout.LayoutParams refundsParams = new FrameLayout.LayoutParams(dp(100), dp(34), Gravity.LEFT | Gravity.TOP);
+        refundsParams.leftMargin = -dp(31);
+        refundsParams.topMargin = dp(214);
+        refunds.setRotation(90f);
+        rail.addView(refunds, refundsParams);
+        FrameLayout.LayoutParams logoutParams = new FrameLayout.LayoutParams(dp(100), dp(34), Gravity.LEFT | Gravity.BOTTOM);
+        logoutParams.leftMargin = -dp(31);
+        logoutParams.bottomMargin = dp(74);
+        logout.setRotation(90f);
+        rail.addView(logout, logoutParams);
+
+        Button handle = smallButton("≡", true);
+        handle.setContentDescription("Buka menu samping. Seret ke atas atau bawah untuk memindahkannya.");
+        handle.setElevation(dp(12));
+        FrameLayout.LayoutParams handleParams = new FrameLayout.LayoutParams(dp(42), dp(46), Gravity.RIGHT | Gravity.TOP);
+        handleParams.topMargin = dp(104);
+        root.addView(handle, handleParams);
+        handle.setOnTouchListener(new View.OnTouchListener() {
+            private float downRawY;
+            private float startY;
+            private boolean moved;
+            @Override public boolean onTouch(View view, MotionEvent event) {
+                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                    downRawY = event.getRawY();
+                    startY = handle.getY();
+                    moved = false;
+                    return true;
+                }
+                if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
+                    float delta = event.getRawY() - downRawY;
+                    if (Math.abs(delta) > dp(5)) moved = true;
+                    if (moved) {
+                        float max = Math.max(dp(8), root.getHeight() - handle.getHeight() - dp(8));
+                        handle.setY(Math.max(dp(8), Math.min(max, startY + delta)));
+                    }
+                    return true;
+                }
+                if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+                    if (!moved) {
+                        boolean opening = rail.getVisibility() != View.VISIBLE;
+                        rail.setVisibility(opening ? View.VISIBLE : View.GONE);
+                        handle.setText(opening ? "×" : "≡");
+                        handle.setContentDescription(opening ? "Tutup menu samping" : "Buka menu samping. Seret ke atas atau bawah untuk memindahkannya.");
+                        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) handle.getLayoutParams();
+                        params.rightMargin = opening ? dp(28) : 0;
+                        handle.setLayoutParams(params);
+                        if (opening) rail.bringToFront();
+                        handle.bringToFront();
+                    }
+                    return true;
+                }
+                return event.getActionMasked() == MotionEvent.ACTION_CANCEL;
+            }
+        });
+        visitors.setOnClickListener(view -> showVisitorAnalytics());
+        refunds.setOnClickListener(view -> {
+            currentOrderCode = null;
+            refundFilter = "requested";
+            paymentFilter = "";
+            showOrderList(true);
+        });
+        logout.setOnClickListener(view -> logoutAdmin());
+    }
+
+    private TextView verticalRailLabel(String text, String description) {
+        TextView label = new TextView(this);
+        label.setText(text);
+        label.setTextColor(INK);
+        label.setTextSize(14);
+        label.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        label.setGravity(Gravity.CENTER);
+        label.setContentDescription(description);
+        label.setClickable(true);
+        label.setFocusable(true);
+        label.setBackground(rounded(Color.WHITE, 0, Color.TRANSPARENT));
+        return label;
+    }
     private LinearLayout card(LinearLayout parent) {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);

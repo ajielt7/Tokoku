@@ -19,8 +19,11 @@ Aplikasi Android admin untuk mencari dan meninjau pesanan, melihat bukti transfe
 - Setujui/tolak pembayaran dengan konfirmasi dan catatan admin.
 - Perbarui status pesanan dan produksi. Backend memvalidasi urutan perubahan serta menulis riwayat secara transaksional.
 - Catat kurir, resi, tautan HTTPS, dan status pengiriman. Pengiriman hanya dibuka setelah pesanan lunas dan produksi selesai.
-- Terima notifikasi FCM saat pesanan baru masuk. Token perangkat terdaftar saat admin login dan dilepas saat logout.
+- Menerima push FCM data-only saat pesanan baru masuk. Android memperbarui cache terenkripsi di latar belakang; daftar menggunakan cache saat aplikasi dibuka tanpa polling berkala. Tombol **Muat ulang** meminta data terbaru secara manual.
+- Notifikasi lokal menggabungkan jumlah pesanan yang belum dibaca dan menampilkan nama depan serta kode pesanan terakhir. Semua notifikasi dianggap dibaca saat aplikasi dibuka.
 - Muat ulang data dan tampilkan pesan ketika koneksi/API gagal.
+
+Untuk data baca, aplikasi mencoba Cloudflare Worker terlebih dahulu dan beralih ke Netlify jika koneksi gagal atau mendapat HTTP 502/503/504. Setelah kegagalan, aplikasi memakai Netlify selama 30 detik sebelum mencoba Worker lagi. Permintaan yang mengubah data dan unggahan tidak dicoba ulang otomatis agar tindakan tidak terduplikasi.
 
 Status pesanan yang didukung: baru → diterima → selesai. Status produksi: menunggu → diproses → selesai. Status kirim: menunggu → dikirim → diterima, atau bermasalah/dikembalikan. Pembatalan tersedia sebelum pembayaran lunas dan meminta alasan. Pembatalan pesanan lunas ditolak sampai kebijakan refund ditetapkan. FCM memerlukan Firebase Android config dan secret Worker.
 

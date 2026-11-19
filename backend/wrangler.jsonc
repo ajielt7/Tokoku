@@ -67,10 +67,12 @@
       },
       "vars": {
         "APP_ENV": "production",
-        // Public storefront origin for production browser requests.
         "ALLOWED_ORIGINS": "https://ajielt7.github.io,https://zieus.gt.tc",
         "RAJAONGKIR_ORIGIN_ID": "5052",
-        "IMAGEKIT_URL_ENDPOINT": "https://ik.imagekit.io/ajielt7"
+        "IMAGEKIT_URL_ENDPOINT": "https://ik.imagekit.io/ajielt7",
+        "GA4_PROPERTY_ID": "564776998",
+        "CLOUDFLARE_ACCOUNT_ID": "9e5879b04d29d27c24c4f822ac24dd55",
+        "CLOUDFLARE_WORKER_NAME": "ruma-api-production"
       },
       "secrets": {
         "required": ["ADMIN_TOKEN", "RAJAONGKIR_API_KEY", "IMAGEKIT_PRIVATE_KEY"]

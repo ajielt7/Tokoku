@@ -13,15 +13,20 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 final class AdminApi {
-    private static final int CONNECT_TIMEOUT_MS = 12_000;
-    private static final int READ_TIMEOUT_MS = 20_000;
+    private static final int CONNECT_TIMEOUT_MS = 8_000;
+    private static final int READ_TIMEOUT_MS = 12_000;
     private static final int MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+    private static final long PRIMARY_OUTAGE_COOLDOWN_MS = 30_000;
+    private static volatile long primaryUnavailableUntil;
 
     private final String baseUrl;
+    private final String fallbackBaseUrl;
     private final String token;
 
-    AdminApi(String baseUrl, String token) throws IOException {
+    AdminApi(String baseUrl, String fallbackBaseUrl, String token) throws IOException {
         this.baseUrl = validateBaseUrl(baseUrl);
+        this.fallbackBaseUrl = validateBaseUrl(fallbackBaseUrl);
+        if (this.baseUrl.equals(this.fallbackBaseUrl)) throw new IOException("Alamat API utama dan cadangan harus berbeda.");
         if (token == null || token.trim().length() < 32) {
             throw new IOException("Token admin minimal 32 karakter.");
         }
@@ -52,14 +57,38 @@ final class AdminApi {
         return request("GET", path, null);
     }
 
+    JSONObject getAnalyticsReport(String period) throws IOException {
+        String value = period == null ? "day" : period;
+        if (!(value.equals("day") || value.equals("week") || value.equals("month") || value.equals("year"))) {
+            throw new IOException("Rentang laporan tidak valid.");
+        }
+        return get("/api/admin/analytics/report?period=" + value);
+    }
+
     JSONObject post(String path, JSONObject body) throws IOException {
         return request("POST", path, body);
     }
 
     String getText(String path) throws IOException {
+        if (System.currentTimeMillis() < primaryUnavailableUntil) return getTextFrom(fallbackBaseUrl, path);
+        try {
+            String result = getTextFrom(baseUrl, path);
+            primaryUnavailableUntil = 0;
+            return result;
+        } catch (ApiException error) {
+            if (!isRetryableReadStatus(error.statusCode)) throw error;
+            markPrimaryUnavailable();
+            return getTextFrom(fallbackBaseUrl, path);
+        } catch (IOException error) {
+            markPrimaryUnavailable();
+            return getTextFrom(fallbackBaseUrl, path);
+        }
+    }
+
+    private String getTextFrom(String requestBaseUrl, String path) throws IOException {
         HttpURLConnection connection = null;
         try {
-            connection = (HttpURLConnection) new URL(baseUrl + path).openConnection();
+            connection = (HttpURLConnection) new URL(requestBaseUrl + path).openConnection();
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
             connection.setReadTimeout(READ_TIMEOUT_MS);
@@ -137,9 +166,26 @@ final class AdminApi {
     }
 
     private JSONObject request(String method, String path, JSONObject body) throws IOException {
+        if (!"GET".equals(method)) return requestFrom(baseUrl, method, path, body);
+        if (System.currentTimeMillis() < primaryUnavailableUntil) return requestFrom(fallbackBaseUrl, method, path, body);
+        try {
+            JSONObject result = requestFrom(baseUrl, method, path, body);
+            primaryUnavailableUntil = 0;
+            return result;
+        } catch (ApiException error) {
+            if (!isRetryableReadStatus(error.statusCode)) throw error;
+            markPrimaryUnavailable();
+            return requestFrom(fallbackBaseUrl, method, path, body);
+        } catch (IOException error) {
+            markPrimaryUnavailable();
+            return requestFrom(fallbackBaseUrl, method, path, body);
+        }
+    }
+
+    private JSONObject requestFrom(String requestBaseUrl, String method, String path, JSONObject body) throws IOException {
         HttpURLConnection connection = null;
         try {
-            URL url = new URL(baseUrl + path);
+            URL url = new URL(requestBaseUrl + path);
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod(method);
             connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
@@ -173,6 +219,14 @@ final class AdminApi {
         } finally {
             if (connection != null) connection.disconnect();
         }
+    }
+
+    private static boolean isRetryableReadStatus(int statusCode) {
+        return statusCode == 502 || statusCode == 503 || statusCode == 504;
+    }
+
+    private static void markPrimaryUnavailable() {
+        primaryUnavailableUntil = System.currentTimeMillis() + PRIMARY_OUTAGE_COOLDOWN_MS;
     }
 
     static String readLimited(InputStream stream) throws IOException {

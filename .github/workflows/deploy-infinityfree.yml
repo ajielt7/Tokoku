@@ -20,7 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SITE_URL: https://zieus.gt.tc
-      PUBLIC_API_BASE_URL: https://toqoku-api.netlify.app
+      PUBLIC_API_BASE_URL: https://ruma-api-production.ajielt7.workers.dev
+      PUBLIC_API_FALLBACK_URL: https://toqoku-api.netlify.app
       CATALOG_API_URL: https://ruma-api-production.ajielt7.workers.dev/api/catalog
       SEO_INDEXABLE: "true"
       CONTENT_READY: "true"
@@ -40,7 +41,6 @@ jobs:
         with:
           name: zieus-infinityfree-site
           path: frontend/dist/
-          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
 

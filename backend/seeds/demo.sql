@@ -18,8 +18,10 @@ VALUES
   ('demo-template-nomor-klasik-v1', 'demo-product-nomor-klasik', 1, 1),
   ('demo-template-plang-nama-v1', 'demo-product-plang-nama', 1, 1);
 
-INSERT OR IGNORE INTO customization_fields (id, template_id, field_key, label, input_type, is_required, max_length, sort_order)
+INSERT OR REPLACE INTO customization_fields (id, template_id, field_key, label, input_type, is_required, max_length, validation_rules_json, sort_order)
 VALUES
-  ('demo-field-nomor-minimal', 'demo-template-nomor-minimal-v1', 'house_number', 'Angka rumah', 'number', 1, 6, 1),
-  ('demo-field-nomor-klasik', 'demo-template-nomor-klasik-v1', 'house_number', 'Angka rumah', 'number', 1, 6, 1),
-  ('demo-field-plang-nama', 'demo-template-plang-nama-v1', 'house_name', 'Nama rumah', 'text', 1, 32, 1);
+  ('demo-field-nomor-minimal', 'demo-template-nomor-minimal-v1', 'house_number', 'Nomor rumah', 'text', 1, 3, '{"pattern":"^[A-Za-z0-9]{1,3}$","uppercase":true}', 1),
+  ('demo-field-area-minimal', 'demo-template-nomor-minimal-v1', 'area_name', 'Nama area (opsional)', 'text', 0, 14, '{"pattern":"^[\\p{L}\\p{N} ./-]{1,14}$","unicode":true}', 2),
+  ('demo-field-nomor-klasik', 'demo-template-nomor-klasik-v1', 'house_number', 'Nomor rumah', 'text', 1, 3, '{"pattern":"^[A-Za-z0-9]{1,3}$","uppercase":true}', 1),
+  ('demo-field-area-klasik', 'demo-template-nomor-klasik-v1', 'area_name', 'Nama area (opsional)', 'text', 0, 14, '{"pattern":"^[\\p{L}\\p{N} ./-]{1,14}$","unicode":true}', 2),
+  ('demo-field-plang-nama', 'demo-template-plang-nama-v1', 'house_name', 'Nama rumah', 'text', 1, 32, '{}', 1);

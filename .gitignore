@@ -8,7 +8,12 @@
 **/ApiKey.txt
 **/imagKit_Key.txt
 **/imageKit_Key.txt
+**/worker.txt
 **/google-services.json
+**/*firebase-adminsdk*.json
+**/fcm-service-account.json
+**/zieus-61c10-c2cd050bb016.json
+**/zieus-61c10-7b276660121e.json
 *.jks
 *.keystore
 

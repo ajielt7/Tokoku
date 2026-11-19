@@ -8,6 +8,7 @@ const outputDirectory = path.join(frontendDirectory, "dist");
 const siteConfig = JSON.parse(await readFile(path.join(frontendDirectory, "src/data/site.json"), "utf8"));
 const siteUrl = (process.env.SITE_URL || siteConfig.siteUrl || "").trim().replace(/\/$/, "");
 const apiBaseUrl = (process.env.PUBLIC_API_BASE_URL || siteConfig.apiBaseUrl || "").trim().replace(/\/$/, "");
+const apiFallbackUrl = (process.env.PUBLIC_API_FALLBACK_URL || siteConfig.apiFallbackUrl || "").trim().replace(/\/$/, "");
 const indexable = process.env.SEO_INDEXABLE === "true" || (process.env.SEO_INDEXABLE == null && siteConfig.indexable === true);
 const contentReady = process.env.CONTENT_READY === "true" || (process.env.CONTENT_READY == null && siteConfig.contentReady === true);
 const previewMode = process.argv.includes("--preview");
@@ -33,14 +34,20 @@ async function walk(directory, relative = "") {
 if (!previewMode) {
   let parsedSiteUrl = null;
   let parsedApiUrl = null;
+  let parsedApiFallbackUrl = null;
   try { parsedSiteUrl = new URL(siteUrl); } catch { fail("SITE_URL belum diisi dengan URL publik."); }
   try { parsedApiUrl = new URL(apiBaseUrl); } catch { fail("PUBLIC_API_BASE_URL belum diisi dengan URL Worker."); }
+  try { parsedApiFallbackUrl = new URL(apiFallbackUrl); } catch { fail("PUBLIC_API_FALLBACK_URL belum diisi dengan URL Netlify cadangan."); }
   if (parsedSiteUrl && (parsedSiteUrl.protocol !== "https:" || parsedSiteUrl.username || parsedSiteUrl.password || parsedSiteUrl.search || parsedSiteUrl.hash)) {
     fail("SITE_URL harus HTTPS dan tidak boleh berisi kredensial, query, atau fragment.");
   }
   if (parsedApiUrl && (parsedApiUrl.protocol !== "https:" || parsedApiUrl.username || parsedApiUrl.password || parsedApiUrl.search || parsedApiUrl.hash)) {
     fail("PUBLIC_API_BASE_URL harus HTTPS dan tidak boleh berisi kredensial, query, atau fragment.");
   }
+  if (parsedApiFallbackUrl && (parsedApiFallbackUrl.protocol !== "https:" || parsedApiFallbackUrl.username || parsedApiFallbackUrl.password || parsedApiFallbackUrl.search || parsedApiFallbackUrl.hash)) {
+    fail("PUBLIC_API_FALLBACK_URL harus HTTPS dan tidak boleh berisi kredensial, query, atau fragment.");
+  }
+  if (apiBaseUrl && apiFallbackUrl && apiBaseUrl === apiFallbackUrl) fail("API utama dan API cadangan harus memakai host yang berbeda.");
   if (!indexable) fail("SEO_INDEXABLE harus true setelah konten siap ditayangkan.");
   if (!contentReady) fail("CONTENT_READY harus true setelah katalog dan informasi toko ditinjau.");
 } else if (indexable) {

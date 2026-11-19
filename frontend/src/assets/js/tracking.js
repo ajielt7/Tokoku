@@ -1,7 +1,7 @@
 const form = document.querySelector("[data-tracking-form]");
 const messageNode = document.querySelector("[data-tracking-message]");
 const resultsNode = document.querySelector("[data-tracking-results]");
-const apiBaseUrl = document.currentScript?.dataset.apiBase || "";
+const apiRequest = window.RumaApi?.request || ((path, options) => fetch(path, options));
 const previewMode = document.currentScript?.dataset.previewMode === "true";
 const chatHref = document.querySelector(".footer-contact")?.href || "";
 
@@ -44,7 +44,7 @@ async function submitRefundRequest(order, credentials, button, statusNode) {
   button.disabled = true;
   statusNode.textContent = "Mengirim permintaan ke admin…";
   try {
-    const response = await fetch(`${apiBaseUrl}/api/orders/cancellation`, {
+    const response = await apiRequest("/api/orders/cancellation", {
       method: "POST",
       headers: { "content-type": "application/json" },
       cache: "no-store",
@@ -164,7 +164,7 @@ form?.addEventListener("submit", async (event) => {
       showMessage("Pelacakan hanya tersedia pada website online untuk pesanan yang tersimpan di API.", true);
       return;
     }
-    const response = await fetch(`${apiBaseUrl}/api/orders/status`, {
+    const response = await apiRequest("/api/orders/status", {
       method: "POST",
       headers: { "content-type": "application/json" },
       cache: "no-store",

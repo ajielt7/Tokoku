@@ -27,10 +27,6 @@ public final class AdminFirebaseMessagingService extends FirebaseMessagingServic
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage message) {
-        if ("visitor_analytics".equals(message.getData().get("event"))) {
-            MainActivity.syncVisitorStatsFromPush(this);
-            return;
-        }
         String orderCode = message.getData().get("order_code");
         String firstName = message.getData().get("customer_first_name");
         if (firstName == null || firstName.trim().isEmpty()) firstName = "Pelanggan";
