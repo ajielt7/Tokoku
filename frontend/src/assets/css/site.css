@@ -867,3 +867,28 @@ body { color: var(--color-ink); background: var(--color-page); }
   .site-header.menu-open .main-nav a:hover { color: #006b3c; }
   .site-header.menu-open .menu-toggle { display: grid; position: relative; z-index: 40; color: #006b3c; background: #ffffff; border-color: #006b3c; opacity: 1; }
 }
+
+@media (max-width: 700px) {
+  /* Hide links before JavaScript initializes, and draw the menu icon locally. */
+  .site-header .main-nav { display: none; }
+  .site-header.menu-open .main-nav { display: flex; }
+  .site-header .main-nav[hidden] { display: none !important; }
+  .menu-toggle { color: #ffffff; background: #006b3c; border-color: #006b3c; }
+  .home-page > .site-header:not(.is-scrolled) .menu-toggle { color: #ffffff; background: #006b3c; border-color: #006b3c; }
+  .menu-icon, .menu-icon::before, .menu-icon::after { display: block; width: 20px; height: 2px; background: currentColor; border-radius: 2px; }
+  .menu-icon { position: relative; }
+  .menu-icon::before, .menu-icon::after { position: absolute; left: 0; content: ""; }
+  .menu-icon::before { top: -6px; }
+  .menu-icon::after { top: 6px; }
+  .menu-toggle[aria-expanded="true"] .menu-icon { background: transparent; }
+  .menu-toggle[aria-expanded="true"] .menu-icon::before { top: 0; transform: rotate(45deg); }
+  .menu-toggle[aria-expanded="true"] .menu-icon::after { top: 0; transform: rotate(-45deg); }
+  .site-header.is-scrolled .menu-toggle { color: #ffffff; background: transparent; border-color: rgb(255 255 255 / 55%); }
+  .site-header.menu-open .menu-toggle { color: #006b3c; background: #ffffff; border-color: #006b3c; }
+}
+
+.icon { display: inline-block; width: 1em; height: 1em; fill: none; vertical-align: -.125em; }
+.icon.icon-filled { fill: currentColor; }
+.footer-social .icon { width: 1.25em; height: 1.25em; }
+
+.icon.benefit-icon { width: 24px; height: 24px; }

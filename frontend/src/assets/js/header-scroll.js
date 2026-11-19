@@ -25,9 +25,6 @@
       }
     };
 
-    menuButton.addEventListener("click", () => {
-      setMenuOpen(menuButton.getAttribute("aria-expanded") !== "true");
-    });
     navigation.addEventListener("click", (event) => {
       if (event.target.closest("a") && mobileMenu.matches) setMenuOpen(false);
     });

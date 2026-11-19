@@ -7,18 +7,14 @@
     <meta name="theme-color" content="#006b3c">
     <link rel="icon" type="image/svg+xml" href="{{ROOT_PREFIX}}assets/icons/favicon.svg">
     <title>Lacak Pesanan | Toqoku by Ajielt7</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer">
-    <link rel="stylesheet" href="{{ROOT_PREFIX}}assets/css/site.css">
+    <link rel="stylesheet" href="{{ROOT_PREFIX}}assets/css/site.css?v={{ASSET_VERSION}}">
   </head>
   <body>
     <a class="skip-link" href="#konten-utama">Lewati ke konten utama</a>
     <header class="site-header"><div class="container header-inner">
       <a class="brand" href="{{ROOT_PREFIX}}index.html"><span class="brand-mark" aria-hidden="true">T</span><span>Toqoku<span class="brand-period">.</span></span></a>
-      <nav class="main-nav" aria-label="Navigasi utama"><a href="{{ROOT_PREFIX}}index.html#produk">Produk</a><a href="{{ROOT_PREFIX}}keranjang/">Keranjang</a><a href="{{ROOT_PREFIX}}tentang-kami/">Tentang Kami</a></nav>
+      <button class="menu-toggle" type="button" aria-label="Buka menu" aria-controls="main-navigation" aria-expanded="false" onclick="event.stopImmediatePropagation(); const header=this.closest('.site-header'); const nav=header.querySelector('.main-nav'); const open=this.getAttribute('aria-expanded')!=='true'; header.classList.toggle('menu-open',open); nav.hidden=!open; this.setAttribute('aria-expanded',String(open)); this.setAttribute('aria-label',open?'Tutup menu':'Buka menu');"><span class="menu-icon" aria-hidden="true"><span></span></span></button>
+      <nav id="main-navigation" class="main-nav" aria-label="Navigasi utama"><a href="{{ROOT_PREFIX}}index.html#produk">Produk</a><a href="{{ROOT_PREFIX}}keranjang/">Keranjang</a><a href="{{ROOT_PREFIX}}tentang-kami/">Tentang Kami</a></nav>
     </div></header>
     <main id="konten-utama" class="checkout-page"><div class="container">
       <nav class="breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="{{ROOT_PREFIX}}index.html">Beranda</a></li><li aria-current="page">Lacak pesanan</li></ol></nav>
@@ -26,7 +22,7 @@
       <section class="tracking-card" aria-labelledby="tracking-title">
         <h2 id="tracking-title">Cek status</h2>
         <form class="tracking-form" data-tracking-form>
-          <label class="form-field">Kode pesanan<input name="order_code" type="text" inputmode="numeric" autocomplete="off" minlength="5" maxlength="21" pattern="(?:[0-9]{5}|[Rr][Uu][Mm][Aa]-[A-Za-z0-9]{16})" title="Masukkan kode baru 5 digit" placeholder="12345" required></label>
+          <label class="form-field">Kode pesanan<input name="order_code" type="text" autocomplete="off" autocapitalize="characters" minlength="21" maxlength="21" placeholder="RUMA-XXXXXXXXXXXXXXXX" required></label>
           <label class="form-field">Nomor telepon checkout<input name="phone" type="tel" autocomplete="tel" minlength="8" maxlength="24" placeholder="08xxxxxxxxxx" required></label>
           <p class="form-message" data-tracking-message role="status" aria-live="polite"></p>
           <button class="button button-primary" type="submit">Cari pesanan</button>
@@ -34,9 +30,10 @@
       </section>
       <section class="tracking-results" data-tracking-results aria-live="polite" hidden></section>
     </div></main>
-    <footer class="site-footer"><div class="container footer-inner"><a class="brand footer-brand" href="{{ROOT_PREFIX}}index.html"><span class="brand-mark" aria-hidden="true">T</span><span>Toqoku<span class="brand-period">.</span></span></a><p>Produk dan karya dari ekosistem Ajielt7.</p><a class="footer-contact" href="{{WHATSAPP_LINK}}" aria-label="Chat WhatsApp" title="Chat WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>{{SOCIAL_LINKS}}<small>{{FOOTER_COPY}}</small></div></footer>
-    <script src="{{ROOT_PREFIX}}assets/js/header-scroll.js" defer></script>
+    <footer class="site-footer"><div class="container footer-inner"><a class="brand footer-brand" href="{{ROOT_PREFIX}}index.html"><span class="brand-mark" aria-hidden="true">T</span><span>Toqoku<span class="brand-period">.</span></span></a><p>Produk dan karya dari ekosistem Ajielt7.</p><a class="footer-contact" href="{{WHATSAPP_LINK}}" aria-label="Chat WhatsApp" title="Chat WhatsApp">{{ICON_WHATSAPP}}</a>{{SOCIAL_LINKS}}<small>{{FOOTER_COPY}}</small></div></footer>
+    <script src="{{ROOT_PREFIX}}assets/js/header-scroll.js?v={{ASSET_VERSION}}" defer></script>
     <script src="{{ROOT_PREFIX}}assets/js/api-client.js" data-api-base="{{API_BASE_URL}}" data-api-fallback="{{API_FALLBACK_URL}}" defer></script>
-    <script src="{{ROOT_PREFIX}}assets/js/tracking.js" data-preview-mode="{{PREVIEW_MODE}}" defer></script>
+
+    <script src="{{ROOT_PREFIX}}assets/js/tracking.js" data-api-base="{{API_BASE_URL}}" data-preview-mode="{{PREVIEW_MODE}}" defer></script>
   </body>
 </html>
