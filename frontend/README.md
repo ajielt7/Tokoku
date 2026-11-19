@@ -72,7 +72,7 @@ npx wrangler pages dev ../frontend/dist --ip 127.0.0.1 --port 5500
 
 Buka `http://localhost:5500`. Origin ini sudah diizinkan oleh konfigurasi lokal Worker untuk permintaan ongkir, checkout, dan pelacakan. Hentikan server dengan `Ctrl+C`. Pratinjau memakai D1 lokal dan tetap `noindex`; jangan gunakan seed demo pada D1 cloud.
 
-Build memakai `http://127.0.0.1:8787/api/catalog` secara default. Untuk pipeline publik, isi `CATALOG_API_URL` dengan endpoint HTTPS Worker yang terhubung ke D1 berisi katalog final. Build berhenti dengan pesan yang jelas bila API tidak dapat dijangkau atau mengembalikan data yang tidak sesuai.
+Build memakai `apiBaseUrl` dari `src/data/site.json` lebih dulu, lalu mencoba `apiFallbackUrl` jika API utama gagal. Untuk memakai Worker lokal, isi `CATALOG_API_URL` dengan `http://127.0.0.1:8787/api/catalog`; variabel ini sengaja mengunci build ke satu endpoint lokal. Pipeline publik memakai `PUBLIC_API_BASE_URL` lebih dulu, lalu `PUBLIC_API_FALLBACK_URL` bila Worker gagal. Katalog dari kedua endpoint harus memakai format yang sama: `data.categories` dan `data.products`.
 
 Untuk build publik, `SITE_URL`, `PUBLIC_API_BASE_URL`, `SEO_INDEXABLE=true`, dan `CONTENT_READY=true` dapat diberikan lewat environment. Nilai ini dipakai workflow Pages; konfigurasi `site.json` tetap nonaktif secara default. Jalankan `node frontend/src/scripts/check-release.mjs --preview` untuk audit keluaran lokal. Build publik menjalankan pemeriksaan tanpa `--preview`; periksa [checklist peluncuran](../docs/LAUNCH_CHECKLIST.md) sebelum mengaktifkan indeks.
 
@@ -187,3 +187,4 @@ Saat `SEO_INDEXABLE=true` dan `CONTENT_READY=true`, halaman produk juga memuat s
 `robots.txt` dan `sitemap.xml` ditempatkan di akar situs yang diterbitkan. Isi finalnya dibuat saat domain dan URL publik sudah ditetapkan; jangan mengirim sitemap berisi alamat contoh ke mesin pencari.
 
 Sebelum peluncuran, periksa URL halaman langsung, status 404, metadata, tautan, tampilan seluler, ukuran gambar, sitemap, serta konfigurasi domain di Google Search Console.
+
