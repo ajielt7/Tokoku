@@ -152,6 +152,17 @@ const shippingCourierNames = {
   anteraja: "Anteraja",
 };
 
+function getDeliveryCoordinates() {
+  // Use the visible marker's live position as the source of truth at checkout.
+  if (deliveryMarker) {
+    const point = deliveryMarker.getLngLat();
+    if (Number.isFinite(point.lat) && Number.isFinite(point.lng)) {
+      deliveryCoordinates = { latitude: point.lat, longitude: point.lng };
+    }
+  }
+  return deliveryCoordinates;
+}
+
 function currentSubtotal() {
   return readCart().reduce((sum, item) => sum + (Number.isSafeInteger(item.priceAmount) ? item.priceAmount : 0) * item.quantity, 0);
 }
@@ -169,6 +180,8 @@ function shippingItems() {
 }
 
 function updateDeliveryPin(latitude, longitude) {
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90
+    || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) return;
   deliveryCoordinates = { latitude, longitude };
   if (deliveryMarker) deliveryMarker.setLngLat([longitude, latitude]);
   else if (deliveryMap) {
@@ -181,7 +194,12 @@ function updateDeliveryPin(latitude, longitude) {
     });
   }
   const status = document.querySelector("[data-delivery-map-status]");
-  if (status) status.textContent = `Pin alamat dipilih: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}.`;
+  if (status) {
+    status.textContent = `Pin alamat dipilih: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}.`;
+    status.classList.remove("is-error");
+  }
+  const message = document.querySelector("[data-checkout-message]");
+  if (message?.classList.contains("is-error")) showMessage(message, "");
   scheduleShippingQuote();
 }
 
@@ -371,8 +389,8 @@ async function loadShippingQuotes(items) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         destination_id: selectedDestination.id,
-        latitude: deliveryCoordinates?.latitude,
-        longitude: deliveryCoordinates?.longitude,
+        latitude: getDeliveryCoordinates()?.latitude,
+        longitude: getDeliveryCoordinates()?.longitude,
         items,
       }),
       signal: quoteController.signal,
@@ -544,7 +562,11 @@ if (checkoutForm) {
       document.querySelector("[data-shipping-options]")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    if (!deliveryCoordinates) {
+    const coordinates = getDeliveryCoordinates();
+    if (!coordinates
+      || !Number.isFinite(coordinates.latitude) || !Number.isFinite(coordinates.longitude)
+      || coordinates.latitude < -90 || coordinates.latitude > 90
+      || coordinates.longitude < -180 || coordinates.longitude > 180) {
       showMessage(messageNode, "Tandai titik alamat penerima di peta sebelum membuat pesanan.", true);
       showDeliveryMap();
       document.querySelector("[data-delivery-map-panel]")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -569,8 +591,8 @@ if (checkoutForm) {
         destination_label: selectedDestination.label,
         courier_code: selectedShipping.code,
         service: selectedShipping.service,
-        latitude: deliveryCoordinates.latitude,
-        longitude: deliveryCoordinates.longitude,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
       },
       items: items.map(({ slug, quantity, customization }) => ({ slug, quantity, customization: customization || {} })),
     };
