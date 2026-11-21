@@ -494,10 +494,10 @@ body { color: var(--color-ink); background: var(--color-page); }
 /* Compact product details and use the space below the photo for related designs. */
 .product-detail-page { padding-top: 18px; padding-bottom: 36px; }
 .product-detail-page .breadcrumbs { margin-bottom: 16px; }
-.product-detail { grid-template-columns: minmax(0, 1.05fr) minmax(340px, .95fr); gap: 24px 32px; }
+.product-detail { grid-template-columns: minmax(0, 1.08fr) minmax(340px, .92fr); gap: 24px clamp(28px, 4vw, 48px); }
 .detail-visual { grid-column: 1; grid-row: 1; }
 .detail-copy { grid-column: 2; grid-row: 1 / span 2; padding-top: 0; }
-.detail-copy h1 { margin-bottom: 7px; font-size: clamp(30px, 3vw, 40px); }
+.detail-copy h1 { margin-bottom: 8px; font-size: clamp(32px, 3.4vw, 44px); }
 .detail-description { margin: 8px 0; font-size: 16px; line-height: 1.4; }
 .detail-notice { margin: 10px 0; }
 .product-specs { margin: 14px 0; }
@@ -723,16 +723,16 @@ body { color: var(--color-ink); background: var(--color-page); }
 }
 
 /* Product page composition: photo and four related designs on the left; purchase flow on the right. */
-.detail-visual { display: grid; grid-template-rows: minmax(0, 1fr) auto; aspect-ratio: 16 / 9; min-height: 0; }
+.detail-visual { display: grid; grid-template-rows: minmax(0, 1fr) auto; aspect-ratio: 1.08 / 1; min-height: 0; overflow: hidden; border: 1px solid #dfe9e2; border-radius: 10px; background: #edf4ef; }
 .detail-photo { min-height: 0; height: 100%; }
-.detail-visual figcaption { margin: 0; padding: 7px 9px; background: #e8f3ec; font-size: 12px; }
-.detail-price { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 12px 0; color: var(--color-muted); }
-.detail-price strong { color: var(--color-ink); font-size: clamp(23px, 2.4vw, 30px); }
-.custom-preview { margin: 10px 0 12px; padding: 11px; }
-.custom-preview h2 { margin: 0; }
+.detail-visual figcaption { margin: 0; padding: 9px 12px; color: var(--color-muted); background: #ffffff; font-size: 12px; }
+.detail-price { display: flex; align-items: baseline; justify-content: flex-start; gap: 16px; margin: 10px 0 16px; color: var(--color-muted); }
+.detail-price strong { color: var(--color-ink); font-size: clamp(25px, 2.6vw, 32px); }
+.custom-preview { margin: 14px 0 16px; padding: 15px; border: 0; border-radius: 10px; background: #eaf3ec; }
+.custom-preview h2 { margin: 0 0 8px; font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .custom-preview svg { max-height: 180px; }
 .cart-add-form { margin: 12px 0 8px; }
-.cart-add-form fieldset { display: block; padding: 12px; }
+.cart-add-form fieldset { display: block; padding: 14px; border-color: #d9e5dc; border-radius: 8px; }
 .personalization-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 9px 12px; }
 .personalization-grid .custom-field-house_number { grid-column: 1; }
 .personalization-grid .custom-field-house_name { grid-column: 1; }
@@ -742,7 +742,7 @@ body { color: var(--color-ink); background: var(--color-page); }
 .personalization-grid .custom-field-area_name { grid-column: 1 / -1; }
 .personalization-grid .quantity-field { grid-column: 2; justify-self: end; width: 110px; }
 .personalization-grid .form-field { gap: 5px; }
-.detail-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.detail-actions { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 10px; }
 .detail-actions > * { display: inline-flex; width: 100%; min-height: 44px; align-items: center; justify-content: center; gap: 8px; }
 .detail-related { margin-top: 0; }
 .detail-related .related-heading { margin-bottom: 8px; }

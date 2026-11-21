@@ -606,7 +606,9 @@ for (const product of catalog.products) {
     PRODUCT_PRICE_AMOUNT: String(product.price_amount),
     PRODUCT_DESCRIPTION: escapeHtml(product.description),
     PRODUCT_MEDIA: media,
-    PRODUCT_MEDIA_CAPTION: '<figcaption>Foto ilustrasi Unsplash; bukan foto produk Toqoku.</figcaption>',
+    PRODUCT_MEDIA_CAPTION: catalogImage
+      ? '<figcaption>Foto produk</figcaption>'
+      : '<figcaption>Foto inspirasi; bukan foto produk Toqoku.</figcaption>',
     PRODUCT_SIZE: escapeHtml(displayFixedSize(product.fixed_size) || "Belum ditentukan"),
     PRODUCT_CUSTOMIZATION: escapeHtml(product.customization || "Belum ditentukan"),
     CUSTOM_FIELDS: customizationFields(product.customization_fields, product.slug),
