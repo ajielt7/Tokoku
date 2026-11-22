@@ -968,7 +968,7 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); font-weight: 400; let
 
 
 /* Enforce the requested 28px Dongle text size across the storefront while keeping headings in Amarante. */
-body :not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not(svg):not(path):not(i):not(script):not(style) {
+body :not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not(svg):not(svg *):not(path):not(i):not(script):not(style) {
   font-family: var(--font-body);
   font-size: 28px !important;
 }
