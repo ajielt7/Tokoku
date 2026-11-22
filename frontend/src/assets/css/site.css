@@ -1052,3 +1052,13 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); }
   font-size: 18px !important;
   line-height: 1.05 !important;
 }
+
+
+/* Give the cart quantity badge enough room and make its digit easy to scan. */
+.header-cart span {
+  min-width: 28px;
+  height: 28px;
+  font-size: 22px !important;
+  font-weight: 700;
+  line-height: 1 !important;
+}
