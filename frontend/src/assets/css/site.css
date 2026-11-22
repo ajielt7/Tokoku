@@ -1082,3 +1082,25 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); }
 
 /* Match the product page canvas while the header is at the top. */
 .product-page .site-header:not(.is-scrolled) { background: #f4f7f2; }
+
+
+/* Keep the product-page header action visually aligned with navigation links. */
+.product-page .header-cta {
+  color: var(--color-muted);
+  background: transparent;
+  box-shadow: none;
+}
+.product-page .header-cta:hover {
+  color: var(--color-brand);
+  background: transparent;
+  box-shadow: none;
+}
+.product-page .site-header.is-scrolled .header-cta {
+  color: #ffffff;
+  background: transparent;
+}
+.product-page .site-header.is-scrolled .header-cta:hover {
+  color: #ffffff;
+  background: transparent;
+  text-decoration: underline;
+}
