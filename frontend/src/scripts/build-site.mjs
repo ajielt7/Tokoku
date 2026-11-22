@@ -591,9 +591,29 @@ for (const product of catalog.products) {
   const link = `${prefix}produk/${escapeHtml(product.slug)}/`;
   const catalogImage = imageUrl(product);
   const image = catalogImage || "https://images.unsplash.com/photo-1747862934428-899f5beb821e?auto=format&fit=crop&w=1200&q=85";
-  const imageAlt = catalogImage
-    ? (product.image_alt || product.name)
-    : `Foto ilustrasi Unsplash untuk ${product.name}; bukan foto produk Toqoku.`;
+  const isInspirationGallery = !catalogImage || /^https:\/\/images\.unsplash\.com\//i.test(catalogImage);
+  const imageAlt = isInspirationGallery
+    ? `Foto inspirasi untuk ${product.name}; bukan foto produk Toqoku.`
+    : (product.image_alt || product.name);
+  const inspirationImages = [
+    { url: "https://images.unsplash.com/photo-1747862934428-899f5beb821e?auto=format&fit=crop&w=1200&q=85", alt: "Inspirasi nomor rumah pada fasad" },
+    { url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85", alt: "Inspirasi suasana rumah modern" },
+    { url: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85", alt: "Inspirasi ruang dan material rumah" },
+    { url: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=85", alt: "Inspirasi interior rumah" },
+  ];
+  const galleryImages = isInspirationGallery
+    ? [{ url: image, alt: imageAlt }, ...inspirationImages.filter((item) => item.url.split("?")[0] !== image.split("?")[0])].slice(0, 4)
+    : [];
+  const thumbnails = galleryImages.length > 1
+    ? `<div class="detail-thumbnails" aria-label="Foto inspirasi lainnya">${galleryImages.map((item, index) => `<button class="detail-thumbnail${index === 0 ? " is-active" : ""}" type="button" data-gallery-thumb data-gallery-src="${escapeHtml(item.url)}" data-gallery-alt="${escapeHtml(item.alt)}" aria-label="Tampilkan inspirasi ${index + 1}" aria-pressed="${index === 0}"><img src="${escapeHtml(item.url.replace(/w=1200/, "w=360"))}" alt="" width="360" height="240" loading="lazy" decoding="async"></button>`).join("")}</div>`
+    : "";
+  const shortDescription = String(product.description).trim().length > 125
+    ? `${String(product.description).trim().slice(0, 122).trimEnd()}...`
+    : String(product.description).trim();
+  const relatedMarkup = [
+    ...related.map((item) => productCard(item, prefix)),
+    ...(!site.contentReady ? previewProductIdeas.slice(0, Math.max(0, 4 - related.length)).map(previewIdeaCard) : []),
+  ].join("\n");
   const media = image
     ? `<img class="detail-photo" src="${escapeHtml(image)}" alt="${escapeHtml(imageAlt)}" width="1000" height="750" fetchpriority="high">`
     : '<div class="detail-image-placeholder" role="img" aria-label="Foto produk belum tersedia"><span>Foto produk</span></div>';
@@ -605,18 +625,20 @@ for (const product of catalog.products) {
     PRODUCT_SLUG: escapeHtml(product.slug),
     PRODUCT_PRICE_AMOUNT: String(product.price_amount),
     PRODUCT_DESCRIPTION: escapeHtml(product.description),
+    PRODUCT_SHORT_DESCRIPTION: escapeHtml(shortDescription),
     PRODUCT_MEDIA: media,
-    PRODUCT_MEDIA_CAPTION: catalogImage
-      ? '<figcaption>Foto produk</figcaption>'
-      : '<figcaption>Foto inspirasi; bukan foto produk Toqoku.</figcaption>',
+    PRODUCT_GALLERY_BADGE: `<span class="gallery-badge">${isInspirationGallery ? "Inspirasi pilihan" : "Foto produk"}</span>`,
+    PRODUCT_MEDIA_CAPTION: isInspirationGallery
+      ? '<figcaption>Foto inspirasi; bukan foto produk Toqoku.</figcaption>'
+      : '<figcaption>Foto produk</figcaption>',
+    PRODUCT_THUMBNAILS: thumbnails,
     PRODUCT_SIZE: escapeHtml(displayFixedSize(product.fixed_size) || "Belum ditentukan"),
     PRODUCT_CUSTOMIZATION: escapeHtml(product.customization || "Belum ditentukan"),
     CUSTOM_FIELDS: customizationFields(product.customization_fields, product.slug),
     PRODUCT_PRICE: formatPrice(product.price_amount),
-    RELATED_PRODUCTS: [
-      ...related.map((item) => productCard(item, prefix)),
-      ...(!site.contentReady ? previewProductIdeas.slice(0, Math.max(0, 4 - related.length)).map(previewIdeaCard) : []),
-    ].join("\n") || '<p class="empty-catalog">Belum ada produk terkait.</p>',
+    RELATED_SECTION: relatedMarkup
+      ? `<section class="related-products detail-related" aria-labelledby="related-title"><div class="related-heading"><h2 id="related-title">Produk lainnya</h2><a class="text-link" href="${prefix}index.html#produk">Semua produk ${iconSvg("arrow-right")}</a></div><div class="product-grid">${relatedMarkup}</div></section>`
+      : "",
     PREVIEW_BANNER: previewBanner,
     DEMO_NOTE: previewMode ? '<p class="demo-note detail-notice">Informasi dan foto ini hanya contoh pratinjau.</p>' : "",
     FOOTER_COPY: footerCopy,
@@ -625,6 +647,7 @@ for (const product of catalog.products) {
     API_BASE_URL: escapeHtml(apiBaseUrl),
     API_FALLBACK_URL: escapeHtml(apiFallbackUrl),
     CUSTOM_PREVIEW_SCRIPT: `<script src="${prefix}assets/js/custom-preview.js" defer></script>`,
+    PRODUCT_GALLERY_SCRIPT: `<script src="${prefix}assets/js/product-gallery.js?v=${assetVersion}" defer></script>`,
   });
   const seoHtml = addSeo(html, {
     title: `${product.name} Custom | ${site.name}`,
