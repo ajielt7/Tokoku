@@ -1078,3 +1078,7 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); }
   border-color: #b7c2ba;
   cursor: not-allowed;
 }
+
+
+/* Match the product page canvas while the header is at the top. */
+.product-page .site-header:not(.is-scrolled) { background: #f4f7f2; }
