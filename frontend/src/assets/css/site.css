@@ -1062,3 +1062,19 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); }
   font-weight: 700;
   line-height: 1 !important;
 }
+
+
+/* Make read-only size information and disabled controls look unavailable. */
+.personalization-grid .floating-static {
+  background: #e9eeea;
+  border-color: #b7c2ba;
+}
+.personalization-grid .floating-static > span { background: #e9eeea; }
+.cart-add-form input:disabled,
+.cart-add-form textarea:disabled,
+.cart-add-form select:disabled {
+  color: #66736b;
+  background: #e9eeea;
+  border-color: #b7c2ba;
+  cursor: not-allowed;
+}
