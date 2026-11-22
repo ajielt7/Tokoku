@@ -4,6 +4,15 @@ const resultsNode = document.querySelector("[data-tracking-results]");
 const apiRequest = window.RumaApi?.request || ((path, options) => fetch(path, options));
 const previewMode = document.currentScript?.dataset.previewMode === "true";
 const chatHref = document.querySelector(".footer-contact")?.href || "";
+const orderInput = form?.elements.namedItem("order_code");
+const requestedOrderCode = new URLSearchParams(window.location.search).get("order");
+
+if (orderInput && requestedOrderCode) {
+  orderInput.value = requestedOrderCode.trim().toUpperCase();
+  const phoneInput = form.elements.namedItem("phone");
+  phoneInput?.focus({ preventScroll: true });
+  showMessage("Kode pesanan sudah diisi. Masukkan nomor telepon yang dipakai saat checkout untuk melihat status.");
+}
 
 const labels = {
   order: { new: "Pesanan diterima", accepted: "Pesanan diproses", completed: "Pesanan selesai", cancelled: "Pesanan dibatalkan" },
@@ -181,3 +190,4 @@ form?.addEventListener("submit", async (event) => {
     submit.disabled = false;
   }
 });
+
