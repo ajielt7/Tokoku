@@ -10,7 +10,8 @@ const outputDirectory = path.join(frontendDirectory, "dist");
 const templateDirectory = path.join(sourceDirectory, "templates");
 const homeStylesheet = await readFile(path.join(sourceDirectory, "assets", "css", "site.css"), "utf8");
 const headerScript = await readFile(path.join(sourceDirectory, "assets", "js", "header-scroll.js"), "utf8");
-const assetVersion = createHash("sha256").update(homeStylesheet).update(headerScript).digest("hex").slice(0, 12);
+const customPreviewScriptSource = await readFile(path.join(sourceDirectory, "assets", "js", "custom-preview.js"), "utf8");
+const assetVersion = createHash("sha256").update(homeStylesheet).update(headerScript).update(customPreviewScriptSource).digest("hex").slice(0, 12);
 const siteConfig = JSON.parse(await readFile(path.join(sourceDirectory, "data", "site.json"), "utf8"));
 function environmentBoolean(name, fallback) {
   const value = process.env[name];
@@ -647,7 +648,7 @@ for (const product of catalog.products) {
     SOCIAL_LINKS: socialLinksMarkup,
     API_BASE_URL: escapeHtml(apiBaseUrl),
     API_FALLBACK_URL: escapeHtml(apiFallbackUrl),
-    CUSTOM_PREVIEW_SCRIPT: `<script src="${prefix}assets/js/custom-preview.js" defer></script>`,
+    CUSTOM_PREVIEW_SCRIPT: `<script src="${prefix}assets/js/custom-preview.js?v=${assetVersion}" defer></script>`,
     PRODUCT_GALLERY_SCRIPT: `<script src="${prefix}assets/js/product-gallery.js?v=${assetVersion}" defer></script>`,
   });
   const seoHtml = addSeo(html, {
