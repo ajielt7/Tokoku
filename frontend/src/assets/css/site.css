@@ -979,3 +979,65 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); }
 .detail-description,
 .detail-description-more p { line-height: 1.05 !important; }
 .custom-preview h2 { font-size: 16px !important; }
+
+/* Floating labels for product personalization controls. */
+.personalization-grid .floating-field {
+  position: relative;
+  display: block;
+  min-width: 0;
+  padding-top: 0;
+}
+.personalization-grid .floating-field > span {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 12px;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  padding: 0 4px;
+  color: var(--color-muted);
+  background: #ffffff;
+  font-size: 28px !important;
+  line-height: 1 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: top 140ms ease, font-size 140ms ease, color 140ms ease;
+}
+.personalization-grid .floating-field input {
+  min-height: 54px;
+  padding: 15px 14px 8px;
+}
+.personalization-grid .floating-field:focus-within > span,
+.personalization-grid .floating-field:has(input:not(:placeholder-shown)) > span {
+  top: 0;
+  color: var(--color-brand);
+  font-size: 19px !important;
+  transform: translateY(-50%);
+}
+.personalization-grid .floating-static {
+  position: relative;
+  min-height: 54px;
+  align-content: center;
+  gap: 0;
+  padding: 13px 14px 7px;
+  border: 1px solid #aab8af;
+  border-radius: 6px;
+  background: #ffffff;
+}
+.personalization-grid .floating-static > span {
+  position: absolute;
+  top: 0;
+  left: 10px;
+  padding: 0 5px;
+  color: var(--color-muted);
+  background: #ffffff;
+  font-size: 19px !important;
+  line-height: 1 !important;
+  transform: translateY(-50%);
+}
+.personalization-grid .floating-static strong { font-size: 28px !important; }
+@media (prefers-reduced-motion: reduce) {
+  .personalization-grid .floating-field > span { transition: none; }
+}
