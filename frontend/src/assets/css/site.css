@@ -1041,3 +1041,14 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); }
 @media (prefers-reduced-motion: reduce) {
   .personalization-grid .floating-field > span { transition: none; }
 }
+
+
+/* Refine product card typography for a balanced catalog layout. */
+.products .product-grid .product-info h3 {
+  font-size: 22px !important;
+  line-height: 1.05 !important;
+}
+.products .product-grid .product-info p {
+  font-size: 18px !important;
+  line-height: 1.05 !important;
+}
