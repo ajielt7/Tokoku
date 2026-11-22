@@ -939,3 +939,17 @@ body { color: var(--color-ink); background: var(--color-page); }
   .detail-copy h1 { font-size: clamp(32px, 8vw, 42px); }
   .custom-preview svg { max-height: 170px; }
 }
+
+
+/* Subtle Material-style elevation for product detail surfaces and controls. */
+.detail-visual { box-shadow: 0 1px 2px rgb(23 44 34 / 8%), 0 4px 12px rgb(23 44 34 / 7%); }
+.detail-thumbnail { box-shadow: 0 1px 2px rgb(23 44 34 / 8%); transition: box-shadow 180ms ease, transform 180ms ease; }
+.detail-thumbnail:hover, .detail-thumbnail.is-active { box-shadow: 0 2px 5px rgb(23 44 34 / 12%), 0 5px 12px rgb(23 44 34 / 10%); }
+.detail-thumbnail:hover { transform: translateY(-1px); }
+.custom-preview { box-shadow: 0 1px 2px rgb(23 44 34 / 6%), 0 3px 9px rgb(23 44 34 / 7%); }
+.detail-actions .button { box-shadow: 0 1px 2px rgb(23 44 34 / 12%), 0 2px 5px rgb(23 44 34 / 9%); transition: box-shadow 180ms ease, transform 180ms ease; }
+.detail-actions .button:hover { box-shadow: 0 3px 6px rgb(23 44 34 / 14%), 0 6px 12px rgb(23 44 34 / 10%); transform: translateY(-1px); }
+@media (prefers-reduced-motion: reduce) {
+  .detail-thumbnail, .detail-actions .button { transition: none; }
+  .detail-thumbnail:hover, .detail-actions .button:hover { transform: none; }
+}
