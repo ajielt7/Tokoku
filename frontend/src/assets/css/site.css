@@ -953,3 +953,15 @@ body { color: var(--color-ink); background: var(--color-page); }
   .detail-thumbnail, .detail-actions .button { transition: none; }
   .detail-thumbnail:hover, .detail-actions .button:hover { transform: none; }
 }
+
+
+/* Site-wide typography: Dongle for copy, Amarante for headings. */
+:root {
+  --font-body: "Dongle", Arial, Helvetica, sans-serif;
+  --font-display: "Amarante", Georgia, serif;
+}
+body { font-family: var(--font-body); font-size: 28px; }
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); font-weight: 400; letter-spacing: normal; }
+.button, .header-cta, .offer-card, .product-card, .related-links > a { font-family: var(--font-body); }
+.featured-tile-copy strong { font-family: var(--font-display); font-weight: 400; letter-spacing: normal; }
+.detail-copy h1 { font-family: var(--font-display); font-weight: 400; letter-spacing: normal; }
