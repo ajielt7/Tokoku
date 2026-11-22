@@ -973,3 +973,9 @@ body :not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not(svg):not(svg *):not(pa
   font-size: 28px !important;
 }
 h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); }
+
+
+/* Tighten product description leading and slightly enlarge the preview heading. */
+.detail-description,
+.detail-description-more p { line-height: 1.25 !important; }
+.custom-preview h2 { font-size: 16px !important; }
