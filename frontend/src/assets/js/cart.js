@@ -153,7 +153,8 @@ const shippingCourierNames = {
 };
 
 function getDeliveryCoordinates() {
-  // Use the visible marker's live position as the source of truth at checkout.
+  // Read the live marker position so a visible/dragged pin remains authoritative
+  // even if another checkout interaction left the cached coordinates stale.
   if (deliveryMarker) {
     const point = deliveryMarker.getLngLat();
     if (Number.isFinite(point.lat) && Number.isFinite(point.lng)) {
