@@ -977,5 +977,5 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); }
 
 /* Tighten product description leading and slightly enlarge the preview heading. */
 .detail-description,
-.detail-description-more p { line-height: 1.25 !important; }
+.detail-description-more p { line-height: 1.05 !important; }
 .custom-preview h2 { font-size: 16px !important; }
