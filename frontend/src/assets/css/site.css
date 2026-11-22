@@ -965,3 +965,11 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); font-weight: 400; let
 .button, .header-cta, .offer-card, .product-card, .related-links > a { font-family: var(--font-body); }
 .featured-tile-copy strong { font-family: var(--font-display); font-weight: 400; letter-spacing: normal; }
 .detail-copy h1 { font-family: var(--font-display); font-weight: 400; letter-spacing: normal; }
+
+
+/* Enforce the requested 28px Dongle text size across the storefront while keeping headings in Amarante. */
+body :not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not(svg):not(path):not(i):not(script):not(style) {
+  font-family: var(--font-body);
+  font-size: 28px !important;
+}
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); }
