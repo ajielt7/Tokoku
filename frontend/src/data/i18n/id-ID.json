@@ -162,11 +162,10 @@
     "catalog.categories.papan-petunjuk.name": "Papan petunjuk",
     "catalog.categories.papan-petunjuk.description": "Papan petunjuk custom untuk rumah dan tempat usaha.",
     "catalog.products.nomor-rumah-akrilik.name": "Nomor Rumah Akrilik",
-    "catalog.products.nomor-rumah-akrilik.description": "Nomor rumah custom dari akrilik 3 mm. Dasar hitam dengan angka dan huruf putih. Ukuran 20 × 12 cm posisi landscape, dipasang dengan double tape. Nomor wajib diisi; nama area opsional maksimal 14 karakter. Waktu pengerjaan 1 jam hingga maksimal 2 hari kerja, bergantung antrean.",
+    "catalog.products.nomor-rumah-akrilik.description": "Nomor rumah akrilik custom dengan bahan akrilik 3 mm, dasar hitam, serta angka dan huruf putih. Ukuran 20 × 12 cm (landscape), dipasang dengan double tape. Isi nomor rumah; nama area opsional maksimal 14 karakter. Waktu pengerjaan sekitar 1 jam hingga maksimal 2 hari kerja, bergantung antrean.",
     "catalog.products.nomor-rumah-akrilik.customization": "Nomor rumah dan nama area custom",
     "catalog.products.nomor-rumah-akrilik.category": "Nomor rumah",
     "catalog.fields.house_number": "Nomor rumah",
     "catalog.fields.area_name": "Nama area (opsional)"
   }
 }
-
