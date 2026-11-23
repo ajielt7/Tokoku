@@ -700,7 +700,9 @@ for (const product of catalog.products) {
   });
   const seoHtml = addSeo(html, {
     title: `${product.name} Custom | ${site.name}`,
-    description: product.description,
+    description: product.slug === "nomor-rumah-akrilik"
+      ? "Nomor rumah akrilik custom 3 mm, ukuran 20 × 12 cm, dengan dasar hitam dan angka serta huruf putih. Pesan nomor rumah dengan nama area pilihanmu."
+      : product.description,
     pathname: `/produk/${product.slug}/`,
     breadcrumbs: [
       { name: "Beranda", path: "/" },

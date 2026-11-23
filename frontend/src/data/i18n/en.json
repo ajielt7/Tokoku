@@ -162,7 +162,7 @@
     "catalog.categories.papan-petunjuk.name": "Wayfinding signs",
     "catalog.categories.papan-petunjuk.description": "Custom directional signs for homes and businesses.",
     "catalog.products.nomor-rumah-akrilik.name": "Acrylic House Number",
-    "catalog.products.nomor-rumah-akrilik.description": "Custom house number made from 3 mm acrylic, with a black base and white lettering. Size: 20 \u00d7 12 cm, landscape. Installed with double-sided tape. A number is required; an optional area name can contain up to 14 characters. Production takes about 1 hour to 2 business days, depending on the queue.",
+    "catalog.products.nomor-rumah-akrilik.description": ""Custom acrylic house number made from 3 mm acrylic, with a black base and white numbers and letters. Fixed 20 × 12 cm landscape size, installed with double-sided tape. Enter a house number; an area name is optional up to 14 characters. Production takes about 1 hour to 2 business days, depending on the queue."",
     "catalog.products.nomor-rumah-akrilik.customization": "Custom house number and area name",
     "catalog.products.nomor-rumah-akrilik.category": "House numbers",
     "catalog.fields.house_number": "House number",
