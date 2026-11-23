@@ -5,7 +5,7 @@
   const menuButton = header.querySelector(".menu-toggle");
   const menuIcon = menuButton?.querySelector(".menu-icon");
   const navigation = header.querySelector(".main-nav");
-  const mobileMenu = window.matchMedia("(max-width: 700px)");
+  const mobileMenu = window.matchMedia("(max-width: 960px)");
 
   if (menuButton && navigation) {
     const setMenuOpen = (open) => {
