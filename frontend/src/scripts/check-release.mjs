@@ -4,7 +4,9 @@ import { fileURLToPath } from "node:url";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const frontendDirectory = path.resolve(scriptDirectory, "../..");
-const outputDirectory = path.join(frontendDirectory, "dist");
+const outputDirectory = process.env.SITE_BUILD_OUTPUT_DIR
+  ? path.resolve(process.env.SITE_BUILD_OUTPUT_DIR)
+  : path.join(frontendDirectory, "dist");
 const siteConfig = JSON.parse(await readFile(path.join(frontendDirectory, "src/data/site.json"), "utf8"));
 const siteUrl = (process.env.SITE_URL || siteConfig.siteUrl || "").trim().replace(/\/$/, "");
 const apiBaseUrl = (process.env.PUBLIC_API_BASE_URL || siteConfig.apiBaseUrl || "").trim().replace(/\/$/, "");
@@ -162,6 +164,17 @@ for (const [file, { html, route }] of pageData) {
       fail(`${file}: produk publik tidak boleh memakai placeholder foto.`);
     }
   }
+  if (!previewMode && route.startsWith("/en/")) {
+    const canonical = html.match(/<link\s+rel=["']canonical["'][^>]*>/i)?.[0] ?? "";
+    const idAlternate = html.match(/<link\s+rel=["']alternate["'][^>]*hreflang=["']id-ID["'][^>]*>/i)?.[0] ?? "";
+    const enAlternate = html.match(/<link\s+rel=["']alternate["'][^>]*hreflang=["']en["'][^>]*>/i)?.[0] ?? "";
+    if (!/<html\s+lang=["']en["']/.test(html)) fail(`${file}: halaman internasional harus memakai lang="en".`);
+    if (!canonical || attr(canonical, "href") !== `${siteUrl.replace(/\/$/, "")}${route}`) fail(`${file}: canonical bahasa Inggris tidak sesuai dengan rutenya.`);
+    if (!idAlternate || !enAlternate) fail(`${file}: hreflang id-ID/en dua arah belum lengkap.`);
+    if (route.startsWith("/en/products/") && (!/data-intl-quote/.test(html) || /assets\/js\/cart\.js/.test(html))) {
+      fail(`${file}: produk internasional harus memakai alur penawaran dan tidak boleh memuat keranjang IDR.`);
+    }
+  }
   if (!previewMode && /localhost|127\.0\.0\.1|REPLACE_WITH|pratinjau katalog|data lokal|\(contoh\)/i.test(html)) {
     fail(`${file}: masih memuat URL lokal atau konten contoh.`);
   }
@@ -198,3 +211,4 @@ if (errors.length) {
 } else {
   console.log(`Pemeriksaan ${previewMode ? "preview" : "rilis"} berhasil: ${htmlFiles.length} halaman HTML, ${publicPages.length} halaman publik.`);
 }
+

@@ -6,13 +6,41 @@ import { fileURLToPath } from "node:url";
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const frontendDirectory = path.resolve(scriptDirectory, "../..");
 const sourceDirectory = path.join(frontendDirectory, "src");
-const outputDirectory = path.join(frontendDirectory, "dist");
+const configuredOutputDirectory = process.env.SITE_BUILD_OUTPUT_DIR;
+const outputDirectory = configuredOutputDirectory
+  ? path.resolve(configuredOutputDirectory)
+  : path.join(frontendDirectory, "dist");
 const templateDirectory = path.join(sourceDirectory, "templates");
 const homeStylesheet = await readFile(path.join(sourceDirectory, "assets", "css", "site.css"), "utf8");
 const headerScript = await readFile(path.join(sourceDirectory, "assets", "js", "header-scroll.js"), "utf8");
 const customPreviewScriptSource = await readFile(path.join(sourceDirectory, "assets", "js", "custom-preview.js"), "utf8");
 const assetVersion = createHash("sha256").update(homeStylesheet).update(headerScript).update(customPreviewScriptSource).digest("hex").slice(0, 12);
 const siteConfig = JSON.parse(await readFile(path.join(sourceDirectory, "data", "site.json"), "utf8"));
+const localeDirectory = path.join(sourceDirectory, "data", "i18n");
+const idLocale = JSON.parse(await readFile(path.join(localeDirectory, "id-ID.json"), "utf8"));
+const enLocale = JSON.parse(await readFile(path.join(localeDirectory, "en.json"), "utf8"));
+const marketConfig = JSON.parse(await readFile(path.join(sourceDirectory, "data", "markets.json"), "utf8"));
+const idMessageKeys = Object.keys(idLocale.messages).sort();
+const enMessageKeys = Object.keys(enLocale.messages).sort();
+if (JSON.stringify(idMessageKeys) !== JSON.stringify(enMessageKeys)) {
+  const missingEnglish = idMessageKeys.filter((key) => !(key in enLocale.messages));
+  const missingIndonesian = enMessageKeys.filter((key) => !(key in idLocale.messages));
+  throw new Error(`Key katalog bahasa harus sama. Hilang di en: ${missingEnglish.join(", ")}; hilang di id-ID: ${missingIndonesian.join(", ")}`);
+}
+for (const key of idMessageKeys) {
+  const placeholders = (value) => [...String(value).matchAll(/\{([a-zA-Z0-9_]+)\}/g)].map((match) => match[1]).sort();
+  if (JSON.stringify(placeholders(idLocale.messages[key])) !== JSON.stringify(placeholders(enLocale.messages[key]))) {
+    throw new Error(`Placeholder katalog untuk ${key} harus sama pada id-ID dan en.`);
+  }
+}
+if (idLocale.locale !== "id-ID" || idLocale.language !== "id" || enLocale.locale !== "en" || enLocale.language !== "en") {
+  throw new Error("Konfigurasi locale harus berupa id-ID/id dan en/en.");
+}
+const internationalMarket = marketConfig.markets?.INTL;
+const idrPerUsd = Number(internationalMarket?.priceDisplay?.idrPerUsd);
+if (internationalMarket?.currency !== "USD" || !Number.isFinite(idrPerUsd) || idrPerUsd <= 0) {
+  throw new Error("Konfigurasi pasar INTL harus memuat mata uang USD dan kurs IDR/USD yang valid.");
+}
 function environmentBoolean(name, fallback) {
   const value = process.env[name];
   if (value == null || value === "") return fallback;
@@ -83,28 +111,9 @@ function escapeHtml(value) {
 }
 
 function iconSvg(name, extraClass = "") {
-  const icons = {
-    "arrow-right": '<path d="M4 12h15M13 5l7 7-7 7"/>',
-    "arrow-up-right-from-square": '<path d="M14 4h6v6M20 4 10 14"/><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/>',
-    "bag-shopping": '<path d="M5 8h14l1 13H4L5 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/>',
-    bars: '<path d="M4 6h16M4 12h16M4 18h16"/>',
-    xmark: '<path d="m6 6 12 12M18 6 6 18"/>',
-    "circle-info": '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
-    house: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H5a2 2 0 0 1-2-2V10Z"/>',
-    "magnifying-glass": '<circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/>',
-    "pen-to-square": '<path d="M13 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m11 13 9-9 3 3-9 9-4 1 1-4Z"/>',
-    "ruler-combined": '<path d="M3 7V3h18v18h-4V7H3Z"/><path d="M7 3v4M11 3v4M15 3v4M17 11h4M17 15h4M17 19h4"/>',
-    whatsapp: '<path d="M20.5 11.6a8.6 8.6 0 0 1-12.7 7.6L3 20.5l1.3-4.6a8.6 8.6 0 1 1 16.2-4.3Z"/><path d="M8.2 7.6c-.5.2-.9.8-.9 1.5 0 2.1 3.4 5.8 5.5 6.5.7.2 1.4-.1 1.8-.6l.7-1-2.5-1.3-.9 1c-1.1-.5-2-1.4-2.5-2.5l.8-.9-1.2-2.7-.8 0Z"/>',
-    facebook: '<path d="M15.12 24v-8.7h2.9l.44-3.4h-3.34V9.73c0-.99.27-1.66 1.68-1.66h1.79V5.02c-.31-.04-1.38-.13-2.62-.13-2.6 0-4.38 1.58-4.38 4.48v2.5H8.65v3.4h2.94V24h3.53Z"/>',
-    instagram: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/>',
-    tiktok: '<path d="M14 3h3c.2 2 1.4 3.4 4 3.7v3.1a9 9 0 0 1-4-1.3v6.8a6.3 6.3 0 1 1-6.3-6.3c.4 0 .8 0 1.2.1v3.3a3.1 3.1 0 1 0 1.9 2.9V3Z"/>',
-    youtube: '<path d="M22 8a3 3 0 0 0-2.1-2.1C18 5.4 12 5.4 12 5.4s-6 0-7.9.5A3 3 0 0 0 2 8a31 31 0 0 0-.5 4 31 31 0 0 0 .5 4 3 3 0 0 0 2.1 2.1c1.9.5 7.9.5 7.9.5s6 0 7.9-.5A3 3 0 0 0 22 16a31 31 0 0 0 .5-4 31 31 0 0 0-.5-4Z"/><path d="m10 15 5-3-5-3v6Z"/>',
-  };
-  const strokeIcons = new Set(["arrow-right", "arrow-up-right-from-square", "circle-info", "magnifying-glass", "pen-to-square", "ruler-combined", "whatsapp", "instagram"]);
-  const isStroke = strokeIcons.has(name);
-  const stroke = isStroke ? ' fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"' : ' fill="currentColor"';
-  const iconClass = `icon${isStroke ? "" : " icon-filled"}${extraClass ? ` ${extraClass}` : ""}`;
-  return `<svg class="${iconClass}" viewBox="0 0 24 24"${stroke} aria-hidden="true" focusable="false">${icons[name] || ""}</svg>`;
+  const brandIcons = new Set(["whatsapp", "facebook", "instagram", "tiktok", "youtube"]);
+  const family = brandIcons.has(name) ? "fa-brands" : "fa-solid";
+  return `<i class="icon ${family} fa-${name}${extraClass ? ` ${extraClass}` : ""}" aria-hidden="true"></i>`;
 }
 
 const iconTokens = {
@@ -120,6 +129,9 @@ const iconTokens = {
   ICON_HOUSE: iconSvg("house"),
   ICON_WHATSAPP: iconSvg("whatsapp"),
 };
+
+const fontAwesomeStylesheet = '<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>\n    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer">';
+const googleFontsStylesheet = '<link rel="preconnect" href="https://fonts.googleapis.com">\n    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n    <link href="https://fonts.googleapis.com/css2?family=Amarante&family=Dongle:wght@300;400;700&display=swap" rel="stylesheet">';
 
 function replaceTokens(template, values) {
   const templateValues = { ...values, ASSET_VERSION: assetVersion };
@@ -222,7 +234,7 @@ s0.parentNode.insertBefore(s1,s0);
 function addMobileNavigation(html) {
   if (html.includes('class="menu-toggle"')) return html;
   const nav = '<nav class="main-nav" aria-label="Navigasi utama">';
-  const menuButton = `<button class="menu-toggle" type="button" aria-label="Buka menu" aria-controls="main-navigation" aria-expanded="false" onclick="event.stopImmediatePropagation(); const header=this.closest('.site-header'); const nav=header.querySelector('.main-nav'); const open=this.getAttribute('aria-expanded')!=='true'; header.classList.toggle('menu-open',open); nav.hidden=!open; this.setAttribute('aria-expanded',String(open)); this.setAttribute('aria-label',open?'Tutup menu':'Buka menu');"><span class="menu-icon" aria-hidden="true"><span></span></span></button>\n`;
+  const menuButton = `<button class="menu-toggle" type="button" aria-label="Buka menu" aria-controls="main-navigation" aria-expanded="false" onclick="event.stopImmediatePropagation(); const header=this.closest('.site-header'); const nav=header.querySelector('.main-nav'); const open=this.getAttribute('aria-expanded')!=='true'; const icon=this.querySelector('.menu-icon'); header.classList.toggle('menu-open',open); nav.hidden=!open; this.setAttribute('aria-expanded',String(open)); this.setAttribute('aria-label',open?'Tutup menu':'Buka menu'); icon.classList.toggle('fa-bars',!open); icon.classList.toggle('fa-xmark',open);"><i class="icon fa-solid fa-bars menu-icon" aria-hidden="true"></i></button>\n`;
   return html.replace(nav, `${menuButton}<nav id="main-navigation" class="main-nav" aria-label="Navigasi utama">`);
 }
 
@@ -232,6 +244,41 @@ function formatPrice(amount) {
     currency: "IDR",
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+function formatUsdEstimate(amount) {
+  const dollars = Math.round((Number(amount) / idrPerUsd) * 100) / 100;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2,
+  }).format(dollars);
+}
+
+function localizeHtml(html) {
+  const translations = new Map();
+  for (const [key, source] of Object.entries(idLocale.messages)) {
+    const target = enLocale.messages[key];
+    if (typeof source === "string" && typeof target === "string" && source !== target && !source.includes("{")) {
+      translations.set(source, target);
+    }
+  }
+  return [...translations.entries()]
+    .sort(([left], [right]) => right.length - left.length)
+    .reduce((result, [source, target]) => result.replaceAll(escapeHtml(source), escapeHtml(target)), html);
+}
+
+function addLanguageAlternates(html, idPath, englishPath) {
+  if (!site.indexable) return html;
+  const alternates = [
+    `<link rel="alternate" hreflang="id-ID" href="${escapeHtml(absoluteUrl(idPath))}">`,
+    `<link rel="alternate" hreflang="en" href="${escapeHtml(absoluteUrl(englishPath))}">`,
+    `<link rel="alternate" hreflang="x-default" href="${escapeHtml(absoluteUrl(idPath))}">`,
+  ].join("\n    ");
+  return html.replace("</head>", `    ${alternates}\n  </head>`);
+}
+
+function addMarketSwitcher(html, href, label) {
+  const link = `<a class="market-switch" href="${escapeHtml(href)}" lang="${label.startsWith("English") ? "en" : "id"}">${escapeHtml(label)}</a>`;
+  return html.replace(/(<div class="header-actions">[\s\S]*?)(<\/div>)/, `$1${link}$2`);
 }
 
 function imageUrl(product) {
@@ -711,12 +758,212 @@ const publicPages = [
     .map((category) => ({ path: `/kategori/${category.slug}/`, priority: "0.8" })),
   ...catalog.products.map((product) => ({ path: `/produk/${product.slug}/`, priority: "0.7" })),
 ];
+
+const marketLabelId = idLocale.messages["market.switchToInternational"];
+const marketLabelEn = enLocale.messages["market.switchToIndonesia"];
+const usdDisclaimer = `${enLocale.messages["market.usdEstimate"]} ${enLocale.messages["market.rateReference"] || "Reference rate"}: ${internationalMarket.priceDisplay.rateSource} (${internationalMarket.priceDisplay.rateDate}).`;
+const categoryOverrides = enLocale.messages;
+const englishWords = {
+  nomor: "Number", rumah: "House", akrilik: "Acrylic", plakat: "Plaque", gantungan: "Keychain",
+  kunci: "Key", stand: "Stand", plang: "Sign", nama: "Name", papan: "Board", petunjuk: "Guide",
+  qris: "QRIS", kecil: "Small", wifi: "Wi-Fi", toilet: "Restroom", arah: "Directional",
+};
+const englishSlugPhrases = {
+  "nomor-rumah": "House numbers",
+  "nomor-rumah-akrilik": "Acrylic House Number",
+  "plang-nama": "Custom Signs",
+  "plakat-akrilik": "Acrylic Plaques",
+  "gantungan-kunci": "Keychains",
+  "stand-qris": "QRIS Stands",
+  "papan-petunjuk": "Wayfinding Signs",
+};
+function englishSlug(slug) {
+  return englishSlugPhrases[slug] || String(slug).split("-").map((word) => englishWords[word.toLowerCase()] || word[0]?.toUpperCase() + word.slice(1)).join(" ");
+}
+function englishCatalogValue(type, slug, field, fallback) {
+  const key = `catalog.${type}.${slug}.${field}`;
+  const translated = categoryOverrides[key];
+  if (typeof translated === "string" && translated.trim()) return translated;
+  const sourceCatalog = type === "categories" ? catalog.categories : catalog.products;
+  const sourceItem = sourceCatalog.find((item) => item.slug === slug);
+  const sourceField = field === "category" ? "category" : field;
+  const sourceValue = sourceItem?.[sourceField];
+  console.warn(`Terjemahan ${key} belum ada; memakai teks Indonesia pada halaman Inggris.`);
+  return typeof sourceValue === "string" && sourceValue.trim() ? sourceValue : fallback;
+}
+function localizedText(locale, key, values = {}) {
+  const template = locale.messages[key];
+  if (typeof template !== "string") throw new Error(`Pesan locale tidak ditemukan: ${key}`);
+  return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, name) => String(values[name] ?? `{${name}}`));
+}
+function englishRoute(idPath) {
+  if (idPath === "/") return "/en/";
+  if (idPath === "/tentang-kami/") return "/en/about/";
+  if (idPath.startsWith("/kategori/")) return idPath.replace(/^\/kategori\//, "/en/categories/");
+  if (idPath.startsWith("/produk/")) return idPath.replace(/^\/produk\//, "/en/products/");
+  return `/en${idPath}`;
+}
+function pageFile(pathname) {
+  return pathname === "/"
+    ? path.join(outputDirectory, "index.html")
+    : path.join(outputDirectory, pathname.replace(/^\//, ""), "index.html");
+}
+function translateCatalogContent(html, pagePath) {
+  let result = html;
+  const category = catalog.categories.find((item) => pagePath === `/kategori/${item.slug}/`);
+  const product = catalog.products.find((item) => pagePath === `/produk/${item.slug}/`);
+  const replaceValue = (source, target) => {
+    if (source != null && target != null && String(source) !== String(target)) {
+      result = result.replaceAll(escapeHtml(source), escapeHtml(target));
+    }
+  };
+  for (const item of catalog.categories) {
+    const name = englishCatalogValue("categories", item.slug, "name", englishSlug(item.slug));
+    const description = englishCatalogValue("categories", item.slug, "description", `Explore our ${name.toLowerCase()} collection and contact us to confirm product details, pricing, and international shipping.`);
+    replaceValue(item.name, name);
+    replaceValue(item.description, description);
+  }
+  for (const item of catalog.products) {
+    const name = englishCatalogValue("products", item.slug, "name", englishSlug(item.slug));
+    const description = englishCatalogValue("products", item.slug, "description", `Custom-made ${name.toLowerCase()}. Contact us to confirm specifications, final pricing, and international shipping.`);
+    const customization = englishCatalogValue("products", item.slug, "customization", "Custom options available");
+    replaceValue(item.name, name);
+    replaceValue(item.description, description);
+    replaceValue(item.customization || "Produk custom", customization);
+    const priceIdr = formatPrice(item.price_amount);
+    result = result.replaceAll(escapeHtml(priceIdr), escapeHtml(formatUsdEstimate(item.price_amount)));
+    const oldAlt = item.image_alt || item.name;
+    const sourceImageIsInspiration = !imageUrl(item) || /^https:\/\/images\.unsplash\.com\//i.test(imageUrl(item));
+    replaceValue(oldAlt, sourceImageIsInspiration
+      ? localizedText(enLocale, "product.photo.inspirationAlt", { name })
+      : localizedText(enLocale, "product.photo.productAlt", { name }));
+    if (item.slug === product?.slug) {
+      const oldShort = String(item.description).trim().length > 125
+        ? `${String(item.description).trim().slice(0, 122).trimEnd()}...`
+        : String(item.description).trim();
+      const newShort = description.length > 125 ? `${description.slice(0, 122).trimEnd()}...` : description;
+      replaceValue(oldShort, newShort);
+      replaceValue(`Foto inspirasi untuk ${item.name}; bukan foto produk Toqoku.`, localizedText(enLocale, "product.photo.inspirationAlt", { name }));
+      replaceValue(`Foto ilustrasi Unsplash untuk ${item.name}; bukan foto produk Toqoku.`, localizedText(enLocale, "product.photo.inspirationAlt", { name }));
+      result = result.replace(/(<label class="form-field custom-field custom-field-house_number">)[\s\S]*?(<input)/, `$1${escapeHtml(enLocale.messages["catalog.fields.house_number"] || "House number")}$2`);
+      result = result.replace(/(<label class="form-field custom-field custom-field-area_name">)[\s\S]*?(<input)/, `$1${escapeHtml(enLocale.messages["catalog.fields.area_name"] || "Area name (optional)")}$2`);
+      result = result.replace(/data-custom-label="[^"]*"/g, (match) => {
+        const source = match.slice('data-custom-label="'.length, -1);
+        const translated = source === idLocale.messages["catalog.fields.house_number"]
+          ? enLocale.messages["catalog.fields.house_number"]
+          : source === idLocale.messages["catalog.fields.area_name"]
+            ? enLocale.messages["catalog.fields.area_name"]
+            : source;
+        return `data-custom-label="${escapeHtml(translated)}"`;
+      });
+      result = result.replace(/<form class="cart-add-form" data-product-form[^>]*>/,
+        `<section class="cart-add-form international-quote" data-intl-quote data-whatsapp="${escapeHtml(site.whatsappNumber)}" data-product-name="${escapeHtml(name)}" data-display-price="${escapeHtml(formatUsdEstimate(item.price_amount))}" data-quote-template="${escapeHtml(enLocale.messages["market.contactMessage"])}" data-details-template="${escapeHtml(enLocale.messages["market.quoteDetailsLabel"])}" data-quantity-label="${escapeHtml(enLocale.messages["market.quoteQuantityLabel"])}" data-price-template="${escapeHtml(enLocale.messages["market.quotePriceLine"])}" data-price-label="${escapeHtml(enLocale.messages["product.quote.priceLabel"])}">`);
+      result = result.replace(/<legend>[^<]*<\/legend>/, `<legend>${escapeHtml(enLocale.messages["product.custom.legend"])}</legend>`);
+      result = result.replace(/(<legend>[^<]*<\/legend>)/, `$1<p class="form-hint international-quote-body">${escapeHtml(enLocale.messages["product.quote.body"])}</p>`);
+      result = result.replace(/<div class="detail-actions">[\s\S]*?<\/div>\s*<p class="form-message" data-form-message[^>]*><\/p>/,
+        `<div class="detail-actions"><a class="button button-primary" data-quote-link href="https://wa.me/${site.whatsappNumber}">${escapeHtml(enLocale.messages["product.quote.button"])}</a></div><p class="form-hint international-quote-note">${escapeHtml(enLocale.messages["product.quote.note"])}</p>`);
+      result = result.replace(/<\/form>/, "</section>");
+      result = result.replace('<p class="detail-price"><strong>', `<p class="detail-price"><span>${escapeHtml(enLocale.messages["product.quote.priceLabel"])}</span><strong>`);
+      result = result.replace(/<script[^>]+cart\.js[^>]*><\/script>/g, "");
+      result = result.replace(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g, (match, raw) => {
+        try {
+          const schema = JSON.parse(raw);
+          return schema["@type"] === "Product" ? "" : match;
+        } catch { return match; }
+      });
+      result = result.replace(/<a class="footer-contact" href="[^"]*"([^>]*)>/, `<a class="footer-contact" href="https://wa.me/${site.whatsappNumber}?text=${encodeURIComponent(enLocale.messages["market.generalContactMessage"])}"$1>`);
+    }
+  }
+  if (category) {
+    const categoryName = englishCatalogValue("categories", category.slug, "name", englishSlug(category.slug));
+    const categoryDescription = englishCatalogValue("categories", category.slug, "description", `Explore our ${categoryName.toLowerCase()} collection and contact us to confirm product details, pricing, and international shipping.`);
+    replaceValue(category.name, categoryName);
+    replaceValue(category.description, categoryDescription);
+    result = result.replaceAll(`aria-label="Lihat katalog ${escapeHtml(category.name)}"`, `aria-label="${escapeHtml(localizedText(enLocale, "products.browseCategoryLabel", { name: categoryName }))}"`);
+    result = result.replaceAll(`alt="Inspirasi ${escapeHtml(category.name)}. Foto Unsplash, bukan foto produk Toqoku."`, `alt="${escapeHtml(localizedText(enLocale, "product.photo.inspirationAlt", { name: categoryName }))}"`);
+  }
+  result = result.replace(/aria-label="Tampilkan inspirasi (\d+)"/g, (_, number) => `aria-label="${escapeHtml(localizedText(enLocale, "product.gallery.showLabel", { number }))}"`);
+  result = result.replace(/aria-label="Lihat katalog: ([^"]+)"/g, (_, name) => `aria-label="${escapeHtml(localizedText(enLocale, "products.browseCategoryLabel", { name }))}"`);
+  result = result.replace(/Foto inspirasi Unsplash untuk ([^;]+); bukan foto produk Toqoku\./g, (_, name) => localizedText(enLocale, "product.photo.inspirationAlt", { name }));
+  result = result.replace(/<iframe([^>]*?)title="[^"]*"/g, '<iframe$1title="' + escapeHtml(enLocale.messages["about.location.mapTitle"]) + '"');
+  result = result.replace('aria-label="Galeri foto produk"', `aria-label="${escapeHtml(enLocale.messages["product.gallery.label"])}"`);
+  result = result.replace('aria-label="Foto inspirasi lainnya"', `aria-label="${escapeHtml(enLocale.messages["product.gallery.moreLabel"])}"`);
+  result = result.replace('aria-label="Pratinjau personalisasi produk"', `aria-label="${escapeHtml(enLocale.messages["product.preview.accessibleLabel"])}"`);
+  result = result.replace('alt="Inspirasi nomor rumah pada fasad. Foto Unsplash, bukan foto produk Toqoku."', `alt="${escapeHtml(enLocale.messages["home.hero.imageAlt"])}"`);
+  return result;
+}
+
+for (const { path: idPath } of publicPages) {
+  const englishPath = englishRoute(idPath);
+  const idFile = pageFile(idPath);
+  const englishFile = path.join(outputDirectory, englishPath === "/en/" ? "en/index.html" : `${englishPath.replace(/^\//, "")}index.html`);
+  await mkdir(path.dirname(englishFile), { recursive: true });
+  let html = await readFile(idFile, "utf8");
+  html = translateCatalogContent(html, idPath);
+  html = localizeHtml(html);
+  html = html.replace('<html lang="id">', '<html lang="en">');
+  for (const page of [...publicPages].sort((left, right) => right.path.length - left.path.length)) {
+    html = html.replaceAll(`${absoluteUrl(page.path)}"`, `${absoluteUrl(englishRoute(page.path))}"`);
+  }
+  html = html.replaceAll('content="id-ID"', 'content="en_US"');
+  html = html.replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${escapeHtml(idPath === "/"
+    ? enLocale.messages["seo.home.description"]
+    : idPath === "/tentang-kami/"
+      ? enLocale.messages["seo.about.description"]
+      : idPath.startsWith("/kategori/")
+        ? (englishCatalogValue("categories", idPath.split("/")[2], "description", "Browse our custom product collection. Contact us to confirm product details, pricing, and international shipping."))
+        : englishCatalogValue("products", idPath.split("/")[2], "description", "Custom-made product. Contact us to confirm specifications, final pricing, and international shipping."))}">`);
+  if (idPath === "/") {
+    html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${escapeHtml(enLocale.messages["seo.home.title"])} | ${escapeHtml(site.name)}</title>`);
+  }
+  if (idPath === "/tentang-kami/") {
+    html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${escapeHtml(localizedText(enLocale, "seo.about.title", { store: site.name }))}</title>`);
+  }
+  if (idPath.startsWith("/kategori/")) {
+    const category = catalog.categories.find((item) => item.slug === idPath.split("/")[2]);
+    const name = category && englishCatalogValue("categories", category.slug, "name", englishSlug(category.slug));
+    if (name) html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${escapeHtml(localizedText(enLocale, "seo.category.title", { name, store: site.name }))}</title>`);
+  }
+  if (idPath.startsWith("/produk/")) {
+    const product = catalog.products.find((item) => item.slug === idPath.split("/")[2]);
+    const name = product && englishCatalogValue("products", product.slug, "name", englishSlug(product.slug));
+    if (name) html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${escapeHtml(localizedText(enLocale, "seo.product.title", { name, store: site.name }))}</title>`);
+  }
+  html = html.replaceAll("tentang-kami/", "about/").replaceAll("kategori/", "categories/").replaceAll("produk/", "products/");
+  html = html.replace(/((?:\.\.\/)*)(?:\.\/)?assets\//g, (_, prefix) => `${prefix}../assets/`);
+  html = html.replace(/<a class="header-cart"[^>]*>[\s\S]*?<\/a>/g, "");
+  html = html.replace(/<a href="[^"]*lacak-pesanan[^"]*">[\s\S]*?<\/a>/g, "");
+  html = html.replace(/<script[^>]+cart\.js[^>]*><\/script>/g, "");
+  html = html.replace(/<form[^>]*data-product-search[^>]*>/, (openingTag) => `${openingTag.slice(0, -1)} data-result-template="${escapeHtml(enLocale.messages["search.results"])}" data-empty-template="${escapeHtml(enLocale.messages["search.noResults"])}" data-order-code-message="${escapeHtml(enLocale.messages["search.internationalTracking"])}">`);
+  for (const key of ["search.quick.houseNumber", "search.quick.plaque", "search.quick.keychain", "search.quick.qris"]) {
+    const source = idLocale.messages[key];
+    html = html.replaceAll(`data-search-term="${escapeHtml(source)}"`, `data-search-term="${escapeHtml(enLocale.messages[key])}"`);
+  }
+  html = html.replace(/(<input[^>]*data-custom-key="house_number"[^>]*)(?:maxlength="[^"]*")?/, '$1maxlength="6"');
+  if (site.indexable) {
+    html = html.replace("</head>", `    <link rel="alternate" hreflang="id-ID" href="${escapeHtml(absoluteUrl(idPath))}">\n    <link rel="alternate" hreflang="en" href="${escapeHtml(absoluteUrl(englishPath))}">\n    <link rel="alternate" hreflang="x-default" href="${escapeHtml(absoluteUrl(idPath))}">\n  </head>`);
+  }
+  html = html.replace(/<a class="market-switch"[^>]*>[\s\S]*?<\/a>/g, "");
+  html = html.replace(/(<div class="header-actions">[\s\S]*?)(<\/div>)/, `$1<a class="market-switch" href="${escapeHtml(idPath)}" lang="id">${escapeHtml(marketLabelEn)}</a>$2`);
+  html = html.replace("</header>", `</header>\n    <aside class="market-estimate-note" aria-label="${escapeHtml(enLocale.messages["market.internationalPricingLabel"])}">${escapeHtml(usdDisclaimer)}</aside>`);
+  const assetPrefix = rootPrefix(englishPath.split("/").filter(Boolean).length);
+  if (idPath.startsWith("/produk/")) {
+    html = html.replace("</body>", `<script src="${assetPrefix}assets/js/international-quote.js" defer></script>\n  </body>`);
+  }
+  await writeFile(englishFile, addMobileNavigation(html), "utf8");
+
+  let idHtml = await readFile(idFile, "utf8");
+  idHtml = addLanguageAlternates(idHtml, idPath, englishPath);
+  idHtml = addMarketSwitcher(idHtml, englishPath, marketLabelId);
+  await writeFile(idFile, idHtml, "utf8");
+}
+
 const robots = site.indexable
   ? `User-agent: *\nAllow: /\n\nSitemap: ${absoluteUrl("/sitemap.xml")}\n`
   : "User-agent: *\nAllow: /\n";
 await writeFile(path.join(outputDirectory, "robots.txt"), robots, "utf8");
 if (site.indexable) {
-  const urls = publicPages.map(({ path: pagePath, priority }) =>
+  const urls = [...publicPages, ...publicPages.map(({ path: pagePath, priority }) => ({ path: englishRoute(pagePath), priority }))].map(({ path: pagePath, priority }) =>
     `  <url><loc>${escapeHtml(absoluteUrl(pagePath))}</loc><priority>${priority}</priority></url>`
   ).join("\n");
   await writeFile(path.join(outputDirectory, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`, "utf8");

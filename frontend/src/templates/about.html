@@ -14,7 +14,7 @@
     {{PREVIEW_BANNER}}
     <header class="site-header"><div class="container header-inner">
       <a class="brand" href="{{ROOT_PREFIX}}index.html"><span class="brand-mark" aria-hidden="true">T</span><span>Toqoku<span class="brand-period">.</span></span></a>
-      <button class="menu-toggle" type="button" aria-label="Buka menu" aria-controls="main-navigation" aria-expanded="false" onclick="event.stopImmediatePropagation(); const header=this.closest('.site-header'); const nav=header.querySelector('.main-nav'); const open=this.getAttribute('aria-expanded')!=='true'; header.classList.toggle('menu-open',open); nav.hidden=!open; this.setAttribute('aria-expanded',String(open)); this.setAttribute('aria-label',open?'Tutup menu':'Buka menu');"><span class="menu-icon" aria-hidden="true"><span></span></span></button>
+      <button class="menu-toggle" type="button" aria-label="Buka menu" aria-controls="main-navigation" aria-expanded="false" onclick="event.stopImmediatePropagation(); const header=this.closest('.site-header'); const nav=header.querySelector('.main-nav'); const open=this.getAttribute('aria-expanded')!=='true'; const icon=this.querySelector('.menu-icon'); header.classList.toggle('menu-open',open); nav.hidden=!open; this.setAttribute('aria-expanded',String(open)); this.setAttribute('aria-label',open?'Tutup menu':'Buka menu'); icon.classList.toggle('fa-bars',!open); icon.classList.toggle('fa-xmark',open);"><i class="icon fa-solid fa-bars menu-icon" aria-hidden="true"></i></button>
       <nav id="main-navigation" class="main-nav" aria-label="Navigasi utama"><a href="{{ROOT_PREFIX}}index.html#produk">Produk</a><a href="{{ROOT_PREFIX}}index.html#cara-pesan">Cara pesan</a><a href="{{ROOT_PREFIX}}tentang-kami/" aria-current="page">Tentang Kami</a><a href="{{ROOT_PREFIX}}lacak-pesanan/">Lacak pesanan</a></nav>
       <div class="header-actions"><a class="header-cart" href="{{ROOT_PREFIX}}keranjang/">{{ICON_BAG_SHOPPING}} Keranjang <span data-cart-count>0</span></a></div>
     </div></header>
@@ -44,3 +44,4 @@
     <script src="{{ROOT_PREFIX}}assets/js/cart.js" data-api-base="{{API_BASE_URL}}" defer></script>
   </body>
 </html>
+
