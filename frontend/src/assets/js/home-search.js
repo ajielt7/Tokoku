@@ -5,11 +5,16 @@
   const status = document.querySelector("[data-product-search-status]");
   const productSection = document.querySelector("#produk");
   const cards = Array.from(document.querySelectorAll("#produk .product-card"));
+  const messages = form.dataset;
+  const isEnglish = document.documentElement.lang === "en";
 
   if (!form || !input || !status || !cards.length) return;
 
+  // Public order codes are either five digits (current) or legacy RUMA-… codes.
+  const isOrderCode = (value) => /^(?:\d{5}|RUMA-[A-Z0-9]{16})$/i.test(value.trim());
+
   const normalize = (value) => value
-    .toLocaleLowerCase("id-ID")
+    .toLocaleLowerCase(isEnglish ? "en" : "id-ID")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
@@ -26,8 +31,10 @@
 
     status.textContent = query
       ? visibleCount
-        ? `${visibleCount} produk cocok: ${value.trim()}.`
-        : `Belum ada produk yang cocok: ${value.trim()}.`
+        ? (messages.resultTemplate || `${visibleCount} produk cocok: ${value.trim()}.`)
+          .replace("{count}", String(visibleCount)).replace("{query}", value.trim())
+        : (messages.emptyTemplate || `Belum ada produk yang cocok: ${value.trim()}.`)
+          .replace("{query}", value.trim())
       : "";
 
     if (clearButton) clearButton.hidden = !value.trim();
@@ -38,6 +45,17 @@
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+    const value = input.value.trim();
+    if (isOrderCode(value) && !isEnglish) {
+      const trackingUrl = new URL("./lacak-pesanan/", window.location.href);
+      trackingUrl.searchParams.set("order", value.toUpperCase());
+      window.location.assign(trackingUrl.href);
+      return;
+    }
+    if (isOrderCode(value) && isEnglish) {
+      status.textContent = messages.orderCodeMessage || "";
+      return;
+    }
     applySearch(input.value, true);
   });
 
@@ -56,3 +74,4 @@
     });
   });
 })();
+

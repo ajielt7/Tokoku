@@ -36,11 +36,11 @@
 
       <section class="store-search" aria-label="Cari produk">
         <div class="container store-search-inner">
-          <div class="store-search-heading"><span class="search-mark">{{ICON_MAGNIFYING_GLASS}}</span><h2>Cari produk</h2></div>
+          <div class="store-search-heading"><span class="search-mark">{{ICON_MAGNIFYING_GLASS}}</span><h2>Cari produk atau lacak pesanan</h2></div>
           <form class="product-search" role="search" data-product-search>
-            <label class="visually-hidden" for="product-search-input">Cari produk</label>
+            <label class="visually-hidden" for="product-search-input">Cari produk atau masukkan kode pesanan untuk melacak</label>
             {{ICON_SEARCH_FIELD}}
-            <input id="product-search-input" type="search" name="q" placeholder="Nomor rumah, plakat, gantungan kunci..." autocomplete="off" data-product-search-input>
+            <input id="product-search-input" type="search" name="q" placeholder="Cari produk atau masukkan kode pesanan..." autocomplete="off" data-product-search-input>
             <button class="search-clear" type="button" data-product-search-clear hidden aria-label="Hapus pencarian">{{ICON_XMARK}}</button>
             <button class="search-submit" type="submit">Cari {{ICON_ARROW_RIGHT}}</button>
           </form>
@@ -93,3 +93,4 @@
     <script src="./assets/js/cart.js" data-api-base="{{API_BASE_URL}}" defer></script>
   </body>
 </html>
+
