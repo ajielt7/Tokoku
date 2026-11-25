@@ -1117,3 +1117,11 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); }
 /* Compact, accessible flag-only market switch. */
 .market-switch { display: inline-flex; width: 42px; min-width: 42px; max-width: 42px; height: 38px; min-height: 38px; justify-content: center; padding: 0; overflow: visible; }
 .market-switch .fi { display: block; width: 24px; height: 18px; flex: 0 0 auto; border-radius: 2px; box-shadow: 0 1px 2px rgb(20 30 24 / 12%); }
+
+/* Compact Dongle leading consistently across all storefront pages. */
+body,
+body :not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not(svg):not(svg *):not(path):not(i):not(script):not(style) {
+  line-height: 1 !important;
+}
+.detail-description,
+.detail-description-more p { line-height: .92 !important; }
