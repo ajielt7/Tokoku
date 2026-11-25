@@ -949,6 +949,7 @@ body { color: var(--color-ink); background: var(--color-page); }
 .detail-thumbnail:hover, .detail-thumbnail.is-active { box-shadow: 0 2px 5px rgb(23 44 34 / 12%), 0 5px 12px rgb(23 44 34 / 10%); }
 .detail-thumbnail:hover { transform: translateY(-1px); }
 .custom-preview { box-shadow: 0 1px 2px rgb(23 44 34 / 6%), 0 3px 9px rgb(23 44 34 / 7%); }
+.custom-preview svg [data-preview-board] { filter: drop-shadow(0 6px 5px rgb(12 22 16 / 24%)); }
 .detail-actions .button { box-shadow: 0 1px 2px rgb(23 44 34 / 12%), 0 2px 5px rgb(23 44 34 / 9%); transition: box-shadow 180ms ease, transform 180ms ease; }
 .detail-actions .button:hover { box-shadow: 0 3px 6px rgb(23 44 34 / 14%), 0 6px 12px rgb(23 44 34 / 10%); transform: translateY(-1px); }
 @media (prefers-reduced-motion: reduce) {
@@ -1110,3 +1111,8 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); }
 /* Keep the complete square product photos visible in the house-number gallery. */
 .detail-photo--contain { object-fit: contain !important; object-position: center; background: #fff; }
 .detail-thumbnail--contain img { object-fit: contain; object-position: center; background: #fff; }
+
+
+/* Compact, accessible flag-only market switch. */
+.market-switch { display: inline-flex; width: 42px; min-width: 42px; max-width: 42px; height: 38px; min-height: 38px; justify-content: center; padding: 0; overflow: visible; }
+.market-switch .fi { display: block; width: 24px; height: 18px; flex: 0 0 auto; border-radius: 2px; box-shadow: 0 1px 2px rgb(20 30 24 / 12%); }
