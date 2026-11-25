@@ -35,7 +35,7 @@
     "navigation.trackOrder": "Track order",
     "navigation.cart": "Cart",
     "navigation.viewProducts": "Shop products",
-    "market.switchToIndonesia": "Indonesia \u00b7 IDR",
+    "market.switchToIndonesia": "Indonesia · IDR",
     "market.switchToInternational": "English · USD",
     "market.estimate": "USD prices are estimates converted from IDR. Final pricing and international shipping are confirmed before ordering.",
     "search.section": "Search products",
@@ -143,7 +143,7 @@
     "home.featured.numberDetail": "Choose your numbers",
     "home.featured.example": "Example: A01",
     "home.featured.areaDetail": "Up to 14 characters",
-    "home.featured.cutting": "CO\u2082 laser cut",
+    "home.featured.cutting": "CO₂ laser cut",
     "home.featured.tape": "Double-sided tape",
     "home.category.smallSigns": "Small signs",
     "home.category.plaque": "Plaques",
@@ -162,11 +162,10 @@
     "catalog.categories.papan-petunjuk.name": "Wayfinding signs",
     "catalog.categories.papan-petunjuk.description": "Custom directional signs for homes and businesses.",
     "catalog.products.nomor-rumah-akrilik.name": "Acrylic House Number",
-    "catalog.products.nomor-rumah-akrilik.description": "Custom acrylic house number made from 3 mm acrylic, with a black base and white numbers and letters. Fixed 20 × 12 cm landscape size, installed with double-sided tape. Enter a house number; an area name is optional up to 14 characters. Production takes about 1 hour to 2 business days, depending on the queue.",
+    "catalog.products.nomor-rumah-akrilik.description": "Custom house number plaque made from 3 mm acrylic, with a black base and white number and decorative details. Size: 28 × 12 cm (landscape). Enter up to 4 letters or numbers.",
     "catalog.products.nomor-rumah-akrilik.customization": "Custom house number and area name",
     "catalog.products.nomor-rumah-akrilik.category": "House numbers",
     "catalog.fields.house_number": "House number",
     "catalog.fields.area_name": "Area name (optional)"
   }
 }
-

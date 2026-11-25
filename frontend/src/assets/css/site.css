@@ -1106,3 +1106,7 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); }
   background: transparent;
   text-decoration: underline;
 }
+
+/* Keep the complete square product photos visible in the house-number gallery. */
+.detail-photo--contain { object-fit: contain !important; object-position: center; background: #fff; }
+.detail-thumbnail--contain img { object-fit: contain; object-position: center; background: #fff; }
