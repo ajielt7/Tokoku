@@ -423,7 +423,7 @@ body { color: var(--color-ink); background: var(--color-page); }
 .empty-catalog { grid-column: 1 / -1; padding: 24px; color: var(--color-muted); background: #f4f8f5; text-align: center; }
 .detail-visual { min-height: 430px; overflow: hidden; background: #e5f4e9; }
 .detail-photo { display: block; width: 100%; height: 100%; min-height: 430px; object-fit: cover; }
-.detail-photo--contain { object-fit: contain; background: #fff; }
+.detail-photo--contain { object-fit: cover; background: transparent; }
 .detail-image-placeholder { min-height: 430px; }
 
 /* Featured products: editorial image tiles with flat controls and Material spacing. */
@@ -899,9 +899,9 @@ body { color: var(--color-ink); background: var(--color-page); }
 .product-detail-page { background: #f4f7f2; }
 .product-detail { grid-template-columns: minmax(0, 1.08fr) minmax(340px, .92fr); gap: 24px clamp(30px, 4.4vw, 56px); }
 .detail-gallery { min-width: 0; }
-.detail-visual { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; aspect-ratio: 1 / .96; min-height: 0; overflow: hidden; border: 0; border-radius: 8px; background: #e7ede7; }
-.detail-photo, .detail-image-placeholder { width: 100%; height: 100%; min-height: 0; object-fit: cover; }
-.detail-visual figcaption { padding: 8px 12px; color: #52635a; background: #ffffff; font-size: 12px; }
+.detail-visual { position: relative; display: block; aspect-ratio: 1 / .96; min-height: 0; overflow: hidden; border: 0; border-radius: 8px; background: #e7ede7; }
+.detail-photo, .detail-image-placeholder { display: block; width: 100%; height: 100%; min-height: 0; object-fit: cover; object-position: center; }
+.detail-visual figcaption { display: none; }
 .gallery-badge { position: absolute; z-index: 1; top: 14px; left: 14px; padding: 7px 12px; border-radius: 999px; color: #263b36; background: rgb(255 255 255 / 94%); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .detail-thumbnails { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
 .detail-thumbnail { min-width: 0; aspect-ratio: 1.35 / 1; padding: 0; overflow: hidden; border: 1px solid #d8e1d9; border-radius: 5px; background: #e7ede7; cursor: pointer; }
