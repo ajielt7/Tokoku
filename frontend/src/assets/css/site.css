@@ -31,7 +31,7 @@ body {
   background: var(--color-page);
   font-family: var(--font-body);
   font-size: 28px;
-  line-height: 1.5;
+  line-height: 1.2;
 }
 
 h1, h2, h3, h4, h5, h6,
@@ -980,7 +980,8 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); }
 
 /* Tighten product description leading and slightly enlarge the preview heading. */
 .detail-description,
-.detail-description-more p { line-height: 1.05 !important; }
+.detail-description-more p { line-height: .92 !important; }
+.detail-description-more p { margin-top: 4px; }
 .custom-preview h2 { font-size: 16px !important; }
 
 /* Floating labels for product personalization controls. */
