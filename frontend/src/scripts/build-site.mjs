@@ -307,10 +307,6 @@ function productMedia(product, className = "", priority = false) {
   ];
   const imageIndex = [...String(product.slug || product.name || "")].reduce((sum, char) => sum + char.charCodeAt(0), 0) % fallbackImages.length;
   const image = remoteImage || fallbackImages[imageIndex];
-  const productDescription = isHouseNumberProduct
-    ? idLocale.messages["catalog.products.nomor-rumah-akrilik.description"]
-    : product.description;
-  const productSize = isHouseNumberProduct ? "28 × 12 cm (landscape)" : (displayFixedSize(product.fixed_size) || "Belum ditentukan");
   const imageAlt = isHouseNumberProduct
     ? "Nomor rumah custom akrilik hitam dengan angka stiker putih, contoh 179."
     : remoteImage ? (product.image_alt || product.name) : `Foto ilustrasi Unsplash untuk ${product.name}; bukan foto produk Toqoku.`;
@@ -645,6 +641,10 @@ for (const product of catalog.products) {
   const prefix = rootPrefix(2);
   const link = `${prefix}produk/${escapeHtml(product.slug)}/`;
   const isHouseNumberProduct = product.slug === "nomor-rumah-akrilik";
+  const productDescription = isHouseNumberProduct
+    ? idLocale.messages["catalog.products.nomor-rumah-akrilik.description"]
+    : product.description;
+  const productSize = isHouseNumberProduct ? "28 × 12 cm (landscape)" : (displayFixedSize(product.fixed_size) || "Belum ditentukan");
   const productImageBase = `${site.siteUrl}/assets/images/produk/`;
   const houseNumberImages = [
     { url: `${productImageBase}nr1-hero.jpg`, alt: "Nomor rumah akrilik hitam dengan angka stiker putih, tampak depan." },
