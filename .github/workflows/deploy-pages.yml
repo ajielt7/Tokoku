@@ -30,7 +30,7 @@ jobs:
       pages: write
       id-token: write
     env:
-      SITE_URL: ${{ vars.SITE_URL || 'https://ajielt7.github.io/Tokoku' }}
+      SITE_URL: ${{ github.event_name == 'pull_request' && 'https://zieus.gt.tc' || vars.SITE_URL || 'https://ajielt7.github.io/Tokoku' }}
       PUBLIC_API_BASE_URL: https://ruma-api-production.ajielt7.workers.dev
       PUBLIC_API_FALLBACK_URL: https://toqoku-api.netlify.app
       SEO_INDEXABLE: "false"
