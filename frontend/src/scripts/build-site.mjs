@@ -296,7 +296,10 @@ function displayFixedSize(value) {
 }
 
 function productMedia(product, className = "", priority = false) {
-  const remoteImage = imageUrl(product);
+  const isHouseNumberProduct = product.slug === "nomor-rumah-akrilik";
+  const remoteImage = isHouseNumberProduct
+    ? `${site.siteUrl}/assets/images/produk/nr1-hero.jpg`
+    : imageUrl(product);
   const fallbackImages = [
     "https://images.unsplash.com/photo-1747862934428-899f5beb821e?auto=format&fit=crop&w=480&q=45",
     "https://images.unsplash.com/photo-1770394644126-4a17c000c122?auto=format&fit=crop&w=480&q=45",
@@ -304,7 +307,9 @@ function productMedia(product, className = "", priority = false) {
   ];
   const imageIndex = [...String(product.slug || product.name || "")].reduce((sum, char) => sum + char.charCodeAt(0), 0) % fallbackImages.length;
   const image = remoteImage || fallbackImages[imageIndex];
-  const imageAlt = remoteImage ? (product.image_alt || product.name) : `Foto ilustrasi Unsplash untuk ${product.name}; bukan foto produk Toqoku.`;
+  const imageAlt = isHouseNumberProduct
+    ? "Nomor rumah custom akrilik hitam dengan angka stiker putih, contoh 179."
+    : remoteImage ? (product.image_alt || product.name) : `Foto ilustrasi Unsplash untuk ${product.name}; bukan foto produk Toqoku.`;
   const visualClass = product.category === "plang-nama" ? "visual-sand" : "visual-sage";
   let src = image;
   let srcSet = "";
@@ -392,7 +397,7 @@ function customizationFields(fields, productSlug) {
     const rules = field.rules && typeof field.rules === "object" ? field.rules : {};
     const pattern = typeof rules.pattern === "string" ? ` pattern="${escapeHtml(rules.pattern)}"` : "";
     const uppercase = rules.uppercase ? ' data-uppercase="true"' : "";
-    return `<label class="form-field custom-field floating-field custom-field-${key}"><span>${label}</span><input type="text" name="custom-${key}" data-custom-key="${key}" data-custom-label="${label}" placeholder=" "${inputMode}${length}${pattern}${uppercase}${required}></label>`;
+    return `<label class="form-field custom-field floating-field custom-field-${key}"><span>${label}</span><input type="text" name="custom-${key}" data-custom-key="${key}" data-custom-label="${label}" placeholder="D122"${inputMode}${length}${pattern}${uppercase}${required}></label>`;
   }).join("\n");
 }
 
@@ -635,21 +640,32 @@ for (const product of catalog.products) {
   const related = catalog.products.filter((item) => item.slug !== product.slug).slice(0, 3);
   const prefix = rootPrefix(2);
   const link = `${prefix}produk/${escapeHtml(product.slug)}/`;
-  const catalogImage = imageUrl(product);
+  const isHouseNumberProduct = product.slug === "nomor-rumah-akrilik";
+  const productImageBase = `${site.siteUrl}/assets/images/produk/`;
+  const houseNumberImages = [
+    { url: `${productImageBase}nr1-hero.jpg`, alt: "Nomor rumah akrilik hitam dengan angka stiker putih, tampak depan." },
+    { url: `${productImageBase}nr1-dimensions.jpg`, alt: "Detail ukuran 28 × 12 cm dan bahan akrilik 3 mm." },
+    { url: `${productImageBase}nr1-lifestyle-1.jpg`, alt: "Contoh nomor rumah akrilik terpasang pada dinding rumah." },
+  ];
+  const catalogImage = isHouseNumberProduct ? houseNumberImages[0].url : imageUrl(product);
   const image = catalogImage || "https://images.unsplash.com/photo-1747862934428-899f5beb821e?auto=format&fit=crop&w=1200&q=85";
-  const isInspirationGallery = !catalogImage || /^https:\/\/images\.unsplash\.com\//i.test(catalogImage);
-  const imageAlt = isInspirationGallery
-    ? `Foto inspirasi untuk ${product.name}; bukan foto produk Toqoku.`
-    : (product.image_alt || product.name);
+  const isInspirationGallery = !isHouseNumberProduct && (!catalogImage || /^https:\/\/images\.unsplash\.com\//i.test(catalogImage));
+  const imageAlt = isHouseNumberProduct
+    ? houseNumberImages[0].alt
+    : isInspirationGallery
+      ? `Foto inspirasi untuk ${product.name}; bukan foto produk Toqoku.`
+      : (product.image_alt || product.name);
   const inspirationImages = [
     { url: "https://images.unsplash.com/photo-1747862934428-899f5beb821e?auto=format&fit=crop&w=1200&q=85", alt: "Inspirasi nomor rumah pada fasad" },
     { url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85", alt: "Inspirasi suasana rumah modern" },
     { url: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=85", alt: "Inspirasi ruang dan material rumah" },
     { url: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=85", alt: "Inspirasi interior rumah" },
   ];
-  const galleryImages = isInspirationGallery
-    ? [{ url: image, alt: imageAlt }, ...inspirationImages.filter((item) => item.url.split("?")[0] !== image.split("?")[0])].slice(0, 4)
-    : [];
+  const galleryImages = isHouseNumberProduct
+    ? houseNumberImages
+    : isInspirationGallery
+      ? [{ url: image, alt: imageAlt }, ...inspirationImages.filter((item) => item.url.split("?")[0] !== image.split("?")[0])].slice(0, 4)
+      : [];
   const thumbnails = galleryImages.length > 1
     ? `<div class="detail-thumbnails" aria-label="Foto inspirasi lainnya">${galleryImages.map((item, index) => `<button class="detail-thumbnail${index === 0 ? " is-active" : ""}" type="button" data-gallery-thumb data-gallery-src="${escapeHtml(item.url)}" data-gallery-alt="${escapeHtml(item.alt)}" aria-label="Tampilkan inspirasi ${index + 1}" aria-pressed="${index === 0}"><img src="${escapeHtml(item.url.replace(/w=1200/, "w=360"))}" alt="" width="360" height="240" loading="lazy" decoding="async"></button>`).join("")}</div>`
     : "";
@@ -661,7 +677,7 @@ for (const product of catalog.products) {
     ...(!site.contentReady ? previewProductIdeas.slice(0, Math.max(0, 4 - related.length)).map(previewIdeaCard) : []),
   ].join("\n");
   const media = image
-    ? `<img class="detail-photo" src="${escapeHtml(image)}" alt="${escapeHtml(imageAlt)}" width="1000" height="750" fetchpriority="high">`
+    ? `<img class="detail-photo${isHouseNumberProduct ? " detail-photo--contain" : ""}" src="${escapeHtml(image)}" alt="${escapeHtml(imageAlt)}" width="1000" height="1000" fetchpriority="high">`
     : '<div class="detail-image-placeholder" role="img" aria-label="Foto produk belum tersedia"><span>Foto produk</span></div>';
   const html = replaceTokens(productTemplate, {
     ROOT_PREFIX: prefix,
