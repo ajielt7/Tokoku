@@ -955,7 +955,7 @@ for (const { path: idPath } of publicPages) {
     const name = product && englishCatalogValue("products", product.slug, "name", englishSlug(product.slug));
     if (name) html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${escapeHtml(localizedText(enLocale, "seo.product.title", { name, store: site.name }))}</title>`);
   }
-  html = html.replaceAll("tentang-kami/", "about/").replaceAll("kategori/", "categories/").replaceAll("produk/", "products/");
+  html = html.replace(/\bhref="([^"]*)"/g, (_, value) => `href="${value.replaceAll("tentang-kami/", "about/").replaceAll("kategori/", "categories/").replaceAll("produk/", "products/")}"`);
   html = html.replace(/((?:\.\.\/)*)(?:\.\/)?assets\//g, (_, prefix) => `${prefix}../assets/`);
   html = html.replace(/<a class="header-cart"[^>]*>[\s\S]*?<\/a>/g, "");
   html = html.replace(/<a href="[^"]*lacak-pesanan[^"]*">[\s\S]*?<\/a>/g, "");
