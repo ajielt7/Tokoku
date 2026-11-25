@@ -143,7 +143,7 @@ function replaceTokens(template, values) {
   const cloudflareAnalyticsSnippet = "<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{\"token\": \"5cca7485ee754628b5eacd5029f16afd\"}'></script><!-- End Cloudflare Web Analytics -->";
   const googleFontsStylesheet = '<link rel="preconnect" href="https://fonts.googleapis.com">\n    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n    <link href="https://fonts.googleapis.com/css2?family=Amarante&family=Dongle:wght@300;400;700&display=swap" rel="stylesheet">';
   const rendered = renderedTemplate.replace(/<head>/i, (openingHead) => `${openingHead}\n    ${googleTagSnippet}\n    ${googleFontsStylesheet}\n    ${cloudflareAnalyticsSnippet}`);
-  const renderedWithFlags = rendered.replace("</head>", '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/7.6.0/css/flag-icons.min.css">');
+  const renderedWithFlags = rendered.replace("</head>", '    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/7.6.0/css/flag-icons.min.css">\n  </head>');
   if (/{{[A-Z_]+}}/.test(renderedWithFlags)) throw new Error("Masih ada token template yang belum terisi.");
   return renderedWithFlags;
 }
