@@ -867,8 +867,8 @@ function translateCatalogContent(html, pagePath) {
         : String(item.description).trim();
       const newShort = description.length > 125 ? `${description.slice(0, 122).trimEnd()}...` : description;
       replaceValue(oldShort, newShort);
-      result = result.replace(/(<p class="detail-description">)[\\s\\S]*?(<\\/p>)/, `$1${escapeHtml(newShort)}$2`);
-      result = result.replace(/(<details class="detail-description-more">[\\s\\S]*?<summary>[\\s\\S]*?<\\/summary><p>)[\\s\\S]*?(<\\/p><\\/details>)/, `$1${escapeHtml(description)}$2`);
+      result = result.replace(/(<p class="detail-description">)[\s\S]*?(<\/p>)/, \`$1\${escapeHtml(newShort)}$2\`);
+      result = result.replace(/(<details class="detail-description-more">[\s\S]*?<summary>[\s\S]*?<\/summary><p>)[\s\S]*?(<\/p><\/details>)/, \`$1\${escapeHtml(description)}$2\`);
       replaceValue(`Foto inspirasi untuk ${item.name}; bukan foto produk Toqoku.`, localizedText(enLocale, "product.photo.inspirationAlt", { name }));
       replaceValue(`Foto ilustrasi Unsplash untuk ${item.name}; bukan foto produk Toqoku.`, localizedText(enLocale, "product.photo.inspirationAlt", { name }));
       result = result.replace(/(<label class="form-field custom-field floating-field custom-field-house_number"><span>)[\s\S]*?(<\/span><input)/, `$1${escapeHtml(enLocale.messages["catalog.fields.house_number"] || "House number")}$2`);
