@@ -301,7 +301,7 @@ function displayFixedSize(value) {
 function productMedia(product, className = "", priority = false) {
   const isHouseNumberProduct = product.slug === "nomor-rumah-akrilik";
   const remoteImage = isHouseNumberProduct
-    ? `${site.siteUrl}/assets/images/produk/nr1-hero.jpg`
+    ? `${site.siteUrl}/assets/images/produk/nr1-hero.jpg?v=${assetVersion}`
     : imageUrl(product);
   const fallbackImages = [
     "https://images.unsplash.com/photo-1747862934428-899f5beb821e?auto=format&fit=crop&w=480&q=45",
@@ -649,10 +649,11 @@ for (const product of catalog.products) {
     : product.description;
   const productSize = isHouseNumberProduct ? "28 × 12 cm (landscape)" : (displayFixedSize(product.fixed_size) || "Belum ditentukan");
   const productImageBase = `${site.siteUrl}/assets/images/produk/`;
+  const productImageUrl = (filename) => `${productImageBase}${filename}?v=${assetVersion}`;
   const houseNumberImages = [
-    { url: `${productImageBase}nr1-hero.jpg`, alt: "Nomor rumah akrilik hitam dengan angka stiker putih, tampak depan." },
-    { url: `${productImageBase}nr1-dimensions.jpg`, alt: "Detail ukuran 28 × 12 cm dan bahan akrilik 3 mm." },
-    { url: `${productImageBase}nr1-lifestyle-1.jpg`, alt: "Contoh nomor rumah akrilik terpasang pada dinding rumah." },
+    { url: productImageUrl("nr1-hero.jpg"), alt: "Nomor rumah akrilik hitam dengan angka stiker putih, tampak depan." },
+    { url: productImageUrl("nr1-dimensions.jpg"), alt: "Detail ukuran 28 × 12 cm dan bahan akrilik 3 mm." },
+    { url: productImageUrl("nr1-lifestyle-1.jpg"), alt: "Contoh nomor rumah akrilik terpasang pada dinding rumah." },
   ];
   const catalogImage = isHouseNumberProduct ? houseNumberImages[0].url : imageUrl(product);
   const image = catalogImage || "https://images.unsplash.com/photo-1747862934428-899f5beb821e?auto=format&fit=crop&w=1200&q=85";
@@ -781,7 +782,7 @@ const publicPages = [
 
 const marketLabelId = idLocale.messages["market.switchToInternational"];
 const marketLabelEn = enLocale.messages["market.switchToIndonesia"];
-const usdDisclaimer = `${enLocale.messages["market.usdEstimate"]} ${enLocale.messages["market.rateReference"] || "Reference rate"}: ${internationalMarket.priceDisplay.rateSource} (${internationalMarket.priceDisplay.rateDate}).`;
+const usdDisclaimer = `${enLocale.messages["market.estimate"]} ${enLocale.messages["market.rateReference"] || "Reference rate"}: ${internationalMarket.priceDisplay.rateSource} (${internationalMarket.priceDisplay.rateDate}).`;
 const categoryOverrides = enLocale.messages;
 const englishWords = {
   nomor: "Number", rumah: "House", akrilik: "Acrylic", plakat: "Plaque", gantungan: "Keychain",
@@ -866,6 +867,8 @@ function translateCatalogContent(html, pagePath) {
         : String(item.description).trim();
       const newShort = description.length > 125 ? `${description.slice(0, 122).trimEnd()}...` : description;
       replaceValue(oldShort, newShort);
+      result = result.replace(/(<p class="detail-description">)[\\s\\S]*?(<\\/p>)/, `$1${escapeHtml(newShort)}$2`);
+      result = result.replace(/(<details class="detail-description-more">[\\s\\S]*?<summary>[\\s\\S]*?<\\/summary><p>)[\\s\\S]*?(<\\/p><\\/details>)/, `$1${escapeHtml(description)}$2`);
       replaceValue(`Foto inspirasi untuk ${item.name}; bukan foto produk Toqoku.`, localizedText(enLocale, "product.photo.inspirationAlt", { name }));
       replaceValue(`Foto ilustrasi Unsplash untuk ${item.name}; bukan foto produk Toqoku.`, localizedText(enLocale, "product.photo.inspirationAlt", { name }));
       result = result.replace(/(<label class="form-field custom-field floating-field custom-field-house_number"><span>)[\s\S]*?(<\/span><input)/, `$1${escapeHtml(enLocale.messages["catalog.fields.house_number"] || "House number")}$2`);
