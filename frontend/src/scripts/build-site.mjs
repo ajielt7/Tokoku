@@ -971,7 +971,7 @@ for (const { path: idPath } of publicPages) {
   }
   html = html.replace(/<a class="market-switch"[^>]*>[\s\S]*?<\/a>/g, "");
   html = addMarketSwitcher(html, idPath, marketLabelEn);
-  html = html.replace("</header>", `</header>\n    <aside class="market-estimate-note" aria-label="${escapeHtml(enLocale.messages["market.internationalPricingLabel"])}">${escapeHtml(usdDisclaimer)}</aside>`);
+  if (idPath !== "/") html = html.replace("</header>", `</header>\n    <aside class="market-estimate-note" aria-label="${escapeHtml(enLocale.messages["market.internationalPricingLabel"])}">${escapeHtml(usdDisclaimer)}</aside>`);
   const assetPrefix = rootPrefix(englishPath.split("/").filter(Boolean).length);
   if (idPath.startsWith("/produk/")) {
     html = html.replace("</body>", `<script src="${assetPrefix}assets/js/international-quote.js" defer></script>\n  </body>`);
