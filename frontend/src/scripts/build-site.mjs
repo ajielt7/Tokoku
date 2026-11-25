@@ -681,8 +681,8 @@ for (const product of catalog.products) {
     ...(!site.contentReady ? previewProductIdeas.slice(0, Math.max(0, 4 - related.length)).map(previewIdeaCard) : []),
   ].join("\n");
   const media = image
-    ? `<img class="detail-photo${isHouseNumberProduct ? " detail-photo--contain" : ""}" src="${escapeHtml(image)}" alt="${escapeHtml(imageAlt)}" width="1000" height="1000" fetchpriority="high">`
-    : '<div class="detail-image-placeholder" role="img" aria-label="Foto produk belum tersedia"><span>Foto produk</span></div>';
+    ? `<img class="detail-photo" src="${escapeHtml(image)}" alt="${escapeHtml(imageAlt)}" width="1000" height="1000" fetchpriority="high">`
+    : '<div class="detail-image-placeholder" role="img" aria-label="Foto produk belum tersedia"></div>';
   const html = replaceTokens(productTemplate, {
     ROOT_PREFIX: prefix,
     CATEGORY_SLUG: escapeHtml(category.slug),
@@ -696,7 +696,7 @@ for (const product of catalog.products) {
     PRODUCT_GALLERY_BADGE: isHouseNumberProduct ? "" : `<span class="gallery-badge">${isInspirationGallery ? "Inspirasi pilihan" : "Foto produk"}</span>`,
     PRODUCT_MEDIA_CAPTION: isInspirationGallery
       ? '<figcaption>Foto inspirasi; bukan foto produk Toqoku.</figcaption>'
-      : '<figcaption>Foto produk</figcaption>',
+      : "",
     PRODUCT_THUMBNAILS: thumbnails,
     PRODUCT_SIZE: escapeHtml(productSize),
     PRODUCT_CUSTOMIZATION: escapeHtml(product.customization || "Belum ditentukan"),
