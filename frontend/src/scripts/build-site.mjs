@@ -143,8 +143,9 @@ function replaceTokens(template, values) {
   const cloudflareAnalyticsSnippet = "<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{\"token\": \"5cca7485ee754628b5eacd5029f16afd\"}'></script><!-- End Cloudflare Web Analytics -->";
   const googleFontsStylesheet = '<link rel="preconnect" href="https://fonts.googleapis.com">\n    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n    <link href="https://fonts.googleapis.com/css2?family=Amarante&family=Dongle:wght@300;400;700&display=swap" rel="stylesheet">';
   const rendered = renderedTemplate.replace(/<head>/i, (openingHead) => `${openingHead}\n    ${googleTagSnippet}\n    ${googleFontsStylesheet}\n    ${cloudflareAnalyticsSnippet}`);
-  if (/{{[A-Z_]+}}/.test(rendered)) throw new Error("Masih ada token template yang belum terisi.");
-  return rendered;
+  const renderedWithFlags = rendered.replace("</head>", '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/7.6.0/css/flag-icons.min.css">');
+  if (/{{[A-Z_]+}}/.test(renderedWithFlags)) throw new Error("Masih ada token template yang belum terisi.");
+  return renderedWithFlags;
 }
 
 function rootPrefix(depth) {
@@ -277,7 +278,9 @@ function addLanguageAlternates(html, idPath, englishPath) {
 }
 
 function addMarketSwitcher(html, href, label) {
-  const link = `<a class="market-switch" href="${escapeHtml(href)}" lang="${label.startsWith("English") ? "en" : "id"}">${escapeHtml(label)}</a>`;
+  const isEnglish = label.startsWith("English");
+  const countryCode = isEnglish ? "us" : "id";
+  const link = '<a class="market-switch" href="' + escapeHtml(href) + '" lang="' + (isEnglish ? "en" : "id") + '" aria-label="' + escapeHtml(label) + '" title="' + escapeHtml(label) + '"><span class="fi fi-' + countryCode + '" aria-hidden="true"></span></a>';
   return html.replace(/(<div class="header-actions">[\s\S]*?)(<\/div>)/, `$1${link}$2`);
 }
 
@@ -964,7 +967,7 @@ for (const { path: idPath } of publicPages) {
     html = html.replace("</head>", `    <link rel="alternate" hreflang="id-ID" href="${escapeHtml(absoluteUrl(idPath))}">\n    <link rel="alternate" hreflang="en" href="${escapeHtml(absoluteUrl(englishPath))}">\n    <link rel="alternate" hreflang="x-default" href="${escapeHtml(absoluteUrl(idPath))}">\n  </head>`);
   }
   html = html.replace(/<a class="market-switch"[^>]*>[\s\S]*?<\/a>/g, "");
-  html = html.replace(/(<div class="header-actions">[\s\S]*?)(<\/div>)/, `$1<a class="market-switch" href="${escapeHtml(idPath)}" lang="id">${escapeHtml(marketLabelEn)}</a>$2`);
+  html = addMarketSwitcher(html, idPath, marketLabelEn);
   html = html.replace("</header>", `</header>\n    <aside class="market-estimate-note" aria-label="${escapeHtml(enLocale.messages["market.internationalPricingLabel"])}">${escapeHtml(usdDisclaimer)}</aside>`);
   const assetPrefix = rootPrefix(englishPath.split("/").filter(Boolean).length);
   if (idPath.startsWith("/produk/")) {
