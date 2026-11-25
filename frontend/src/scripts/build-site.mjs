@@ -641,6 +641,10 @@ for (const product of catalog.products) {
   const prefix = rootPrefix(2);
   const link = `${prefix}produk/${escapeHtml(product.slug)}/`;
   const isHouseNumberProduct = product.slug === "nomor-rumah-akrilik";
+  const productDescription = isHouseNumberProduct
+    ? idLocale.messages["catalog.products.nomor-rumah-akrilik.description"]
+    : product.description;
+  const productSize = isHouseNumberProduct ? "28 × 12 cm (landscape)" : (displayFixedSize(product.fixed_size) || "Belum ditentukan");
   const productImageBase = `${site.siteUrl}/assets/images/produk/`;
   const houseNumberImages = [
     { url: `${productImageBase}nr1-hero.jpg`, alt: "Nomor rumah akrilik hitam dengan angka stiker putih, tampak depan." },
@@ -667,11 +671,11 @@ for (const product of catalog.products) {
       ? [{ url: image, alt: imageAlt }, ...inspirationImages.filter((item) => item.url.split("?")[0] !== image.split("?")[0])].slice(0, 4)
       : [];
   const thumbnails = galleryImages.length > 1
-    ? `<div class="detail-thumbnails" aria-label="Foto inspirasi lainnya">${galleryImages.map((item, index) => `<button class="detail-thumbnail${index === 0 ? " is-active" : ""}" type="button" data-gallery-thumb data-gallery-src="${escapeHtml(item.url)}" data-gallery-alt="${escapeHtml(item.alt)}" aria-label="Tampilkan inspirasi ${index + 1}" aria-pressed="${index === 0}"><img src="${escapeHtml(item.url.replace(/w=1200/, "w=360"))}" alt="" width="360" height="240" loading="lazy" decoding="async"></button>`).join("")}</div>`
+    ? `<div class="detail-thumbnails" aria-label="Galeri foto produk">${galleryImages.map((item, index) => `<button class="detail-thumbnail${isHouseNumberProduct ? " detail-thumbnail--contain" : ""}${index === 0 ? " is-active" : ""}" type="button" data-gallery-thumb data-gallery-src="${escapeHtml(item.url)}" data-gallery-alt="${escapeHtml(item.alt)}" aria-label="Tampilkan gambar ${index + 1}" aria-pressed="${index === 0}"><img src="${escapeHtml(item.url)}" alt="" width="360" height="360" loading="lazy" decoding="async"></button>`).join("")}</div>`
     : "";
-  const shortDescription = String(product.description).trim().length > 125
-    ? `${String(product.description).trim().slice(0, 122).trimEnd()}...`
-    : String(product.description).trim();
+  const shortDescription = String(productDescription).trim().length > 125
+    ? `${String(productDescription).trim().slice(0, 122).trimEnd()}...`
+    : String(productDescription).trim();
   const relatedMarkup = [
     ...related.map((item) => productCard(item, prefix)),
     ...(!site.contentReady ? previewProductIdeas.slice(0, Math.max(0, 4 - related.length)).map(previewIdeaCard) : []),
@@ -686,15 +690,15 @@ for (const product of catalog.products) {
     PRODUCT_NAME: escapeHtml(product.name),
     PRODUCT_SLUG: escapeHtml(product.slug),
     PRODUCT_PRICE_AMOUNT: String(product.price_amount),
-    PRODUCT_DESCRIPTION: escapeHtml(product.description),
+    PRODUCT_DESCRIPTION: escapeHtml(productDescription),
     PRODUCT_SHORT_DESCRIPTION: escapeHtml(shortDescription),
     PRODUCT_MEDIA: media,
-    PRODUCT_GALLERY_BADGE: `<span class="gallery-badge">${isInspirationGallery ? "Inspirasi pilihan" : "Foto produk"}</span>`,
+    PRODUCT_GALLERY_BADGE: isHouseNumberProduct ? "" : `<span class="gallery-badge">${isInspirationGallery ? "Inspirasi pilihan" : "Foto produk"}</span>`,
     PRODUCT_MEDIA_CAPTION: isInspirationGallery
       ? '<figcaption>Foto inspirasi; bukan foto produk Toqoku.</figcaption>'
       : '<figcaption>Foto produk</figcaption>',
     PRODUCT_THUMBNAILS: thumbnails,
-    PRODUCT_SIZE: escapeHtml(displayFixedSize(product.fixed_size) || "Belum ditentukan"),
+    PRODUCT_SIZE: escapeHtml(productSize),
     PRODUCT_CUSTOMIZATION: escapeHtml(product.customization || "Belum ditentukan"),
     CUSTOM_FIELDS: customizationFields(product.customization_fields, product.slug),
     PRODUCT_PRICE: formatPrice(product.price_amount),
@@ -713,9 +717,7 @@ for (const product of catalog.products) {
   });
   const seoHtml = addSeo(html, {
     title: `${product.name} Custom | ${site.name}`,
-    description: product.slug === "nomor-rumah-akrilik"
-      ? "Nomor rumah akrilik custom 3 mm, ukuran 20 × 12 cm, dengan dasar hitam dan angka serta huruf putih. Pesan nomor rumah dengan nama area pilihanmu."
-      : product.description,
+     description: productDescription,
     pathname: `/produk/${product.slug}/`,
     breadcrumbs: [
       { name: "Beranda", path: "/" },
@@ -726,7 +728,7 @@ for (const product of catalog.products) {
       "@context": "https://schema.org",
       "@type": "Product",
       name: product.name,
-      description: product.description,
+      description: productDescription,
       image: [image],
       category: category.name,
       offers: {
@@ -842,8 +844,11 @@ function translateCatalogContent(html, pagePath) {
     const name = englishCatalogValue("products", item.slug, "name", englishSlug(item.slug));
     const description = englishCatalogValue("products", item.slug, "description", `Custom-made ${name.toLowerCase()}. Contact us to confirm specifications, final pricing, and international shipping.`);
     const customization = englishCatalogValue("products", item.slug, "customization", "Custom options available");
+    const sourceDescription = item.slug === "nomor-rumah-akrilik"
+      ? idLocale.messages["catalog.products.nomor-rumah-akrilik.description"]
+      : item.description;
     replaceValue(item.name, name);
-    replaceValue(item.description, description);
+    replaceValue(sourceDescription, description);
     replaceValue(item.customization || "Produk custom", customization);
     const priceIdr = formatPrice(item.price_amount);
     result = result.replaceAll(escapeHtml(priceIdr), escapeHtml(formatUsdEstimate(item.price_amount)));
