@@ -844,8 +844,11 @@ function translateCatalogContent(html, pagePath) {
     const name = englishCatalogValue("products", item.slug, "name", englishSlug(item.slug));
     const description = englishCatalogValue("products", item.slug, "description", `Custom-made ${name.toLowerCase()}. Contact us to confirm specifications, final pricing, and international shipping.`);
     const customization = englishCatalogValue("products", item.slug, "customization", "Custom options available");
+    const sourceDescription = item.slug === "nomor-rumah-akrilik"
+      ? idLocale.messages["catalog.products.nomor-rumah-akrilik.description"]
+      : item.description;
     replaceValue(item.name, name);
-    replaceValue(item.description, description);
+    replaceValue(sourceDescription, description);
     replaceValue(item.customization || "Produk custom", customization);
     const priceIdr = formatPrice(item.price_amount);
     result = result.replaceAll(escapeHtml(priceIdr), escapeHtml(formatUsdEstimate(item.price_amount)));
