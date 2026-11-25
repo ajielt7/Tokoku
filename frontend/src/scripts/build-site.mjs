@@ -369,20 +369,17 @@ function featuredProductCard(idea, index) {
 
 function customizationFields(fields, productSlug) {
   let productFields = Array.isArray(fields) ? [...fields] : [];
-  if (previewMode && /^nomor-rumah-/.test(productSlug || "")) {
-    productFields = productFields.map((field) => field.key === "house_number"
-      ? { ...field, label: "Nomor rumah", type: "text", required: true, max_length: 3, rules: { pattern: "[A-Za-z0-9]{1,3}", uppercase: true } }
-      : field);
-    if (!productFields.some((field) => field.key === "area_name")) {
-      productFields.push({
-        key: "area_name",
-        label: "Nama area (opsional)",
+  if (/^nomor-rumah-/.test(productSlug || "")) {
+    productFields = productFields
+      .filter((field) => field.key === "house_number")
+      .map((field) => ({
+        ...field,
+        label: "Nomor rumah",
         type: "text",
-        required: false,
-        max_length: 14,
-        rules: { pattern: String.raw`[\p{L}\p{N} ./-]{1,14}` },
-      });
-    }
+        required: true,
+        max_length: 4,
+        rules: { pattern: "[A-Za-z0-9]{1,4}", uppercase: true },
+      }));
   }
   if (!productFields.length) return '<p class="form-hint">Tidak ada bagian custom untuk produk ini.</p>';
   return productFields.map((field) => {
@@ -847,7 +844,7 @@ function translateCatalogContent(html, pagePath) {
       replaceValue(oldShort, newShort);
       replaceValue(`Foto inspirasi untuk ${item.name}; bukan foto produk Toqoku.`, localizedText(enLocale, "product.photo.inspirationAlt", { name }));
       replaceValue(`Foto ilustrasi Unsplash untuk ${item.name}; bukan foto produk Toqoku.`, localizedText(enLocale, "product.photo.inspirationAlt", { name }));
-      result = result.replace(/(<label class="form-field custom-field custom-field-house_number">)[\s\S]*?(<input)/, `$1${escapeHtml(enLocale.messages["catalog.fields.house_number"] || "House number")}$2`);
+      result = result.replace(/(<label class="form-field custom-field floating-field custom-field-house_number"><span>)[\s\S]*?(<\/span><input)/, `$1${escapeHtml(enLocale.messages["catalog.fields.house_number"] || "House number")}$2`);
       result = result.replace(/(<label class="form-field custom-field custom-field-area_name">)[\s\S]*?(<input)/, `$1${escapeHtml(enLocale.messages["catalog.fields.area_name"] || "Area name (optional)")}$2`);
       result = result.replace(/data-custom-label="[^"]*"/g, (match) => {
         const source = match.slice('data-custom-label="'.length, -1);
